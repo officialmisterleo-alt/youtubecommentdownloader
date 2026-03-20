@@ -16,22 +16,22 @@ export default function HeroInput() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="flex w-full max-w-xl gap-2 mb-3">
+      <div className="flex w-full max-w-xl mx-auto gap-2 mb-3">
         <input
           type="text"
           value={url}
           onChange={e => setUrl(e.target.value)}
           placeholder="Paste a YouTube URL..."
-          className="flex-1 min-w-0 bg-[#171717] border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder:text-[#555555] focus:outline-none focus:border-white/20 transition-colors"
+          className="flex-1 min-w-0 h-12 bg-[#171717] border border-white/10 rounded-lg px-4 text-white text-sm placeholder:text-[#555555] focus:outline-none focus:border-white/20 transition-colors"
         />
         <button
           type="submit"
-          className="bg-red-600 hover:bg-red-500 text-white font-semibold px-6 py-3 rounded-lg text-sm whitespace-nowrap transition-colors shrink-0"
+          className="h-12 bg-red-600 hover:bg-red-500 text-white font-semibold px-6 rounded-lg text-sm whitespace-nowrap transition-colors shrink-0"
         >
           Download Comments
         </button>
       </div>
-      <p className="text-xs text-[#555555]">
+      <p className="text-xs text-[#555555] text-center">
         Works with any public YouTube video, playlist, or channel URL
       </p>
     </form>
