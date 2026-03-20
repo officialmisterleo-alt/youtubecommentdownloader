@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 import Link from 'next/link'
 import { Plus, Download, RefreshCw, ChevronDown, X, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -171,7 +172,7 @@ ${commentRows}
       <Navbar />
 
       {showBanner && (
-        <div className="bg-red-700 py-2.5 px-4 flex items-center justify-center gap-3 text-sm text-white">
+        <div className="bg-red-700 py-1.5 px-4 flex items-center justify-center gap-3 text-sm text-white">
           <span>🚀 Unlock API access, bulk exports &amp; scheduling →{' '}
             <Link href="/pricing" className="underline font-semibold">View Enterprise Plans</Link>
           </span>
@@ -267,12 +268,12 @@ ${commentRows}
                   <button
                     key={f}
                     onClick={() => selectFormat(f)}
-                    className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[40px] flex items-center gap-1.5 ${
+                    className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 min-h-[40px] flex items-center gap-1.5 border ${
                       isActive
-                        ? 'bg-red-600 text-white'
+                        ? 'bg-red-600 border-transparent text-white'
                         : isGated
-                        ? 'bg-[#0a0a0a] border border-white/[0.07] text-[#888888] cursor-pointer hover:border-white/[0.15]'
-                        : 'bg-[#0a0a0a] border border-white/[0.07] text-[#888888] hover:border-white/[0.2]'
+                        ? 'bg-[#0a0a0a] border-white/[0.07] text-[#888888] cursor-pointer hover:border-white/[0.15]'
+                        : 'bg-[#0a0a0a] border-white/[0.07] text-[#888888] hover:border-white/[0.2]'
                     }`}
                   >
                     {isGated && <Lock className="w-3 h-3" />}
@@ -289,7 +290,7 @@ ${commentRows}
             <div className="flex flex-wrap gap-2">
               {(['top', 'newest', 'oldest'] as SortBy[]).map(s => (
                 <button key={s} onClick={() => setSortBy(s)}
-                  className={`px-4 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors min-h-[40px] ${sortBy === s ? 'bg-red-600 text-white' : 'bg-[#0a0a0a] border border-white/[0.07] text-[#888888] hover:border-white/[0.2]'}`}>
+                  className={`px-4 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors duration-200 min-h-[40px] border ${sortBy === s ? 'bg-red-600 border-transparent text-white' : 'bg-[#0a0a0a] border-white/[0.07] text-[#888888] hover:border-white/[0.2]'}`}>
                   {s}
                 </button>
               ))}
@@ -356,6 +357,8 @@ ${commentRows}
           </div>
         )}
       </div>
+
+      <Footer />
 
       {/* Auth gate modal */}
       {showAuthGate && (
