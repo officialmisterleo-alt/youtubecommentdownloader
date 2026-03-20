@@ -182,12 +182,12 @@ ${commentRows}
       <div className="max-w-4xl mx-auto px-4 py-10 sm:py-12">
         <div className="text-center mb-8 sm:mb-10">
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">YouTube Comment Downloader</h1>
-          <p className="text-gray-400 text-sm sm:text-base">Paste a YouTube URL to extract and export all comments instantly.</p>
+          <p className="text-[#888888] text-sm sm:text-base">Paste a YouTube URL to extract and export all comments instantly.</p>
         </div>
 
         {/* URL inputs */}
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
-          <label className="text-sm font-medium text-gray-300 mb-3 block">YouTube URL(s)</label>
+          <label className="text-sm font-medium text-white mb-3 block">YouTube URL(s)</label>
           <div className="space-y-3">
             {urls.map((u, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -195,7 +195,7 @@ ${commentRows}
                   placeholder="https://www.youtube.com/watch?v=..."
                   className="flex-1 min-w-0 bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm w-full" />
                 {i > 0 && (
-                  <button onClick={() => removeUrl(i)} className="text-gray-500 hover:text-red-400 p-1 shrink-0">
+                  <button onClick={() => removeUrl(i)} className="text-[#888888] hover:text-red-400 p-1 shrink-0">
                     <X size={16} />
                   </button>
                 )}
@@ -203,11 +203,11 @@ ${commentRows}
             ))}
           </div>
           {urls.length < 5 ? (
-            <button onClick={addUrl} className="mt-3 flex items-center gap-2 text-gray-500 hover:text-gray-300 text-sm transition-colors min-h-[36px]">
+            <button onClick={addUrl} className="mt-3 flex items-center gap-2 text-[#888888] hover:text-white text-sm transition-colors min-h-[36px]">
               <Plus className="w-4 h-4" /> Add URL
             </button>
           ) : (
-            <p className="mt-3 text-gray-600 text-xs">Maximum 5 URLs on free plan. <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade for unlimited</Link></p>
+            <p className="mt-3 text-[#888888] text-xs">Maximum 5 URLs on free plan. <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade for unlimited</Link></p>
           )}
         </div>
 
@@ -218,7 +218,7 @@ ${commentRows}
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="text-sm font-medium text-white">Include Replies</div>
-              <div className="text-xs text-gray-500">Also fetch comment replies (slower)</div>
+              <div className="text-xs text-[#888888]">Also fetch comment replies (slower)</div>
             </div>
             <label className="flex items-center gap-3 cursor-pointer shrink-0">
               <div className="relative">
@@ -246,7 +246,7 @@ ${commentRows}
                 <option value="5000">5,000 comments</option>
                 <option value="0">Unlimited (Pro+)</option>
               </select>
-              <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-gray-500 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-[#888888] pointer-events-none" />
             </div>
           </div>
 
@@ -254,8 +254,8 @@ ${commentRows}
           <div>
             <label className="text-sm font-medium text-white block mb-2">Export Format</label>
             {!isSignedIn && (
-              <p className="text-xs text-gray-500 mb-3 flex items-center gap-1.5">
-                <Lock className="w-3 h-3 text-gray-600" />
+              <p className="text-xs text-[#888888] mb-3 flex items-center gap-1.5">
+                <Lock className="w-3 h-3 text-[#888888]" />
                 <span>CSV, JSON &amp; Excel require a free account. <Link href="/auth/login" className="text-red-400 hover:text-red-300 underline">Sign in to unlock</Link></span>
               </p>
             )}
@@ -271,8 +271,8 @@ ${commentRows}
                       isActive
                         ? 'bg-red-600 text-white'
                         : isGated
-                        ? 'bg-[#0a0a0a] border border-white/[0.07] text-gray-600 cursor-pointer hover:border-gray-600'
-                        : 'bg-[#0a0a0a] border border-white/[0.07] text-gray-400 hover:border-gray-500'
+                        ? 'bg-[#0a0a0a] border border-white/[0.07] text-[#888888] cursor-pointer hover:border-white/[0.15]'
+                        : 'bg-[#0a0a0a] border border-white/[0.07] text-[#888888] hover:border-white/[0.2]'
                     }`}
                   >
                     {isGated && <Lock className="w-3 h-3" />}
@@ -289,7 +289,7 @@ ${commentRows}
             <div className="flex flex-wrap gap-2">
               {(['top', 'newest', 'oldest'] as SortBy[]).map(s => (
                 <button key={s} onClick={() => setSortBy(s)}
-                  className={`px-4 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors min-h-[40px] ${sortBy === s ? 'bg-red-600 text-white' : 'bg-[#0a0a0a] border border-white/[0.07] text-gray-400 hover:border-gray-500'}`}>
+                  className={`px-4 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors min-h-[40px] ${sortBy === s ? 'bg-red-600 text-white' : 'bg-[#0a0a0a] border border-white/[0.07] text-[#888888] hover:border-white/[0.2]'}`}>
                   {s}
                 </button>
               ))}
@@ -305,8 +305,8 @@ ${commentRows}
         {loading && (
           <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-300">{statusMsg}</span>
-              <span className="text-sm text-gray-500">{progress}%</span>
+              <span className="text-sm text-white">{statusMsg}</span>
+              <span className="text-sm text-[#888888]">{progress}%</span>
             </div>
             <div className="bg-[#0a0a0a] rounded-full h-2 overflow-hidden">
               <div className="bg-red-600 h-full rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
@@ -319,10 +319,10 @@ ${commentRows}
             <div className="p-4 border-b border-white/[0.07] flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-white font-semibold text-sm">Preview</span>
-                <span className="text-gray-500 text-sm ml-2">({comments.length} comments)</span>
+                <span className="text-[#888888] text-sm ml-2">({comments.length} comments)</span>
               </div>
               <div className="flex gap-3 flex-wrap">
-                <button onClick={() => { setDone(false); setComments([]); setUrls(['']) }} className="text-gray-500 hover:text-gray-300 text-sm transition-colors min-h-[36px]">Export another</button>
+                <button onClick={() => { setDone(false); setComments([]); setUrls(['']) }} className="text-[#888888] hover:text-white text-sm transition-colors min-h-[36px]">Export another</button>
                 <button onClick={() => downloadComments(comments, format)}
                   className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 min-h-[36px]">
                   <Download className="w-4 h-4" /> Download {format}
@@ -334,7 +334,7 @@ ${commentRows}
                 <thead className="bg-[#0a0a0a]">
                   <tr>
                     {['Author', 'Comment', 'Likes', 'Date', 'Replies'].map(h => (
-                      <th key={h} className="text-left px-4 py-3 text-gray-400 font-medium whitespace-nowrap">{h}</th>
+                      <th key={h} className="text-left px-4 py-3 text-[#888888] font-medium whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -342,12 +342,12 @@ ${commentRows}
                   {comments.slice(0, 10).map(c => (
                     <tr key={c.id} className="border-t border-white/[0.07]">
                       <td className="px-4 py-3 text-[#888888] text-xs font-medium whitespace-nowrap">{c.author}</td>
-                      <td className="px-4 py-3 text-gray-300 min-w-[200px] max-w-xs">
+                      <td className="px-4 py-3 text-white min-w-[200px] max-w-xs">
                         <span className="line-clamp-2">{c.text}</span>
                       </td>
-                      <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{c.likes}</td>
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">{c.date}</td>
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{c.replies}</td>
+                      <td className="px-4 py-3 text-[#888888] whitespace-nowrap">{c.likes}</td>
+                      <td className="px-4 py-3 text-[#888888] whitespace-nowrap text-xs">{c.date}</td>
+                      <td className="px-4 py-3 text-[#888888] whitespace-nowrap">{c.replies}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -367,17 +367,17 @@ ${commentRows}
               </div>
               <h3 className="text-white font-bold text-lg">Sign in to export</h3>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed mb-6">
+            <p className="text-[#888888] text-sm leading-relaxed mb-6">
               Create a free account to download in <strong className="text-white">CSV, JSON, and Excel</strong> formats. Plain text is always free — no sign-in needed.
             </p>
             <div className="flex flex-col gap-3">
               <Link href="/auth/signup" className="block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-xl text-center transition-colors">
                 Create Free Account
               </Link>
-              <Link href="/auth/login" className="block border border-white/[0.07] hover:border-gray-600 text-gray-300 font-medium px-4 py-3 rounded-xl text-center transition-colors text-sm">
+              <Link href="/auth/login" className="block border border-white/[0.07] hover:border-white/[0.15] text-white font-medium px-4 py-3 rounded-xl text-center transition-colors text-sm">
                 Sign In
               </Link>
-              <button onClick={() => setShowAuthGate(false)} className="text-gray-600 hover:text-gray-400 text-sm transition-colors mt-1">
+              <button onClick={() => setShowAuthGate(false)} className="text-[#888888] hover:text-[#888888] text-sm transition-colors mt-1">
                 Continue with TXT (no sign-in)
               </button>
             </div>

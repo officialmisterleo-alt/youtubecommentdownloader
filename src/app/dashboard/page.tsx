@@ -20,10 +20,10 @@ export default async function DashboardPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-white">
               Welcome back{firstName ? `, ${firstName}` : (user?.email ? `, ${user.email.split('@')[0]}` : '')}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">Here&apos;s your export activity</p>
+            <p className="text-[#888888] text-sm mt-1">Here&apos;s your export activity</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="bg-[#171717] border border-white/[0.07] text-gray-400 text-xs px-3 py-1 rounded-full">Free Plan</span>
+            <span className="bg-[#171717] border border-white/[0.07] text-[#888888] text-xs px-3 py-1 rounded-full">Free Plan</span>
             <Link
               href="/tool"
               className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
           ].map(s => (
             <div key={s.label} className="bg-[#171717] border border-white/[0.07] rounded-xl p-5">
               <div className="text-2xl font-bold text-white mb-1">{s.value}</div>
-              <div className="text-gray-500 text-xs">{s.label}</div>
+              <div className="text-[#888888] text-xs">{s.label}</div>
             </div>
           ))}
         </div>
@@ -54,10 +54,10 @@ export default async function DashboardPage() {
           </div>
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <div className="w-12 h-12 bg-[#171717] rounded-xl flex items-center justify-center mb-4">
-              <Plus className="w-6 h-6 text-gray-600" />
+              <Plus className="w-6 h-6 text-[#888888]" />
             </div>
-            <p className="text-gray-400 text-sm font-medium mb-1">No downloads yet</p>
-            <p className="text-gray-600 text-xs mb-5">Head to the Tool to export your first comment thread.</p>
+            <p className="text-[#888888] text-sm font-medium mb-1">No downloads yet</p>
+            <p className="text-[#888888] text-xs mb-5">Head to the Tool to export your first comment thread.</p>
             <Link
               href="/tool"
               className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
@@ -71,13 +71,13 @@ export default async function DashboardPage() {
           {/* API Key */}
           <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Key className="w-5 h-5 text-gray-400" />
+              <Key className="w-5 h-5 text-[#888888]" />
               <h2 className="font-semibold text-white">API Key</h2>
             </div>
             <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3 flex items-center gap-3 mb-3">
-              <code className="text-gray-500 text-xs flex-1">••••••••••••••••••••••••••••••</code>
+              <code className="text-[#888888] text-xs flex-1">••••••••••••••••••••••••••••••</code>
             </div>
-            <p className="text-gray-600 text-xs">
+            <p className="text-[#888888] text-xs">
               Available on Business &amp; Enterprise plans.{' '}
               <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade</Link>
             </p>
@@ -86,7 +86,7 @@ export default async function DashboardPage() {
           {/* Team */}
           <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Users className="w-5 h-5 text-gray-400" />
+              <Users className="w-5 h-5 text-[#888888]" />
               <h2 className="font-semibold text-white">Team Members</h2>
             </div>
             <div className="flex items-center gap-3 bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3 mb-3">
@@ -95,10 +95,10 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <div className="text-white text-sm">{displayName || user?.email || 'Your Account'}</div>
-                <div className="text-gray-500 text-xs">Owner</div>
+                <div className="text-[#888888] text-xs">Owner</div>
               </div>
             </div>
-            <p className="text-gray-600 text-xs">
+            <p className="text-[#888888] text-xs">
               Team seats available on Business &amp; Enterprise.{' '}
               <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade</Link>
             </p>
