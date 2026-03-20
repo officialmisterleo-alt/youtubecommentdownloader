@@ -10,28 +10,28 @@ const plans = [
     desc: 'Perfect for trying out the tool',
     features: ['500 comments per export', '3 exports per day', 'CSV export only', 'No account required', 'Basic sorting'],
     notIncluded: ['Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
-    cta: 'Get Started Free', href: '/tool', highlight: false, badge: null,
+    cta: 'Start Free Trial', href: '/auth/signup?plan=free', highlight: false, badge: null, note: 'Credit card required. Cancel anytime.',
   },
   {
     name: 'Pro', monthlyPrice: 29, annualPrice: 24,
     desc: 'For individual power users',
     features: ['100,000 comments/month', 'All export formats', 'Reply thread capture', 'Email support', 'Priority processing', 'Basic sorting & filtering'],
     notIncluded: ['Bulk channel exports', 'REST API access', 'Team seats', 'Scheduled exports'],
-    cta: 'Start Pro', href: '/auth/signup?plan=pro', highlight: false, badge: null,
+    cta: 'Start Pro', href: '/auth/signup?plan=pro', highlight: false, badge: null, note: null,
   },
   {
     name: 'Business', monthlyPrice: 79, annualPrice: 65,
     desc: 'For agencies and growing teams',
     features: ['1M comments/month', 'All export formats', 'Bulk channel/playlist', 'Scheduled exports', 'REST API access', '3 team seats', 'Priority email support', 'CSV/Excel/JSON/HTML/TXT'],
     notIncluded: ['SSO / SAML', 'White-label', 'Dedicated API quota'],
-    cta: 'Start Business', href: '/auth/signup?plan=business', highlight: true, badge: 'Most Popular',
+    cta: 'Start Business', href: '/auth/signup?plan=business', highlight: true, badge: 'Most Popular', note: null,
   },
   {
     name: 'Enterprise', monthlyPrice: 299, annualPrice: 249,
     desc: 'For large teams and enterprise use',
     features: ['Unlimited comments', 'Dedicated API quota', '10 team seats', 'SSO / SAML', 'White-label exports', 'Custom data retention', '99.9% SLA', 'Priority phone support', 'Custom onboarding'],
     notIncluded: [],
-    cta: 'Contact Sales', href: 'mailto:enterprise@youtubecommentdownloader.com', highlight: false, badge: null,
+    cta: 'Contact Sales', href: 'mailto:enterprise@youtubecommentdownloader.com', highlight: false, badge: null, note: null,
   },
 ]
 
@@ -54,7 +54,7 @@ const faqs = [
   { q: 'What counts as a "comment"?', a: 'Each unique top-level comment counts as 1 comment. Replies to comments also count individually when you enable the "Include Replies" option.' },
   { q: 'Can I upgrade or downgrade my plan at any time?', a: 'Absolutely. You can change your plan at any time from your dashboard. Upgrades take effect immediately. Downgrades take effect at the end of your billing cycle.' },
   { q: 'Is the YouTube API key required?', a: 'For the free web tool, no — we handle API access on our end. If you use the REST API on Business/Enterprise, you can optionally bring your own YouTube API key for higher quota.' },
-  { q: 'Do you offer refunds?', a: 'Yes. We offer a 30-day money-back guarantee on all paid plans. No questions asked. Just email us at support@youtubecommentdownloader.com.' },
+  { q: 'Do you offer refunds?', a: 'Refunds are considered only within 48 hours of initial purchase, and only if the tool demonstrably failed to function as described. Usage fees for successfully completed exports are non-refundable. We strongly recommend testing the free tier before upgrading.' },
 ]
 
 export default function PricingPage() {
@@ -86,9 +86,11 @@ export default function PricingPage() {
                 {annual && plan.monthlyPrice > 0 && <div className="text-gray-500 text-xs mt-1">Billed annually</div>}
               </div>
               <p className="text-gray-500 text-sm mb-6">{plan.desc}</p>
-              <Link href={plan.href} className={`block text-center py-3 rounded-xl font-semibold text-sm transition-colors mb-6 ${plan.highlight ? 'bg-red-600 hover:bg-red-700 text-white' : 'border border-[#1f1f2e] hover:border-gray-500 text-gray-300'}`}>
+              <Link href={plan.href} className={`block text-center py-3 rounded-xl font-semibold text-sm transition-colors mb-2 ${plan.highlight ? 'bg-red-600 hover:bg-red-700 text-white' : 'border border-[#1f1f2e] hover:border-gray-500 text-gray-300'}`}>
                 {plan.cta}
               </Link>
+              {plan.note && <p className="text-gray-600 text-xs text-center mb-4">{plan.note}</p>}
+              {!plan.note && <div className="mb-4" />}
               <div className="space-y-2.5 flex-1">
                 {plan.features.map(f => (
                   <div key={f} className="flex items-start gap-2 text-sm">

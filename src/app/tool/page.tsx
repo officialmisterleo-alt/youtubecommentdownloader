@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
-import { Plus, Download, RefreshCw, ChevronDown } from 'lucide-react'
+import { Plus, Download, RefreshCw, ChevronDown, X } from 'lucide-react'
 
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number }
 type Format = 'CSV' | 'Excel' | 'JSON' | 'HTML' | 'TXT'
@@ -19,9 +19,11 @@ export default function ToolPage() {
   const [statusMsg, setStatusMsg] = useState('')
   const [comments, setComments] = useState<Comment[]>([])
   const [done, setDone] = useState(false)
+  const [showBanner, setShowBanner] = useState(true)
 
   const addUrl = () => { if (urls.length < 5) setUrls([...urls, '']) }
   const updateUrl = (i: number, v: string) => { const u = [...urls]; u[i] = v; setUrls(u) }
+  const removeUrl = (i: number) => { setUrls(urls.filter((_, idx) => idx !== i)) }
 
   const downloadComments = (comments: Comment[], format: Format) => {
     let content = ''
@@ -65,7 +67,6 @@ export default function ToolPage() {
       const data = await res.json()
       if (data.comments) { setComments(data.comments); setDone(true) }
     } catch {
-      // Use mock on error
       setComments([
         { id: '1', author: '@techreviewer99', text: 'This is exactly what I needed! The tutorial was super clear.', likes: 342, date: '2 days ago', replies: 12 },
         { id: '2', author: '@marketingpro_sarah', text: 'Great content as always. Would love to see a follow-up.', likes: 187, date: '3 days ago', replies: 5 },
@@ -81,11 +82,15 @@ export default function ToolPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
       <Navbar />
-      {/* Upgrade banner */}
-      <div className="bg-red-700 py-2.5 px-4 text-center text-sm text-white">
-        🚀 Unlock API access, bulk exports & scheduling →{' '}
-        <Link href="/pricing" className="underline font-semibold">View Enterprise Plans</Link>
-      </div>
+
+      {showBanner && (
+        <div className="bg-red-700 py-2.5 px-4 flex items-center justify-center gap-3 text-sm text-white">
+          <span>🚀 Unlock API access, bulk exports &amp; scheduling →{' '}
+            <Link href="/pricing" className="underline font-semibold">View Enterprise Plans</Link>
+          </span>
+          <button onClick={() => setShowBanner(false)} className="ml-auto text-white/70 hover:text-white text-xl leading-none">&times;</button>
+        </div>
+      )}
 
       <div className="max-w-4xl mx-auto px-4 py-12">
         <div className="text-center mb-10">
@@ -93,13 +98,21 @@ export default function ToolPage() {
           <p className="text-gray-400">Paste a YouTube URL to extract and export all comments instantly.</p>
         </div>
 
+        {/* URL inputs */}
         <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-6 mb-6">
           <label className="text-sm font-medium text-gray-300 mb-3 block">YouTube URL(s)</label>
           <div className="space-y-3">
             {urls.map((u, i) => (
-              <input key={i} value={u} onChange={e => updateUrl(i, e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
-                className="w-full bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm" />
+              <div key={i} className="flex items-center gap-2">
+                <input value={u} onChange={e => updateUrl(i, e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="flex-1 bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm" />
+                {i > 0 && (
+                  <button onClick={() => removeUrl(i)} className="text-gray-500 hover:text-red-400 p-1 shrink-0">
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
           {urls.length < 5 ? (
@@ -111,18 +124,30 @@ export default function ToolPage() {
           )}
         </div>
 
+        {/* Options */}
         <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-6 mb-6 space-y-5">
+
+          {/* Include Replies toggle */}
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium text-white">Include Replies</div>
               <div className="text-xs text-gray-500">Also fetch comment replies (slower)</div>
             </div>
-            <button onClick={() => setIncludeReplies(!includeReplies)}
-              className={`w-11 h-6 rounded-full transition-colors relative ${includeReplies ? 'bg-red-600' : 'bg-[#2a2a3a]'}`}>
-              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow ${includeReplies ? 'translate-x-5' : 'translate-x-0.5'}`} />
-            </button>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={includeReplies}
+                  onChange={e => setIncludeReplies(e.target.checked)}
+                />
+                <div className={`w-10 h-6 rounded-full transition-colors ${includeReplies ? 'bg-red-600' : 'bg-gray-700'}`} />
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${includeReplies ? 'translate-x-5' : 'translate-x-1'}`} />
+              </div>
+            </label>
           </div>
 
+          {/* Max Comments */}
           <div>
             <label className="text-sm font-medium text-white block mb-2">Max Comments</label>
             <div className="relative">
@@ -138,6 +163,7 @@ export default function ToolPage() {
             </div>
           </div>
 
+          {/* Export Format */}
           <div>
             <label className="text-sm font-medium text-white block mb-2">Export Format</label>
             <div className="flex flex-wrap gap-2">
@@ -150,9 +176,10 @@ export default function ToolPage() {
             </div>
           </div>
 
+          {/* Sort By */}
           <div>
             <label className="text-sm font-medium text-white block mb-2">Sort By</label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(['top', 'newest', 'oldest'] as SortBy[]).map(s => (
                 <button key={s} onClick={() => setSortBy(s)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${sortBy === s ? 'bg-red-600 text-white' : 'bg-[#0a0a0f] border border-[#1f1f2e] text-gray-400 hover:border-gray-500'}`}>
@@ -182,7 +209,7 @@ export default function ToolPage() {
 
         {done && comments.length > 0 && (
           <div className="mt-6 bg-[#13131a] border border-[#1f1f2e] rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-[#1f1f2e] flex items-center justify-between">
+            <div className="p-4 border-b border-[#1f1f2e] flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-white font-semibold text-sm">Preview</span>
                 <span className="text-gray-500 text-sm ml-2">({comments.length} comments)</span>
@@ -206,7 +233,7 @@ export default function ToolPage() {
                 </thead>
                 <tbody>
                   {comments.slice(0, 10).map(c => (
-                    <tr key={c.id} className="border-t border-[#1f1f2e] hover:bg-[#0d0d14] transition-colors">
+                    <tr key={c.id} className="border-t border-[#1f1f2e]">
                       <td className="px-4 py-3 text-blue-400 text-xs font-medium whitespace-nowrap">{c.author}</td>
                       <td className="px-4 py-3 text-gray-300 max-w-xs">
                         <span className="line-clamp-2">{c.text}</span>
