@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 import Link from 'next/link'
 import { Check, X, Zap } from 'lucide-react'
 
@@ -10,7 +11,7 @@ const plans = [
     desc: 'Perfect for trying out the tool',
     features: ['500 comments per export', '3 exports per day', 'CSV export only', 'No account required', 'Basic sorting'],
     notIncluded: ['Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
-    cta: 'Start Free Trial', href: '/auth/signup?plan=free', highlight: false, badge: null, note: 'Credit card required. Cancel anytime.',
+    cta: 'Start Free Trial', href: '/auth/signup?plan=free', highlight: false, badge: null, note: 'No credit card required.',
   },
   {
     name: 'Pro', monthlyPrice: 29, annualPrice: 24,
@@ -61,47 +62,47 @@ export default function PricingPage() {
   const [annual, setAnnual] = useState(false)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 py-16">
+      <div className="flex-1 max-w-7xl mx-auto px-4 py-16">
         <div className="text-center mb-14">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4">Simple, transparent pricing</h1>
-          <p className="text-gray-400 text-lg mb-8">Start free. Scale as you grow. No hidden fees.</p>
-          <div className="inline-flex items-center gap-3 bg-[#13131a] border border-[#1f1f2e] rounded-xl p-1">
-            <button onClick={() => setAnnual(false)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${!annual ? 'bg-red-600 text-white' : 'text-gray-400'}`}>Monthly</button>
-            <button onClick={() => setAnnual(true)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${annual ? 'bg-red-600 text-white' : 'text-gray-400'}`}>
-              Annual <span className={`text-xs px-2 py-0.5 rounded-full ${annual ? 'bg-red-800 text-red-200' : 'bg-green-900 text-green-400'}`}>Save 2 months</span>
+          <p className="text-[#888888] text-lg mb-8">Start free. Scale as you grow. No hidden fees.</p>
+          <div className="inline-flex items-center gap-1 bg-[#171717] border border-white/[0.07] rounded-xl p-1">
+            <button onClick={() => setAnnual(false)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${!annual ? 'bg-red-600 text-white' : 'text-[#888888] hover:text-white'}`}>Monthly</button>
+            <button onClick={() => setAnnual(true)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${annual ? 'bg-red-600 text-white' : 'text-[#888888] hover:text-white'}`}>
+              Annual <span className={`text-xs px-2 py-0.5 rounded-full ${annual ? 'bg-red-900 text-red-200' : 'bg-white/[0.07] text-[#888888]'}`}>Save 2 months</span>
             </button>
           </div>
         </div>
 
         <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
           {plans.map(plan => (
-            <div key={plan.name} className={`rounded-2xl p-6 border flex flex-col ${plan.highlight ? 'bg-red-950/20 border-red-700 ring-1 ring-red-700' : 'bg-[#13131a] border-[#1f1f2e]'}`}>
+            <div key={plan.name} className={`rounded-2xl p-6 border flex flex-col ${plan.highlight ? 'bg-red-950/20 border-red-700 ring-1 ring-red-700' : 'bg-[#171717] border-white/[0.07]'}`}>
               {plan.badge && <div className="inline-flex items-center gap-1 text-red-400 text-xs font-semibold uppercase tracking-widest mb-3"><Zap className="w-3 h-3" /> {plan.badge}</div>}
               <div className="font-bold text-white text-xl mb-1">{plan.name}</div>
               <div className="mb-4">
                 <span className="text-4xl font-extrabold text-white">${annual ? plan.annualPrice : plan.monthlyPrice}</span>
-                {plan.monthlyPrice > 0 && <span className="text-gray-500 text-sm">/mo</span>}
-                {annual && plan.monthlyPrice > 0 && <div className="text-gray-500 text-xs mt-1">Billed annually</div>}
+                {plan.monthlyPrice > 0 && <span className="text-[#555555] text-sm">/mo</span>}
+                {annual && plan.monthlyPrice > 0 && <div className="text-[#555555] text-xs mt-1">Billed annually</div>}
               </div>
-              <p className="text-gray-500 text-sm mb-6">{plan.desc}</p>
-              <Link href={plan.href} className={`block text-center py-3 rounded-xl font-semibold text-sm transition-colors mb-2 ${plan.highlight ? 'bg-red-600 hover:bg-red-700 text-white' : 'border border-[#1f1f2e] hover:border-gray-500 text-gray-300'}`}>
+              <p className="text-[#888888] text-sm mb-6">{plan.desc}</p>
+              <Link href={plan.href} className={`block text-center py-3 rounded-xl font-semibold text-sm transition-colors mb-2 ${plan.highlight ? 'bg-red-600 hover:bg-red-700 text-white' : 'border border-white/[0.07] hover:border-white/20 text-[#888888] hover:text-white'}`}>
                 {plan.cta}
               </Link>
-              {plan.note && <p className="text-gray-600 text-xs text-center mb-4">{plan.note}</p>}
+              {plan.note && <p className="text-[#555555] text-xs text-center mb-4">{plan.note}</p>}
               {!plan.note && <div className="mb-4" />}
               <div className="space-y-2.5 flex-1">
                 {plan.features.map(f => (
                   <div key={f} className="flex items-start gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-300">{f}</span>
+                    <Check className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-[#888888]">{f}</span>
                   </div>
                 ))}
                 {plan.notIncluded.map(f => (
                   <div key={f} className="flex items-start gap-2 text-sm">
-                    <X className="w-4 h-4 text-gray-700 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">{f}</span>
+                    <X className="w-4 h-4 text-white/20 flex-shrink-0 mt-0.5" />
+                    <span className="text-[#555555]">{f}</span>
                   </div>
                 ))}
               </div>
@@ -110,13 +111,13 @@ export default function PricingPage() {
         </div>
 
         {/* Lifetime */}
-        <div className="bg-gradient-to-r from-yellow-950/30 to-orange-950/20 border border-yellow-800/40 rounded-2xl p-6 mb-16 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 mb-16 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <div className="text-yellow-400 text-xs font-semibold uppercase tracking-widest mb-1">⚡ Limited Time Offer</div>
+            <div className="text-red-500 text-xs font-semibold uppercase tracking-widest mb-1">⚡ Limited Time Offer</div>
             <div className="text-white font-bold text-xl mb-1">Lifetime Deal — $149</div>
-            <p className="text-gray-400 text-sm">Everything in Business, forever. One payment, no recurring fees. Perfect for freelancers and indie hackers.</p>
+            <p className="text-[#888888] text-sm">Everything in Business, forever. One payment, no recurring fees. Perfect for freelancers and indie hackers.</p>
           </div>
-          <Link href="/auth/signup?plan=lifetime" className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-6 py-3 rounded-xl text-sm transition-colors whitespace-nowrap">
+          <Link href="/auth/signup?plan=lifetime" className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors whitespace-nowrap">
             Get Lifetime Access →
           </Link>
         </div>
@@ -124,26 +125,26 @@ export default function PricingPage() {
         {/* Comparison table */}
         <div className="mb-16">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Full Feature Comparison</h2>
-          <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl overflow-hidden">
+          <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[#1f1f2e]">
-                  <th className="text-left px-6 py-4 text-gray-400 font-medium w-1/3">Feature</th>
+                <tr className="border-b border-white/[0.07]">
+                  <th className="text-left px-6 py-4 text-[#888888] font-medium w-1/3">Feature</th>
                   {['Free', 'Pro', 'Business', 'Enterprise'].map(p => (
-                    <th key={p} className="px-4 py-4 text-center text-gray-300 font-semibold">{p}</th>
+                    <th key={p} className="px-4 py-4 text-center text-white font-semibold">{p}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {comparisonFeatures.map((row, i) => (
-                  <tr key={row.label} className={`border-b border-[#1f1f2e] ${i % 2 === 0 ? 'bg-[#0d0d14]' : ''}`}>
-                    <td className="px-6 py-3.5 text-gray-400">{row.label}</td>
+                  <tr key={row.label} className={`border-b border-white/[0.07] ${i % 2 === 0 ? 'bg-[#0a0a0a]' : ''}`}>
+                    <td className="px-6 py-3.5 text-[#888888]">{row.label}</td>
                     {[row.free, row.pro, row.business, row.enterprise].map((v, j) => (
                       <td key={j} className="px-4 py-3.5 text-center">
                         {typeof v === 'boolean' ? (
-                          v ? <Check className="w-4 h-4 text-green-500 mx-auto" /> : <X className="w-4 h-4 text-gray-700 mx-auto" />
+                          v ? <Check className="w-4 h-4 text-red-500 mx-auto" /> : <X className="w-4 h-4 text-white/20 mx-auto" />
                         ) : (
-                          <span className="text-gray-300">{v}</span>
+                          <span className="text-[#888888]">{v}</span>
                         )}
                       </td>
                     ))}
@@ -159,14 +160,15 @@ export default function PricingPage() {
           <h2 className="text-2xl font-bold text-white mb-8 text-center">Frequently Asked Questions</h2>
           <div className="space-y-4">
             {faqs.map(faq => (
-              <div key={faq.q} className="bg-[#13131a] border border-[#1f1f2e] rounded-xl p-6">
+              <div key={faq.q} className="bg-[#171717] border border-white/[0.07] rounded-xl p-6">
                 <div className="font-semibold text-white mb-2">{faq.q}</div>
-                <p className="text-gray-400 text-sm leading-relaxed">{faq.a}</p>
+                <p className="text-[#888888] text-sm leading-relaxed">{faq.a}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }

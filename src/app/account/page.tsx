@@ -83,7 +83,7 @@ export default function AccountPage() {
             </div>
             <Link
               href="/pricing"
-              className="text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
+              className="inline-flex items-center text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
             >
               Upgrade
             </Link>

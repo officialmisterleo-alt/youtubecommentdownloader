@@ -16,7 +16,7 @@ export default function HeroInput() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="flex w-full max-w-xl mx-auto gap-2 mb-3">
+      <div className="flex flex-col sm:flex-row w-full max-w-xl mx-auto gap-2 mb-3">
         <input
           type="text"
           value={url}
@@ -26,7 +26,7 @@ export default function HeroInput() {
         />
         <button
           type="submit"
-          className="h-12 bg-red-600 hover:bg-red-500 text-white font-semibold px-6 rounded-lg text-sm whitespace-nowrap transition-colors shrink-0"
+          className="h-12 bg-red-600 hover:bg-red-500 text-white font-semibold px-6 rounded-lg text-sm whitespace-nowrap transition-colors w-full sm:w-auto"
         >
           Download Comments
         </button>

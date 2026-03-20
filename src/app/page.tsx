@@ -29,7 +29,7 @@ export default function Home() {
       <Navbar />
 
       {/* ── HERO — centered, no split ── */}
-      <section className="flex flex-col items-center text-center px-6 pt-28 pb-24">
+      <section className="flex flex-col items-center text-center px-6 pt-16 sm:pt-28 pb-24">
         <span className="text-xs font-semibold tracking-widest text-red-500 uppercase mb-6">
           YouTube Comment Downloader
         </span>
