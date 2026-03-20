@@ -41,7 +41,9 @@ export default function AccountPage() {
 
   if (!user) return null
 
-  const initials = user.email?.[0]?.toUpperCase() ?? 'U'
+  const displayName = user.user_metadata?.full_name || user.user_metadata?.name || null
+  const initials = displayName ? displayName[0].toUpperCase() : (user.email?.[0]?.toUpperCase() ?? 'U')
+  const isGoogleUser = user.app_metadata?.provider === 'google'
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
@@ -56,8 +58,8 @@ export default function AccountPage() {
               {initials}
             </div>
             <div>
-              <div className="text-white font-medium">{user.email}</div>
-              <div className="text-[#555555] text-xs mt-0.5">Signed in with Google</div>
+              <div className="text-white font-medium">{displayName || user.email}</div>
+              <div className="text-[#555555] text-xs mt-0.5">{isGoogleUser ? 'Signed in with Google' : 'Signed in with email'}</div>
             </div>
           </div>
 

@@ -45,7 +45,9 @@ export default function Navbar() {
     window.location.href = '/'
   }
 
-  const initials = user?.email?.[0]?.toUpperCase() ?? 'U'
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || null
+  const firstName = displayName ? displayName.split(' ')[0] : null
+  const initials = displayName ? displayName[0].toUpperCase() : (user?.email?.[0]?.toUpperCase() ?? 'U')
 
   return (
     <>
@@ -86,7 +88,7 @@ export default function Navbar() {
                     <div className="w-7 h-7 bg-red-900 rounded-full flex items-center justify-center text-red-200 text-xs font-bold">
                       {initials}
                     </div>
-                    <span className="text-sm text-[#888888] max-w-[140px] truncate">{user.email}</span>
+                    <span className="text-sm text-[#888888] max-w-[140px] truncate">{firstName || displayName || user.email}</span>
                   </button>
                   {dropdownOpen && (
                     <div className="absolute right-0 top-full mt-2 w-48 bg-[#111111] border border-white/[0.1] rounded-xl shadow-xl overflow-hidden z-50">

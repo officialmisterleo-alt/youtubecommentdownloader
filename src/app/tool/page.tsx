@@ -58,6 +58,9 @@ function ToolPageContent() {
     setFormat(f)
   }
 
+  const escapeHtml = (str: string) =>
+    str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
   const downloadComments = (comments: Comment[], fmt: Format) => {
     if (GATED_FORMATS.includes(fmt) && !isSignedIn) {
       setShowAuthGate(true)
@@ -72,7 +75,50 @@ function ToolPageContent() {
     } else if (fmt === 'JSON') {
       content = JSON.stringify(comments, null, 2); mimeType = 'application/json'; ext = 'json'
     } else if (fmt === 'HTML') {
-      content = `<html><body><table border="1"><tr><th>Author</th><th>Comment</th><th>Likes</th><th>Date</th><th>Replies</th></tr>${comments.map(c => `<tr><td>${c.author}</td><td>${c.text}</td><td>${c.likes}</td><td>${c.date}</td><td>${c.replies}</td></tr>`).join('')}</table></body></html>`
+      const commentRows = comments.map(c => {
+        const initial = c.author.replace('@', '')[0]?.toUpperCase() || '?'
+        return `<div class="comment">
+  <div class="avatar">${initial}</div>
+  <div class="comment-body">
+    <div class="comment-header">
+      <span class="author">${escapeHtml(c.author)}</span>
+      <span class="timestamp">${escapeHtml(c.date)}</span>
+    </div>
+    <div class="comment-text">${escapeHtml(c.text)}</div>
+    <div class="comment-actions">
+      <span class="likes">👍 ${c.likes.toLocaleString()}</span>${c.replies > 0 ? `\n      <span class="replies">${c.replies} ${c.replies === 1 ? 'reply' : 'replies'}</span>` : ''}
+    </div>
+  </div>
+</div>`
+      }).join('\n')
+      content = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Comments</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f0f0f; color: #fff; font-family: Roboto, Arial, sans-serif; padding: 24px 16px; max-width: 860px; margin: 0 auto; }
+  .header { font-size: 20px; font-weight: 400; color: #fff; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #272727; }
+  .comment { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid #272727; }
+  .comment:last-child { border-bottom: none; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: #3f3f3f; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500; color: #fff; flex-shrink: 0; }
+  .comment-body { flex: 1; min-width: 0; }
+  .comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .author { font-size: 13px; font-weight: 500; color: #fff; }
+  .timestamp { font-size: 12px; color: #aaa; }
+  .comment-text { font-size: 14px; color: #f1f1f1; line-height: 1.6; margin-bottom: 8px; word-break: break-word; white-space: pre-wrap; }
+  .comment-actions { display: flex; align-items: center; gap: 16px; }
+  .likes { font-size: 13px; color: #aaa; }
+  .replies { font-size: 13px; color: #3ea6ff; }
+</style>
+</head>
+<body>
+<div class="header">${comments.length.toLocaleString()} Comments</div>
+${commentRows}
+</body>
+</html>`
       mimeType = 'text/html'; ext = 'html'
     } else {
       content = comments.map(c => `${c.author}: ${c.text} (${c.likes} likes, ${c.date})`).join('\n\n')
@@ -89,7 +135,7 @@ function ToolPageContent() {
     if (!url) return
     setLoading(true); setDone(false); setProgress(0); setComments([])
 
-    const msgs = ['Fetching comments...', 'Processing 1,247 comments...', 'Preparing export...']
+    const msgs = ['Fetching comments...', 'Processing comments...', 'Preparing export...']
     for (let i = 0; i < msgs.length; i++) {
       setStatusMsg(msgs[i]); setProgress((i + 1) * 33)
       await new Promise(r => setTimeout(r, 800))
@@ -102,7 +148,11 @@ function ToolPageContent() {
         body: JSON.stringify({ url, maxComments: parseInt(maxComments) || 100, includeReplies, sortBy }),
       })
       const data = await res.json()
-      if (data.comments) { setComments(data.comments); setDone(true) }
+      if (data.comments) {
+        setComments(data.comments)
+        setStatusMsg(`Processed ${data.comments.length.toLocaleString()} comments`)
+        setDone(true)
+      }
     } catch {
       setComments([
         { id: '1', author: '@techreviewer99', text: 'This is exactly what I needed! The tutorial was super clear.', likes: 342, date: '2 days ago', replies: 12 },

@@ -7,6 +7,8 @@ import { Plus, Key, Users } from 'lucide-react'
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name
+  const firstName = displayName ? displayName.split(' ')[0] : null
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
@@ -16,7 +18,7 @@ export default async function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-white">
-              Welcome back{user?.email ? `, ${user.email.split('@')[0]}` : ''}
+              Welcome back{firstName ? `, ${firstName}` : (user?.email ? `, ${user.email.split('@')[0]}` : '')}
             </h1>
             <p className="text-gray-500 text-sm mt-1">Here&apos;s your export activity</p>
           </div>
@@ -89,10 +91,10 @@ export default async function DashboardPage() {
             </div>
             <div className="flex items-center gap-3 bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl p-3 mb-3">
               <div className="w-8 h-8 bg-red-900 rounded-full flex items-center justify-center text-red-200 text-xs font-bold">
-                {user?.email?.[0]?.toUpperCase() || 'U'}
+                {displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
               </div>
               <div>
-                <div className="text-white text-sm">{user?.email || 'Your Account'}</div>
+                <div className="text-white text-sm">{displayName || user?.email || 'Your Account'}</div>
                 <div className="text-gray-500 text-xs">Owner</div>
               </div>
             </div>
