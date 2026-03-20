@@ -1,7 +1,9 @@
 'use client'
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
-import { Youtube, Wrench, CreditCard, LayoutDashboard } from 'lucide-react'
+import { Youtube, Wrench, CreditCard, LayoutDashboard, LogOut, User } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const navLinks = [
   { href: '/tool',      label: 'Tool',      icon: Wrench },
@@ -11,18 +13,39 @@ const navLinks = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   const navRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!open) return
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (!open && !dropdownOpen) return
     const handler = (e: MouseEvent) => {
       if (navRef.current && !navRef.current.contains(e.target as Node)) {
         setOpen(false)
+        setDropdownOpen(false)
       }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [open])
+  }, [open, dropdownOpen])
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    window.location.href = '/'
+  }
+
+  const initials = user?.email?.[0]?.toUpperCase() ?? 'U'
 
   return (
     <>
@@ -54,18 +77,63 @@ export default function Navbar() {
 
             {/* Right auth — desktop */}
             <div className="hidden md:flex items-center gap-1">
-              <Link
-                href="/auth/login"
-                className="text-sm text-[#888888] hover:text-white px-4 py-2 rounded-lg hover:bg-white/[0.05] transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/auth/signup"
-                className="bg-red-600 hover:bg-red-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                Get Started
-              </Link>
+              {user ? (
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/[0.05] transition-colors"
+                  >
+                    <div className="w-7 h-7 bg-red-900 rounded-full flex items-center justify-center text-red-200 text-xs font-bold">
+                      {initials}
+                    </div>
+                    <span className="text-sm text-[#888888] max-w-[140px] truncate">{user.email}</span>
+                  </button>
+                  {dropdownOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-[#111111] border border-white/[0.1] rounded-xl shadow-xl overflow-hidden z-50">
+                      <Link
+                        href="/account"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#888888] hover:text-white hover:bg-white/[0.05] transition-colors"
+                      >
+                        <User size={14} />
+                        Account
+                      </Link>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#888888] hover:text-white hover:bg-white/[0.05] transition-colors"
+                      >
+                        <LayoutDashboard size={14} />
+                        Dashboard
+                      </Link>
+                      <div className="border-t border-white/[0.07]">
+                        <button
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-white/[0.05] transition-colors"
+                        >
+                          <LogOut size={14} />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    className="text-sm text-[#888888] hover:text-white px-4 py-2 rounded-lg hover:bg-white/[0.05] transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    className="bg-red-600 hover:bg-red-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Animated hamburger — mobile */}
@@ -96,23 +164,49 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
-            <Link
-              href="/auth/login"
-              onClick={() => setOpen(false)}
-              className="flex items-center px-6 border-b border-white/[0.05] text-[#888888] hover:text-white hover:bg-white/[0.04] transition-colors text-sm font-medium"
-              style={{ minHeight: 52 }}
-            >
-              Sign In
-            </Link>
-            <div className="px-6 py-4">
-              <Link
-                href="/auth/signup"
-                onClick={() => setOpen(false)}
-                className="block bg-red-600 hover:bg-red-500 text-white font-medium px-4 py-3 rounded-lg text-center transition-colors text-sm"
-              >
-                Get Started
-              </Link>
-            </div>
+            {user ? (
+              <>
+                <Link
+                  href="/account"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 px-6 border-b border-white/[0.05] text-[#888888] hover:text-white hover:bg-white/[0.04] transition-colors text-sm font-medium"
+                  style={{ minHeight: 52 }}
+                >
+                  <div className="w-6 h-6 bg-red-900 rounded-full flex items-center justify-center text-red-200 text-xs font-bold">
+                    {initials}
+                  </div>
+                  Account
+                </Link>
+                <div className="px-6 py-4">
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full bg-[#1a0a0a] hover:bg-red-950 border border-red-900/50 text-red-400 font-medium px-4 py-3 rounded-lg text-center transition-colors text-sm"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center px-6 border-b border-white/[0.05] text-[#888888] hover:text-white hover:bg-white/[0.04] transition-colors text-sm font-medium"
+                  style={{ minHeight: 52 }}
+                >
+                  Sign In
+                </Link>
+                <div className="px-6 py-4">
+                  <Link
+                    href="/auth/signup"
+                    onClick={() => setOpen(false)}
+                    className="block bg-red-600 hover:bg-red-500 text-white font-medium px-4 py-3 rounded-lg text-center transition-colors text-sm"
+                  >
+                    Get Started
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </nav>

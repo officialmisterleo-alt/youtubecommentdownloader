@@ -1,100 +1,71 @@
 import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Plus, Download, Key, Users, BarChart2, FileText, Zap } from 'lucide-react'
-
-const mockExports = [
-  { id: '1', url: 'youtube.com/watch?v=dQw4w9WgXcQ', format: 'CSV', comments: 1247, status: 'completed', date: '2025-01-15' },
-  { id: '2', url: 'youtube.com/watch?v=9bZkp7q19f0', format: 'JSON', comments: 3892, status: 'completed', date: '2025-01-14' },
-  { id: '3', url: 'youtube.com/watch?v=fRh_vgS2dFE', format: 'Excel', comments: 567, status: 'completed', date: '2025-01-13' },
-  { id: '4', url: 'youtube.com/watch?v=CevxZvSJLk8', format: 'CSV', comments: 0, status: 'failed', date: '2025-01-12' },
-  { id: '5', url: 'youtube.com/watch?v=M7lc1UVf-VE', format: 'TXT', comments: 2103, status: 'completed', date: '2025-01-11' },
-]
-
-const stats = [
-  { label: 'Exports This Month', value: '14', icon: FileText, color: 'text-blue-400' },
-  { label: 'Comments Downloaded', value: '47,892', icon: BarChart2, color: 'text-green-400' },
-  { label: 'API Calls', value: '1,203', icon: Zap, color: 'text-yellow-400' },
-]
+import { Plus, Key, Users } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
       <Navbar />
-      <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Welcome back{user?.email ? `, ${user.email.split('@')[0]}` : ''} 👋</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">
+              Welcome back{user?.email ? `, ${user.email.split('@')[0]}` : ''}
+            </h1>
             <p className="text-gray-500 text-sm mt-1">Here&apos;s your export activity</p>
           </div>
           <div className="flex items-center gap-3">
             <span className="bg-[#13131a] border border-[#1f1f2e] text-gray-400 text-xs px-3 py-1 rounded-full">Free Plan</span>
-            <Link href="/tool" className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+            <Link
+              href="/tool"
+              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            >
               <Plus className="w-4 h-4" /> New Export
             </Link>
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats — empty state */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          {stats.map(s => (
-            <div key={s.label} className="bg-[#13131a] border border-[#1f1f2e] rounded-xl p-5 flex items-center gap-4">
-              <div className="bg-[#1f1f2e] w-10 h-10 rounded-lg flex items-center justify-center">
-                <s.icon className={`w-5 h-5 ${s.color}`} />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-white">{s.value}</div>
-                <div className="text-gray-500 text-xs">{s.label}</div>
-              </div>
+          {[
+            { label: 'Exports This Month', value: '0' },
+            { label: 'Comments Downloaded', value: '0' },
+            { label: 'API Calls', value: '0' },
+          ].map(s => (
+            <div key={s.label} className="bg-[#13131a] border border-[#1f1f2e] rounded-xl p-5">
+              <div className="text-2xl font-bold text-white mb-1">{s.value}</div>
+              <div className="text-gray-500 text-xs">{s.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Recent Exports */}
+        {/* Recent Exports — empty state */}
         <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl overflow-hidden mb-8">
           <div className="p-5 border-b border-[#1f1f2e]">
             <h2 className="font-semibold text-white">Recent Exports</h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#1f1f2e] bg-[#0d0d14]">
-                  {['URL', 'Format', 'Comments', 'Status', 'Date', 'Download'].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-gray-500 font-medium">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {mockExports.map(e => (
-                  <tr key={e.id} className="border-b border-[#1f1f2e] hover:bg-[#0d0d14] transition-colors">
-                    <td className="px-5 py-3.5 text-blue-400 text-xs">{e.url}</td>
-                    <td className="px-5 py-3.5 text-gray-300">{e.format}</td>
-                    <td className="px-5 py-3.5 text-gray-300">{e.comments.toLocaleString()}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${e.status === 'completed' ? 'bg-green-950 text-green-400' : 'bg-red-950 text-red-400'}`}>
-                        {e.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-500 text-xs">{e.date}</td>
-                    <td className="px-5 py-3.5">
-                      {e.status === 'completed' && (
-                        <button className="text-gray-500 hover:text-white transition-colors">
-                          <Download className="w-4 h-4" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <div className="w-12 h-12 bg-[#1f1f2e] rounded-xl flex items-center justify-center mb-4">
+              <Plus className="w-6 h-6 text-gray-600" />
+            </div>
+            <p className="text-gray-400 text-sm font-medium mb-1">No downloads yet</p>
+            <p className="text-gray-600 text-xs mb-5">Head to the Tool to export your first comment thread.</p>
+            <Link
+              href="/tool"
+              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
+            >
+              Go to Tool
+            </Link>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* API Key */}
           <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
@@ -104,7 +75,10 @@ export default async function DashboardPage() {
             <div className="bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl p-3 flex items-center gap-3 mb-3">
               <code className="text-gray-500 text-xs flex-1">••••••••••••••••••••••••••••••</code>
             </div>
-            <p className="text-gray-600 text-xs">Available on Business & Enterprise plans. <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade</Link></p>
+            <p className="text-gray-600 text-xs">
+              Available on Business &amp; Enterprise plans.{' '}
+              <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade</Link>
+            </p>
           </div>
 
           {/* Team */}
@@ -122,10 +96,14 @@ export default async function DashboardPage() {
                 <div className="text-gray-500 text-xs">Owner</div>
               </div>
             </div>
-            <p className="text-gray-600 text-xs">Team seats available on Business & Enterprise. <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade</Link></p>
+            <p className="text-gray-600 text-xs">
+              Team seats available on Business &amp; Enterprise.{' '}
+              <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade</Link>
+            </p>
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }
