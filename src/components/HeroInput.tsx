@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Download } from 'lucide-react'
 
 export default function HeroInput() {
   const [url, setUrl] = useState('')
@@ -16,24 +15,23 @@ export default function HeroInput() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full mt-8">
-      <div className="flex flex-col sm:flex-row gap-3 w-full max-w-2xl">
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="flex w-full max-w-xl gap-2 mb-3">
         <input
-          type="url"
+          type="text"
           value={url}
           onChange={e => setUrl(e.target.value)}
-          placeholder="Paste a YouTube video URL..."
-          className="flex-1 bg-[#13131a] border border-[#1f1f2e] focus:border-red-600 rounded-xl px-5 py-4 text-white placeholder-gray-500 focus:outline-none text-sm sm:text-base transition-colors min-w-0"
+          placeholder="Paste a YouTube URL..."
+          className="flex-1 min-w-0 bg-[#171717] border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder:text-[#555555] focus:outline-none focus:border-white/20 transition-colors"
         />
         <button
           type="submit"
-          className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold px-6 py-4 rounded-xl transition-colors text-sm sm:text-base whitespace-nowrap flex items-center justify-center gap-2 shrink-0"
+          className="bg-red-600 hover:bg-red-500 text-white font-semibold px-6 py-3 rounded-lg text-sm whitespace-nowrap transition-colors shrink-0"
         >
-          <Download className="w-4 h-4" />
           Download Comments
         </button>
       </div>
-      <p className="text-gray-600 text-xs mt-2.5">
+      <p className="text-xs text-[#555555]">
         Works with any public YouTube video, playlist, or channel URL
       </p>
     </form>

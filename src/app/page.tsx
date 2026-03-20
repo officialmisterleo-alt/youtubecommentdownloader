@@ -1,180 +1,95 @@
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import HeroInput from '@/components/HeroInput'
-import {
-  Download, FileSpreadsheet, Zap, Users, Key, Shield, Youtube,
-} from 'lucide-react'
+import { Download, FileSpreadsheet, Zap, Users, Key, Shield } from 'lucide-react'
+
+// Bevel card class — reused across all cards
+const bevel = [
+  'bg-gradient-to-br from-[#1c1c1c] to-[#111111]',
+  'border border-white/[0.07]',
+  'rounded-xl',
+  'shadow-[inset_1px_1px_0_rgba(255,255,255,0.04),0_1px_3px_rgba(0,0,0,0.4)]',
+].join(' ')
 
 const features = [
-  {
-    icon: Download,
-    color: 'bg-blue-500/10 text-blue-400',
-    title: 'Bulk Export',
-    desc: 'Download thousands of comments from any video, playlist, or channel in one click.',
-  },
-  {
-    icon: FileSpreadsheet,
-    color: 'bg-green-500/10 text-green-400',
-    title: '6 Export Formats',
-    desc: 'CSV, JSON, Excel, TXT and more. Ready to drop into any analytics workflow.',
-  },
-  {
-    icon: Zap,
-    color: 'bg-yellow-500/10 text-yellow-400',
-    title: 'Instant Results',
-    desc: '5,000 comments per minute. No queue, no waiting. Results appear as they load.',
-  },
-  {
-    icon: Users,
-    color: 'bg-purple-500/10 text-purple-400',
-    title: 'Team Access',
-    desc: 'Share exports, manage seats, and collaborate across your agency or research team.',
-  },
-  {
-    icon: Key,
-    color: 'bg-orange-500/10 text-orange-400',
-    title: 'REST API',
-    desc: 'Full API access for Business and Enterprise. Automate exports and integrate with your stack.',
-  },
-  {
-    icon: Shield,
-    color: 'bg-red-500/10 text-red-400',
-    title: 'Enterprise Ready',
-    desc: 'SOC2-grade infrastructure, SLA guarantees, and dedicated support for large teams.',
-  },
+  { icon: Download,       title: 'Bulk Export',       desc: 'Download thousands of comments from any video, playlist, or channel in one click.' },
+  { icon: FileSpreadsheet, title: '6 Export Formats', desc: 'CSV, JSON, Excel, TXT and more. Ready to drop into any analytics workflow.' },
+  { icon: Zap,            title: 'Instant Results',   desc: '5,000 comments per minute. No queue, no waiting. Results appear as they load.' },
+  { icon: Users,          title: 'Team Access',       desc: 'Share exports, manage seats, and collaborate across your agency or research team.' },
+  { icon: Key,            title: 'REST API',          desc: 'Full API access for Business and Enterprise. Automate exports and integrate with your stack.' },
+  { icon: Shield,         title: 'Enterprise Ready',  desc: 'SOC2-grade infrastructure, SLA guarantees, and dedicated support for large teams.' },
 ]
 
-const surfaces = [
-  { emoji: '🎬', label: 'Video Comments' },
-  { emoji: '📋', label: 'Playlist Comments' },
-  { emoji: '📺', label: 'Channel Comments' },
-  { emoji: '⚡', label: 'YouTube Shorts' },
-]
-
-const mockComments = [
-  { author: '@techreviewer99',    text: 'This is exactly what I needed! Super clear tutorial.',               likes: 342 },
-  { author: '@marketingpro_sarah', text: 'Great content as always. Follow-up video please?',                 likes: 187 },
-  { author: '@dataanalyst_mike',   text: 'Been using this method for 6 months, works great for our agency.', likes: 156 },
-  { author: '@researcher_2024',    text: 'Downloaded 50k comments in under 10 minutes. Incredible.',         likes: 98  },
-  { author: '@agencyfounder',      text: 'We replaced 3 tools with this. The API is seamless.',              likes: 54  },
-]
+const surfaces = ['Video Comments', 'Playlist Comments', 'Channel Comments', 'YouTube Shorts']
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-950 overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0a0a] overflow-x-hidden text-white">
       <Navbar />
 
-      {/* ── HERO ── */}
-      <section className="px-4 sm:px-6 pt-14 pb-20 max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      {/* ── HERO — centered, no split ── */}
+      <section className="flex flex-col items-center text-center px-6 pt-28 pb-24">
+        <span className="text-xs font-semibold tracking-widest text-red-500 uppercase mb-6">
+          YouTube Comment Downloader
+        </span>
 
-          {/* Left */}
-          <div>
-            <p className="text-red-500 text-xs font-semibold uppercase tracking-widest mb-4">
-              YouTube Comment Downloader
-            </p>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-white leading-[1.1] tracking-tight mb-5">
-              Extract &amp; export<br />
-              <span className="relative inline-block">
-                <span className="relative z-10">any comment thread</span>
-                <span className="absolute bottom-1 left-0 w-full h-3 bg-red-600/25 -z-0 rounded" />
-              </span>
-            </h1>
-            <p className="text-gray-400 text-base sm:text-lg mb-6 max-w-md leading-relaxed">
-              Bulk downloads, 6 export formats, REST API — built for agencies,
-              researchers, and teams who need comment data at scale.
-            </p>
+        <h1 className="text-5xl md:text-7xl font-bold text-white leading-[1.05] tracking-tight max-w-4xl mb-6">
+          Extract any YouTube<br />comment thread
+        </h1>
 
-            <HeroInput />
+        <p className="text-[#888888] text-lg md:text-xl max-w-xl mb-10 leading-relaxed">
+          Bulk export comments from any video, playlist, or channel.
+          CSV, JSON, Excel — built for agencies and researchers.
+        </p>
 
-            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mt-6">
-              <span>45k+ users</span>
-              <span className="text-gray-800">·</span>
-              <span>6 export formats</span>
-              <span className="text-gray-800">·</span>
-              <span>5k comments/min</span>
-            </div>
-            <div className="mt-5">
-              <Link
-                href="/pricing"
-                className="inline-block border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-sm px-5 py-2.5 rounded-md transition-colors"
-              >
-                View pricing
-              </Link>
-            </div>
-          </div>
+        <HeroInput />
 
-          {/* Right — clean comment preview card, no mac chrome */}
-          <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-            <div className="bg-gray-800 px-4 py-3 flex items-center gap-2 border-b border-white/10">
-              <Youtube className="w-3.5 h-3.5 text-red-500 shrink-0" />
-              <span className="text-gray-500 text-xs truncate">youtube.com/watch?v=dQw4w9WgXcQ</span>
-            </div>
-            <div className="p-4 space-y-3">
-              {mockComments.map((c, i) => (
-                <div key={i} className="flex gap-3">
-                  <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs text-gray-500 shrink-0 font-bold">
-                    {c.author[1].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 mb-0.5">
-                      <span className="text-blue-400 text-xs font-medium">{c.author}</span>
-                      <span className="text-gray-600 text-xs">👍 {c.likes}</span>
-                    </div>
-                    <p className="text-gray-400 text-xs leading-relaxed truncate">{c.text}</p>
-                  </div>
-                </div>
-              ))}
-              <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                <span className="text-gray-600 text-xs">1,247 comments fetched</span>
-                <span className="text-green-500 text-xs font-medium">✓ Ready to export</span>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center gap-6 mt-10 text-sm text-[#555555]">
+          <span>45k+ users</span>
+          <span className="text-[#333]">·</span>
+          <span>6 export formats</span>
+          <span className="text-[#333]">·</span>
+          <span>5k comments/min</span>
         </div>
       </section>
 
       {/* ── FEATURES GRID ── */}
-      <section className="py-20 px-4 sm:px-6 border-t border-white/5">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+      <section className="py-16 px-6 border-t border-white/[0.07]">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-10">
+            <h2 className="text-2xl font-bold text-white mb-2">
               Everything your team needs
             </h2>
-            <p className="text-gray-500 text-sm sm:text-base max-w-xl">
+            <p className="text-sm text-[#555555] max-w-lg">
               From one-off exports to production API pipelines — built for every use case.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {features.map(({ icon: Icon, color, title, desc }) => (
-              <div
-                key={title}
-                className="bg-gray-900 border border-white/8 rounded-xl p-5 hover:border-white/15 transition-colors"
-              >
-                <div className={`inline-flex items-center justify-center w-9 h-9 rounded-lg mb-4 ${color}`}>
-                  <Icon size={18} />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {features.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className={`${bevel} p-5`}>
+                <div className="w-9 h-9 bg-white/[0.05] rounded-lg flex items-center justify-center mb-4">
+                  <Icon size={18} className="text-white/60" />
                 </div>
-                <h3 className="text-white font-semibold text-sm mb-1.5">{title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+                <h3 className="text-sm font-semibold text-white mb-1">{title}</h3>
+                <p className="text-xs text-[#555555] leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── SUPPORTED SURFACES ── */}
-      <section className="py-16 px-4 sm:px-6 border-t border-white/5">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-6">
+      {/* ── SUPPORTED SOURCES ── */}
+      <section className="py-16 px-6 border-t border-white/[0.07]">
+        <div className="max-w-6xl mx-auto text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#555555] mb-6">
             Supported Sources
           </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {surfaces.map(({ emoji, label }) => (
+          <div className="flex flex-wrap justify-center gap-2">
+            {surfaces.map(label => (
               <div
                 key={label}
-                className="bg-white/5 border border-white/10 rounded-full px-5 py-2.5 text-sm text-gray-300 flex items-center gap-2"
+                className="bg-[#171717] border border-white/[0.07] rounded-full px-4 py-2 text-xs text-[#888888] font-medium"
               >
-                <span>{emoji}</span>
                 {label}
               </div>
             ))}
@@ -183,35 +98,35 @@ export default function Home() {
       </section>
 
       {/* ── QUOTE ── */}
-      <section className="border-y border-white/5 py-14 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto">
-          <blockquote className="text-lg sm:text-xl lg:text-2xl font-medium text-white/80 italic leading-relaxed mb-4">
+      <section className="py-16 px-6 border-t border-white/[0.07]">
+        <div className="max-w-3xl mx-auto">
+          <blockquote className="text-xl md:text-2xl font-medium text-white/70 italic leading-relaxed mb-4">
             &ldquo;We manage 30+ brand accounts. What used to take a full day now takes
             20 minutes. The bulk channel export changed how we do competitive analysis.&rdquo;
           </blockquote>
-          <cite className="text-gray-500 text-sm not-italic">
+          <cite className="text-[#555555] text-sm not-italic">
             — Sarah K., Social Media Manager at MediaWave Agency
           </cite>
         </div>
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section className="py-20 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-12">How it works</h2>
-          <div className="space-y-10">
+      <section className="py-16 px-6 border-t border-white/[0.07]">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-white mb-10">How it works</h2>
+          <div className="space-y-8">
             {[
               { n: '1', title: 'Paste any YouTube URL',  desc: 'Drop in a video, channel, or playlist URL. Works with any public YouTube content.' },
               { n: '2', title: 'Set your options',       desc: 'Choose how many comments, whether to include replies, and your preferred export format.' },
               { n: '3', title: 'Download your data',     desc: 'Export to CSV, Excel, JSON, HTML, or plain text — ready for any analytics tool or pipeline.' },
             ].map(step => (
-              <div key={step.n} className="flex gap-5 sm:gap-6 items-start">
-                <span className="text-4xl sm:text-5xl font-extrabold text-red-600 leading-none w-10 sm:w-12 shrink-0">
+              <div key={step.n} className="flex gap-6 items-start">
+                <span className="text-4xl font-bold text-red-600 leading-none w-10 shrink-0 tabular-nums">
                   {step.n}
                 </span>
                 <div className="pt-1">
-                  <h3 className="text-white font-bold text-lg mb-1">{step.title}</h3>
-                  <p className="text-gray-500 text-sm leading-relaxed max-w-lg">{step.desc}</p>
+                  <h3 className="text-white font-semibold text-base mb-1">{step.title}</h3>
+                  <p className="text-[#555555] text-sm leading-relaxed">{step.desc}</p>
                 </div>
               </div>
             ))}
@@ -220,9 +135,9 @@ export default function Home() {
       </section>
 
       {/* ── WHO USES IT ── */}
-      <section className="py-20 px-4 sm:px-6 border-t border-white/5">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-12">Who uses it</h2>
+      <section className="py-16 px-6 border-t border-white/[0.07]">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-white mb-10">Who uses it</h2>
           <div>
             {[
               {
@@ -240,55 +155,57 @@ export default function Home() {
             ].map((u, i) => (
               <div
                 key={u.tag}
-                className={`flex flex-col sm:flex-row gap-4 sm:gap-10 py-8 ${i < 2 ? 'border-b border-white/5' : ''}`}
+                className={`flex flex-col sm:flex-row gap-4 sm:gap-10 py-7 ${i < 2 ? 'border-b border-white/[0.07]' : ''}`}
               >
-                <div className="sm:w-36 shrink-0">
+                <div className="sm:w-32 shrink-0">
                   <span className="text-red-500 font-semibold text-sm">{u.tag}</span>
                 </div>
-                <p className="text-gray-400 text-sm leading-relaxed max-w-xl">{u.desc}</p>
+                <p className="text-[#888888] text-sm leading-relaxed">{u.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── FINAL CTA ── */}
-      <section className="py-24 px-4 sm:px-6 border-t border-white/5">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4 leading-tight">
-            Start extracting comments<br />in 30 seconds
-          </h2>
-          <p className="text-gray-500 text-base sm:text-lg mb-8">
-            No credit card required to try. Upgrade when you&apos;re ready.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/tool"
-              className="w-full sm:w-auto bg-red-600 hover:bg-red-500 text-white font-semibold px-8 py-3 rounded-md transition-colors text-sm text-center"
-            >
-              Try Free
-            </Link>
-            <Link
-              href="/pricing"
-              className="w-full sm:w-auto border border-white/20 hover:border-white/40 text-gray-300 hover:text-white font-medium px-8 py-3 rounded-md transition-colors text-sm text-center"
-            >
-              View Pricing
-            </Link>
+      {/* ── FINAL CTA — bevel card ── */}
+      <section className="py-16 px-6 border-t border-white/[0.07]">
+        <div className="max-w-2xl mx-auto">
+          <div className={`${bevel} rounded-2xl p-10 text-center`}>
+            <h2 className="text-2xl font-bold text-white mb-3">
+              Start extracting comments in 30 seconds
+            </h2>
+            <p className="text-sm text-[#555555] mb-8">
+              No credit card required to try. Upgrade when you&apos;re ready.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/tool"
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-500 text-white font-semibold px-8 py-2.5 rounded-lg text-sm text-center transition-colors"
+              >
+                Try Free
+              </Link>
+              <Link
+                href="/pricing"
+                className="w-full sm:w-auto border border-white/[0.12] hover:border-white/25 text-[#888888] hover:text-white font-medium px-8 py-2.5 rounded-lg text-sm text-center transition-colors"
+              >
+                View Pricing
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/5 py-10 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex flex-col gap-8">
+      <footer className="border-t border-white/[0.07] py-10 px-6">
+        <div className="max-w-6xl mx-auto flex flex-col gap-8">
           <div className="flex flex-col sm:flex-row justify-between items-start gap-8">
             <div>
               <div className="text-white font-bold text-sm mb-1">YTCommentDownloader</div>
-              <div className="text-gray-600 text-xs max-w-xs">
+              <div className="text-[#555555] text-xs max-w-xs">
                 Bulk YouTube comment extraction for agencies, brands, and researchers.
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-x-8 gap-y-3 text-sm text-gray-600">
+            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-x-10 gap-y-3 text-sm text-[#555555]">
               <div className="flex flex-col gap-3">
                 <Link href="/tool"      className="hover:text-white transition-colors">Try the Tool</Link>
                 <Link href="/pricing"   className="hover:text-white transition-colors">Pricing</Link>
@@ -306,7 +223,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <div className="border-t border-white/5 pt-6 text-gray-700 text-xs">
+          <div className="border-t border-white/[0.07] pt-6 text-[#333333] text-xs">
             © 2025–2026 YouTube Comment Downloader. All rights reserved.
           </div>
         </div>
