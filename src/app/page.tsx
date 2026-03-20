@@ -1,41 +1,43 @@
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import HeroInput from '@/components/HeroInput'
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="min-h-screen bg-[#0a0a0f] overflow-x-hidden">
       <Navbar />
 
       {/* HERO */}
-      <section className="px-4 pt-16 pb-20 max-w-7xl mx-auto">
+      <section className="px-4 pt-14 pb-20 max-w-7xl mx-auto">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left: text */}
+          {/* Left: text + URL input */}
           <div>
             <p className="text-red-500 text-sm font-semibold uppercase tracking-widest mb-4">YouTube Comment Downloader</p>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-[1.08] tracking-tight mb-6">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-white leading-[1.1] tracking-tight mb-5">
               Extract &amp; export<br />
               <span className="relative inline-block">
                 <span className="relative z-10">any comment thread</span>
                 <span className="absolute bottom-1 left-0 w-full h-3 bg-red-600/30 -z-0 rounded" />
               </span>
             </h1>
-            <p className="text-gray-400 text-lg mb-8 max-w-md">
+            <p className="text-gray-400 text-base sm:text-lg mb-6 max-w-md leading-relaxed">
               Bulk downloads, 6 export formats, REST API — built for agencies, researchers, and teams who need comment data at scale.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 mb-8">
-              <Link href="/tool" className="bg-red-600 hover:bg-red-700 text-white font-bold px-7 py-3.5 rounded-xl transition-colors text-base text-center">
-                Start Extracting
-              </Link>
-              <Link href="/pricing" className="border border-[#1f1f2e] text-gray-300 hover:border-gray-500 font-medium px-7 py-3.5 rounded-xl transition-colors text-base text-center">
-                View pricing
-              </Link>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+
+            {/* URL input portal */}
+            <HeroInput />
+
+            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mt-6">
               <span>45k+ users</span>
               <span className="text-gray-800">·</span>
               <span>6 export formats</span>
               <span className="text-gray-800">·</span>
               <span>5k comments/min</span>
+            </div>
+            <div className="flex flex-wrap gap-3 mt-6">
+              <Link href="/pricing" className="border border-[#1f1f2e] text-gray-300 hover:border-gray-500 font-medium px-5 py-2.5 rounded-xl transition-colors text-sm text-center">
+                View pricing
+              </Link>
             </div>
           </div>
 
@@ -77,10 +79,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SOCIAL PROOF — single full-width quote */}
+      {/* SOCIAL PROOF */}
       <section className="border-y border-[#1f1f2e] py-12 px-4">
         <div className="max-w-4xl mx-auto">
-          <blockquote className="text-xl sm:text-2xl font-medium text-white/80 italic leading-relaxed mb-4">
+          <blockquote className="text-lg sm:text-xl lg:text-2xl font-medium text-white/80 italic leading-relaxed mb-4">
             &ldquo;We manage 30+ brand accounts. What used to take a full day now takes 20 minutes. The bulk channel export changed how we do competitive analysis.&rdquo;
           </blockquote>
           <cite className="text-gray-500 text-sm not-italic">— Sarah K., Social Media Manager at MediaWave Agency</cite>
@@ -88,7 +90,7 @@ export default function Home() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="py-20 px-4">
+      <section className="py-16 sm:py-20 px-4">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-12">How it works</h2>
           <div className="space-y-10">
@@ -97,8 +99,8 @@ export default function Home() {
               { n: '2', title: 'Set your options', desc: 'Choose how many comments, whether to include replies, and your preferred export format.' },
               { n: '3', title: 'Download your data', desc: 'Export to CSV, Excel, JSON, HTML, or plain text — ready for any analytics tool or pipeline.' },
             ].map(step => (
-              <div key={step.n} className="flex gap-6 items-start">
-                <span className="text-5xl font-extrabold text-red-600 leading-none w-12 shrink-0">{step.n}</span>
+              <div key={step.n} className="flex gap-5 sm:gap-6 items-start">
+                <span className="text-4xl sm:text-5xl font-extrabold text-red-600 leading-none w-10 sm:w-12 shrink-0">{step.n}</span>
                 <div className="pt-1">
                   <h3 className="text-white font-bold text-lg mb-1">{step.title}</h3>
                   <p className="text-gray-500 text-sm leading-relaxed max-w-lg">{step.desc}</p>
@@ -110,7 +112,7 @@ export default function Home() {
       </section>
 
       {/* WHO USES IT */}
-      <section className="py-20 px-4 border-t border-[#1f1f2e]">
+      <section className="py-16 sm:py-20 px-4 border-t border-[#1f1f2e]">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-12">Who uses it</h2>
           <div>
@@ -140,12 +142,12 @@ export default function Home() {
       </section>
 
       {/* FINAL CTA */}
-      <section className="py-24 px-4 border-t border-[#1f1f2e]">
+      <section className="py-20 sm:py-24 px-4 border-t border-[#1f1f2e]">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-6 leading-tight">
             Start pulling comments<br />in under 60 seconds.
           </h2>
-          <Link href="/tool" className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-xl transition-colors text-base">
+          <Link href="/tool" className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-xl transition-colors text-base min-h-[52px] flex items-center">
             Start Extracting — It&apos;s Free
           </Link>
         </div>
@@ -153,14 +155,31 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="border-t border-[#1f1f2e] py-10 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-          <div className="text-gray-700 text-sm">© 2025 YouTube Comment Downloader</div>
-          <div className="flex flex-wrap gap-6 text-sm text-gray-600">
-            <Link href="/tool" className="hover:text-white transition-colors">Tool</Link>
-            <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-            <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+        <div className="max-w-7xl mx-auto flex flex-col gap-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-8">
+            <div>
+              <div className="text-white font-bold text-sm mb-1">YTCommentDownloader</div>
+              <div className="text-gray-600 text-xs max-w-xs">
+                Bulk YouTube comment extraction for agencies, brands, and researchers.
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-x-8 gap-y-3 text-sm text-gray-600">
+              <div className="flex flex-col gap-3">
+                <Link href="/tool" className="hover:text-white transition-colors">Try the Tool</Link>
+                <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
+                <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+                <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                <a href="mailto:support@youtubecommentdownloader.com" className="hover:text-white transition-colors">
+                  Support
+                </a>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-[#1f1f2e] pt-6 text-gray-700 text-xs">
+            © 2025–2026 YouTube Comment Downloader. All rights reserved.
           </div>
         </div>
       </footer>

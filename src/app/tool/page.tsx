@@ -1,18 +1,24 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
-import { Plus, Download, RefreshCw, ChevronDown, X } from 'lucide-react'
+import { Plus, Download, RefreshCw, ChevronDown, X, Lock } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number }
 type Format = 'CSV' | 'Excel' | 'JSON' | 'HTML' | 'TXT'
 type SortBy = 'top' | 'newest' | 'oldest'
 
-export default function ToolPage() {
+const GATED_FORMATS: Format[] = ['CSV', 'Excel', 'JSON']
+const ALL_FORMATS: Format[] = ['CSV', 'Excel', 'JSON', 'HTML', 'TXT']
+
+function ToolPageContent() {
+  const searchParams = useSearchParams()
   const [urls, setUrls] = useState<string[]>([''])
   const [includeReplies, setIncludeReplies] = useState(false)
   const [maxComments, setMaxComments] = useState('100')
-  const [format, setFormat] = useState<Format>('CSV')
+  const [format, setFormat] = useState<Format>('TXT')
   const [sortBy, setSortBy] = useState<SortBy>('top')
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -20,21 +26,52 @@ export default function ToolPage() {
   const [comments, setComments] = useState<Comment[]>([])
   const [done, setDone] = useState(false)
   const [showBanner, setShowBanner] = useState(true)
+  const [isSignedIn, setIsSignedIn] = useState(false)
+  const [showAuthGate, setShowAuthGate] = useState(false)
+
+  // Pre-fill URL from query param
+  useEffect(() => {
+    const urlParam = searchParams.get('url')
+    if (urlParam) setUrls([urlParam])
+  }, [searchParams])
+
+  // Check auth status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient()
+      const { data } = await supabase.auth.getUser()
+      setIsSignedIn(!!data.user)
+      if (data.user) setFormat('CSV')
+    }
+    checkAuth()
+  }, [])
 
   const addUrl = () => { if (urls.length < 5) setUrls([...urls, '']) }
   const updateUrl = (i: number, v: string) => { const u = [...urls]; u[i] = v; setUrls(u) }
   const removeUrl = (i: number) => { setUrls(urls.filter((_, idx) => idx !== i)) }
 
-  const downloadComments = (comments: Comment[], format: Format) => {
+  const selectFormat = (f: Format) => {
+    if (GATED_FORMATS.includes(f) && !isSignedIn) {
+      setShowAuthGate(true)
+      return
+    }
+    setFormat(f)
+  }
+
+  const downloadComments = (comments: Comment[], fmt: Format) => {
+    if (GATED_FORMATS.includes(fmt) && !isSignedIn) {
+      setShowAuthGate(true)
+      return
+    }
     let content = ''
     let mimeType = 'text/plain'
     let ext = 'txt'
-    if (format === 'CSV') {
+    if (fmt === 'CSV') {
       content = 'Author,Comment,Likes,Date,Replies\n' + comments.map(c => `"${c.author}","${c.text.replace(/"/g, '""')}",${c.likes},"${c.date}",${c.replies}`).join('\n')
       mimeType = 'text/csv'; ext = 'csv'
-    } else if (format === 'JSON') {
+    } else if (fmt === 'JSON') {
       content = JSON.stringify(comments, null, 2); mimeType = 'application/json'; ext = 'json'
-    } else if (format === 'HTML') {
+    } else if (fmt === 'HTML') {
       content = `<html><body><table border="1"><tr><th>Author</th><th>Comment</th><th>Likes</th><th>Date</th><th>Replies</th></tr>${comments.map(c => `<tr><td>${c.author}</td><td>${c.text}</td><td>${c.likes}</td><td>${c.date}</td><td>${c.replies}</td></tr>`).join('')}</table></body></html>`
       mimeType = 'text/html'; ext = 'html'
     } else {
@@ -80,7 +117,7 @@ export default function ToolPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="min-h-screen bg-[#0a0a0f] overflow-x-hidden">
       <Navbar />
 
       {showBanner && (
@@ -92,21 +129,21 @@ export default function ToolPage() {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-white mb-2">YouTube Comment Downloader</h1>
-          <p className="text-gray-400">Paste a YouTube URL to extract and export all comments instantly.</p>
+      <div className="max-w-4xl mx-auto px-4 py-10 sm:py-12">
+        <div className="text-center mb-8 sm:mb-10">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">YouTube Comment Downloader</h1>
+          <p className="text-gray-400 text-sm sm:text-base">Paste a YouTube URL to extract and export all comments instantly.</p>
         </div>
 
         {/* URL inputs */}
-        <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-6 mb-6">
+        <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
           <label className="text-sm font-medium text-gray-300 mb-3 block">YouTube URL(s)</label>
           <div className="space-y-3">
             {urls.map((u, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input value={u} onChange={e => updateUrl(i, e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="flex-1 bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm" />
+                  className="flex-1 min-w-0 bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm w-full" />
                 {i > 0 && (
                   <button onClick={() => removeUrl(i)} className="text-gray-500 hover:text-red-400 p-1 shrink-0">
                     <X size={16} />
@@ -116,7 +153,7 @@ export default function ToolPage() {
             ))}
           </div>
           {urls.length < 5 ? (
-            <button onClick={addUrl} className="mt-3 flex items-center gap-2 text-gray-500 hover:text-gray-300 text-sm transition-colors">
+            <button onClick={addUrl} className="mt-3 flex items-center gap-2 text-gray-500 hover:text-gray-300 text-sm transition-colors min-h-[36px]">
               <Plus className="w-4 h-4" /> Add URL
             </button>
           ) : (
@@ -125,15 +162,15 @@ export default function ToolPage() {
         </div>
 
         {/* Options */}
-        <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-6 mb-6 space-y-5">
+        <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 space-y-5">
 
           {/* Include Replies toggle */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <div className="text-sm font-medium text-white">Include Replies</div>
               <div className="text-xs text-gray-500">Also fetch comment replies (slower)</div>
             </div>
-            <label className="flex items-center gap-3 cursor-pointer">
+            <label className="flex items-center gap-3 cursor-pointer shrink-0">
               <div className="relative">
                 <input
                   type="checkbox"
@@ -152,27 +189,47 @@ export default function ToolPage() {
             <label className="text-sm font-medium text-white block mb-2">Max Comments</label>
             <div className="relative">
               <select value={maxComments} onChange={e => setMaxComments(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl px-4 py-2.5 text-white text-sm appearance-none focus:outline-none focus:border-red-600">
+                className="w-full bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl px-4 py-3 text-white text-sm appearance-none focus:outline-none focus:border-red-600">
                 <option value="100">100 comments</option>
                 <option value="500">500 comments</option>
                 <option value="1000">1,000 comments</option>
                 <option value="5000">5,000 comments</option>
                 <option value="0">Unlimited (Pro+)</option>
               </select>
-              <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-500 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-gray-500 pointer-events-none" />
             </div>
           </div>
 
           {/* Export Format */}
           <div>
             <label className="text-sm font-medium text-white block mb-2">Export Format</label>
+            {!isSignedIn && (
+              <p className="text-xs text-gray-500 mb-3 flex items-center gap-1.5">
+                <Lock className="w-3 h-3 text-gray-600" />
+                <span>CSV, JSON &amp; Excel require a free account. <Link href="/auth/login" className="text-red-400 hover:text-red-300 underline">Sign in to unlock</Link></span>
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
-              {(['CSV', 'Excel', 'JSON', 'HTML', 'TXT'] as Format[]).map(f => (
-                <button key={f} onClick={() => setFormat(f)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${format === f ? 'bg-red-600 text-white' : 'bg-[#0a0a0f] border border-[#1f1f2e] text-gray-400 hover:border-gray-500'}`}>
-                  {f}
-                </button>
-              ))}
+              {ALL_FORMATS.map(f => {
+                const isGated = GATED_FORMATS.includes(f) && !isSignedIn
+                const isActive = format === f
+                return (
+                  <button
+                    key={f}
+                    onClick={() => selectFormat(f)}
+                    className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[40px] flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-red-600 text-white'
+                        : isGated
+                        ? 'bg-[#0a0a0f] border border-[#1f1f2e] text-gray-600 cursor-pointer hover:border-gray-600'
+                        : 'bg-[#0a0a0f] border border-[#1f1f2e] text-gray-400 hover:border-gray-500'
+                    }`}
+                  >
+                    {isGated && <Lock className="w-3 h-3" />}
+                    {f}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -182,7 +239,7 @@ export default function ToolPage() {
             <div className="flex flex-wrap gap-2">
               {(['top', 'newest', 'oldest'] as SortBy[]).map(s => (
                 <button key={s} onClick={() => setSortBy(s)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${sortBy === s ? 'bg-red-600 text-white' : 'bg-[#0a0a0f] border border-[#1f1f2e] text-gray-400 hover:border-gray-500'}`}>
+                  className={`px-4 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors min-h-[40px] ${sortBy === s ? 'bg-red-600 text-white' : 'bg-[#0a0a0f] border border-[#1f1f2e] text-gray-400 hover:border-gray-500'}`}>
                   {s}
                 </button>
               ))}
@@ -191,12 +248,12 @@ export default function ToolPage() {
         </div>
 
         <button onClick={handleExport} disabled={loading || !urls[0]}
-          className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl text-lg transition-colors flex items-center justify-center gap-3">
+          className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl text-base sm:text-lg transition-colors flex items-center justify-center gap-3 min-h-[56px]">
           {loading ? <><RefreshCw className="w-5 h-5 animate-spin" /> Exporting...</> : <><Download className="w-5 h-5" /> Start Export</>}
         </button>
 
         {loading && (
-          <div className="mt-6 bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-6">
+          <div className="mt-4 sm:mt-6 bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-gray-300">{statusMsg}</span>
               <span className="text-sm text-gray-500">{progress}%</span>
@@ -208,16 +265,16 @@ export default function ToolPage() {
         )}
 
         {done && comments.length > 0 && (
-          <div className="mt-6 bg-[#13131a] border border-[#1f1f2e] rounded-2xl overflow-hidden">
+          <div className="mt-4 sm:mt-6 bg-[#13131a] border border-[#1f1f2e] rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-[#1f1f2e] flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-white font-semibold text-sm">Preview</span>
                 <span className="text-gray-500 text-sm ml-2">({comments.length} comments)</span>
               </div>
-              <div className="flex gap-3">
-                <button onClick={() => { setDone(false); setComments([]); setUrls(['']) }} className="text-gray-500 hover:text-gray-300 text-sm transition-colors">Export another</button>
+              <div className="flex gap-3 flex-wrap">
+                <button onClick={() => { setDone(false); setComments([]); setUrls(['']) }} className="text-gray-500 hover:text-gray-300 text-sm transition-colors min-h-[36px]">Export another</button>
                 <button onClick={() => downloadComments(comments, format)}
-                  className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors flex items-center gap-2">
+                  className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 min-h-[36px]">
                   <Download className="w-4 h-4" /> Download {format}
                 </button>
               </div>
@@ -227,7 +284,7 @@ export default function ToolPage() {
                 <thead className="bg-[#0a0a0f]">
                   <tr>
                     {['Author', 'Comment', 'Likes', 'Date', 'Replies'].map(h => (
-                      <th key={h} className="text-left px-4 py-3 text-gray-400 font-medium">{h}</th>
+                      <th key={h} className="text-left px-4 py-3 text-gray-400 font-medium whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -235,7 +292,7 @@ export default function ToolPage() {
                   {comments.slice(0, 10).map(c => (
                     <tr key={c.id} className="border-t border-[#1f1f2e]">
                       <td className="px-4 py-3 text-blue-400 text-xs font-medium whitespace-nowrap">{c.author}</td>
-                      <td className="px-4 py-3 text-gray-300 max-w-xs">
+                      <td className="px-4 py-3 text-gray-300 min-w-[200px] max-w-xs">
                         <span className="line-clamp-2">{c.text}</span>
                       </td>
                       <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{c.likes}</td>
@@ -249,6 +306,42 @@ export default function ToolPage() {
           </div>
         )}
       </div>
+
+      {/* Auth gate modal */}
+      {showAuthGate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-6 sm:p-8 max-w-sm w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-600/20 rounded-full p-2">
+                <Lock className="w-5 h-5 text-red-500" />
+              </div>
+              <h3 className="text-white font-bold text-lg">Sign in to export</h3>
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed mb-6">
+              Create a free account to download in <strong className="text-white">CSV, JSON, and Excel</strong> formats. Plain text is always free — no sign-in needed.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Link href="/auth/signup" className="block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-xl text-center transition-colors">
+                Create Free Account
+              </Link>
+              <Link href="/auth/login" className="block border border-[#1f1f2e] hover:border-gray-600 text-gray-300 font-medium px-4 py-3 rounded-xl text-center transition-colors text-sm">
+                Sign In
+              </Link>
+              <button onClick={() => setShowAuthGate(false)} className="text-gray-600 hover:text-gray-400 text-sm transition-colors mt-1">
+                Continue with TXT (no sign-in)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+export default function ToolPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0f]" />}>
+      <ToolPageContent />
+    </Suspense>
   )
 }
