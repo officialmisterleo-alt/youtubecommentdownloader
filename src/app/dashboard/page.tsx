@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   const firstName = displayName ? displayName.split(' ')[0] : null
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
       <Navbar />
       <div className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
         {/* Header */}
@@ -23,7 +23,7 @@ export default async function DashboardPage() {
             <p className="text-gray-500 text-sm mt-1">Here&apos;s your export activity</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="bg-[#13131a] border border-[#1f1f2e] text-gray-400 text-xs px-3 py-1 rounded-full">Free Plan</span>
+            <span className="bg-[#171717] border border-white/[0.07] text-gray-400 text-xs px-3 py-1 rounded-full">Free Plan</span>
             <Link
               href="/tool"
               className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
             { label: 'Comments Downloaded', value: '0' },
             { label: 'API Calls', value: '0' },
           ].map(s => (
-            <div key={s.label} className="bg-[#13131a] border border-[#1f1f2e] rounded-xl p-5">
+            <div key={s.label} className="bg-[#171717] border border-white/[0.07] rounded-xl p-5">
               <div className="text-2xl font-bold text-white mb-1">{s.value}</div>
               <div className="text-gray-500 text-xs">{s.label}</div>
             </div>
@@ -48,12 +48,12 @@ export default async function DashboardPage() {
         </div>
 
         {/* Recent Exports — empty state */}
-        <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl overflow-hidden mb-8">
-          <div className="p-5 border-b border-[#1f1f2e]">
+        <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-8">
+          <div className="p-5 border-b border-white/[0.07]">
             <h2 className="font-semibold text-white">Recent Exports</h2>
           </div>
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <div className="w-12 h-12 bg-[#1f1f2e] rounded-xl flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-[#171717] rounded-xl flex items-center justify-center mb-4">
               <Plus className="w-6 h-6 text-gray-600" />
             </div>
             <p className="text-gray-400 text-sm font-medium mb-1">No downloads yet</p>
@@ -69,12 +69,12 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* API Key */}
-          <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-6">
+          <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <Key className="w-5 h-5 text-gray-400" />
               <h2 className="font-semibold text-white">API Key</h2>
             </div>
-            <div className="bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl p-3 flex items-center gap-3 mb-3">
+            <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3 flex items-center gap-3 mb-3">
               <code className="text-gray-500 text-xs flex-1">••••••••••••••••••••••••••••••</code>
             </div>
             <p className="text-gray-600 text-xs">
@@ -84,12 +84,12 @@ export default async function DashboardPage() {
           </div>
 
           {/* Team */}
-          <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-6">
+          <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <Users className="w-5 h-5 text-gray-400" />
               <h2 className="font-semibold text-white">Team Members</h2>
             </div>
-            <div className="flex items-center gap-3 bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl p-3 mb-3">
+            <div className="flex items-center gap-3 bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3 mb-3">
               <div className="w-8 h-8 bg-red-900 rounded-full flex items-center justify-center text-red-200 text-xs font-bold">
                 {displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
               </div>

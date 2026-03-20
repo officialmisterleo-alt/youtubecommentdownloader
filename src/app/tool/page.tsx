@@ -167,7 +167,7 @@ ${commentRows}
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0a0a] overflow-x-hidden">
       <Navbar />
 
       {showBanner && (
@@ -186,14 +186,14 @@ ${commentRows}
         </div>
 
         {/* URL inputs */}
-        <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
           <label className="text-sm font-medium text-gray-300 mb-3 block">YouTube URL(s)</label>
           <div className="space-y-3">
             {urls.map((u, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input value={u} onChange={e => updateUrl(i, e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="flex-1 min-w-0 bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm w-full" />
+                  className="flex-1 min-w-0 bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm w-full" />
                 {i > 0 && (
                   <button onClick={() => removeUrl(i)} className="text-gray-500 hover:text-red-400 p-1 shrink-0">
                     <X size={16} />
@@ -212,7 +212,7 @@ ${commentRows}
         </div>
 
         {/* Options */}
-        <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 space-y-5">
+        <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 space-y-5">
 
           {/* Include Replies toggle */}
           <div className="flex items-center justify-between gap-4">
@@ -228,7 +228,7 @@ ${commentRows}
                   checked={includeReplies}
                   onChange={e => setIncludeReplies(e.target.checked)}
                 />
-                <div className={`w-10 h-6 rounded-full transition-colors ${includeReplies ? 'bg-red-600' : 'bg-gray-700'}`} />
+                <div className={`w-10 h-6 rounded-full transition-colors ${includeReplies ? 'bg-red-600' : 'bg-[#333333]'}`} />
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${includeReplies ? 'translate-x-5' : 'translate-x-1'}`} />
               </div>
             </label>
@@ -239,7 +239,7 @@ ${commentRows}
             <label className="text-sm font-medium text-white block mb-2">Max Comments</label>
             <div className="relative">
               <select value={maxComments} onChange={e => setMaxComments(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl px-4 py-3 text-white text-sm appearance-none focus:outline-none focus:border-red-600">
+                className="w-full bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white text-sm appearance-none focus:outline-none focus:border-red-600">
                 <option value="100">100 comments</option>
                 <option value="500">500 comments</option>
                 <option value="1000">1,000 comments</option>
@@ -271,8 +271,8 @@ ${commentRows}
                       isActive
                         ? 'bg-red-600 text-white'
                         : isGated
-                        ? 'bg-[#0a0a0f] border border-[#1f1f2e] text-gray-600 cursor-pointer hover:border-gray-600'
-                        : 'bg-[#0a0a0f] border border-[#1f1f2e] text-gray-400 hover:border-gray-500'
+                        ? 'bg-[#0a0a0a] border border-white/[0.07] text-gray-600 cursor-pointer hover:border-gray-600'
+                        : 'bg-[#0a0a0a] border border-white/[0.07] text-gray-400 hover:border-gray-500'
                     }`}
                   >
                     {isGated && <Lock className="w-3 h-3" />}
@@ -289,7 +289,7 @@ ${commentRows}
             <div className="flex flex-wrap gap-2">
               {(['top', 'newest', 'oldest'] as SortBy[]).map(s => (
                 <button key={s} onClick={() => setSortBy(s)}
-                  className={`px-4 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors min-h-[40px] ${sortBy === s ? 'bg-red-600 text-white' : 'bg-[#0a0a0f] border border-[#1f1f2e] text-gray-400 hover:border-gray-500'}`}>
+                  className={`px-4 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors min-h-[40px] ${sortBy === s ? 'bg-red-600 text-white' : 'bg-[#0a0a0a] border border-white/[0.07] text-gray-400 hover:border-gray-500'}`}>
                   {s}
                 </button>
               ))}
@@ -303,20 +303,20 @@ ${commentRows}
         </button>
 
         {loading && (
-          <div className="mt-4 sm:mt-6 bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-4 sm:p-6">
+          <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-gray-300">{statusMsg}</span>
               <span className="text-sm text-gray-500">{progress}%</span>
             </div>
-            <div className="bg-[#0a0a0f] rounded-full h-2 overflow-hidden">
+            <div className="bg-[#0a0a0a] rounded-full h-2 overflow-hidden">
               <div className="bg-red-600 h-full rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
           </div>
         )}
 
         {done && comments.length > 0 && (
-          <div className="mt-4 sm:mt-6 bg-[#13131a] border border-[#1f1f2e] rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-[#1f1f2e] flex flex-wrap items-center justify-between gap-3">
+          <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-white/[0.07] flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-white font-semibold text-sm">Preview</span>
                 <span className="text-gray-500 text-sm ml-2">({comments.length} comments)</span>
@@ -331,7 +331,7 @@ ${commentRows}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-[#0a0a0f]">
+                <thead className="bg-[#0a0a0a]">
                   <tr>
                     {['Author', 'Comment', 'Likes', 'Date', 'Replies'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-gray-400 font-medium whitespace-nowrap">{h}</th>
@@ -340,8 +340,8 @@ ${commentRows}
                 </thead>
                 <tbody>
                   {comments.slice(0, 10).map(c => (
-                    <tr key={c.id} className="border-t border-[#1f1f2e]">
-                      <td className="px-4 py-3 text-blue-400 text-xs font-medium whitespace-nowrap">{c.author}</td>
+                    <tr key={c.id} className="border-t border-white/[0.07]">
+                      <td className="px-4 py-3 text-[#888888] text-xs font-medium whitespace-nowrap">{c.author}</td>
                       <td className="px-4 py-3 text-gray-300 min-w-[200px] max-w-xs">
                         <span className="line-clamp-2">{c.text}</span>
                       </td>
@@ -360,7 +360,7 @@ ${commentRows}
       {/* Auth gate modal */}
       {showAuthGate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-          <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-6 sm:p-8 max-w-sm w-full">
+          <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 sm:p-8 max-w-sm w-full">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-red-600/20 rounded-full p-2">
                 <Lock className="w-5 h-5 text-red-500" />
@@ -374,7 +374,7 @@ ${commentRows}
               <Link href="/auth/signup" className="block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-xl text-center transition-colors">
                 Create Free Account
               </Link>
-              <Link href="/auth/login" className="block border border-[#1f1f2e] hover:border-gray-600 text-gray-300 font-medium px-4 py-3 rounded-xl text-center transition-colors text-sm">
+              <Link href="/auth/login" className="block border border-white/[0.07] hover:border-gray-600 text-gray-300 font-medium px-4 py-3 rounded-xl text-center transition-colors text-sm">
                 Sign In
               </Link>
               <button onClick={() => setShowAuthGate(false)} className="text-gray-600 hover:text-gray-400 text-sm transition-colors mt-1">
@@ -390,7 +390,7 @@ ${commentRows}
 
 export default function ToolPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0f]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}>
       <ToolPageContent />
     </Suspense>
   )

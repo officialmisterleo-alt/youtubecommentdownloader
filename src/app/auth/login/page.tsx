@@ -30,12 +30,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4">
       <Link href="/" className="flex items-center gap-2 mb-8">
         <div className="bg-red-600 rounded p-1.5"><Youtube className="w-5 h-5 text-white" /></div>
         <span className="font-bold text-white">YTCommentDownloader</span>
       </Link>
-      <div className="bg-[#13131a] border border-[#1f1f2e] rounded-2xl p-8 w-full max-w-md">
+      <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-8 w-full max-w-md">
         <h1 className="text-2xl font-bold text-white mb-2">Welcome back</h1>
         <p className="text-gray-500 text-sm mb-6">Sign in to your account</p>
 
@@ -45,9 +45,9 @@ export default function LoginPage() {
         </button>
 
         <div className="flex items-center gap-3 mb-4">
-          <div className="flex-1 h-px bg-[#1f1f2e]" />
+          <div className="flex-1 h-px bg-white/[0.07]" />
           <span className="text-gray-600 text-xs">or</span>
-          <div className="flex-1 h-px bg-[#1f1f2e]" />
+          <div className="flex-1 h-px bg-white/[0.07]" />
         </div>
 
         {error && <div className="bg-red-950/50 border border-red-900 text-red-400 text-sm rounded-lg px-4 py-3 mb-5">{error}</div>}
@@ -55,12 +55,12 @@ export default function LoginPage() {
           <div>
             <label className="text-sm text-gray-400 mb-1.5 block">Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-              className="w-full bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm" />
+              className="w-full bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm" />
           </div>
           <div>
             <label className="text-sm text-gray-400 mb-1.5 block">Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-              className="w-full bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm" />
+              className="w-full bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm" />
           </div>
           <button type="submit" disabled={loading}
             className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors text-sm mt-2">

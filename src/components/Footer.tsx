@@ -29,7 +29,7 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        <div className="border-t border-white/[0.07] pt-6 text-[#333333] text-xs">
+        <div className="border-t border-white/[0.07] pt-6 text-[#555555] text-xs">
           © 2025–2026 YouTube Comment Downloader. All rights reserved.
         </div>
       </div>

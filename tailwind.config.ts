@@ -4,7 +4,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        brand: { red: '#dc2626', dark: '#0a0a0f', card: '#13131a', border: '#1f1f2e' },
+        brand: {
+          bg: '#0a0a0a',
+          surface: '#171717',
+          border: 'rgba(255,255,255,0.07)',
+          muted: '#888888',
+          subtle: '#555555',
+          accent: '#dc2626',
+          'accent-hover': '#ef4444',
+        },
       },
       fontFamily: { sans: ['Inter', 'sans-serif'] },
     },

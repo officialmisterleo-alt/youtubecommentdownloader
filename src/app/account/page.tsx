@@ -52,7 +52,7 @@ export default function AccountPage() {
         <h1 className="text-2xl font-bold text-white mb-8">Account</h1>
 
         {/* Profile card */}
-        <div className="bg-[#111111] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
+        <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
           <div className="p-6 border-b border-white/[0.07] flex items-center gap-4">
             <div className="w-14 h-14 bg-red-900 rounded-full flex items-center justify-center text-red-200 text-xl font-bold shrink-0">
               {initials}
@@ -91,7 +91,7 @@ export default function AccountPage() {
         </div>
 
         {/* Sign out */}
-        <div className="bg-[#111111] border border-white/[0.07] rounded-2xl p-6">
+        <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
           <h2 className="text-sm font-semibold text-white mb-1">Sign Out</h2>
           <p className="text-[#555555] text-xs mb-4">You&apos;ll be redirected to the home page.</p>
           <button
