@@ -21,8 +21,8 @@ const plans = [
   {
     name: 'Business', monthlyPrice: 79, annualPrice: 65,
     desc: 'For agencies and growing teams',
-    features: ['1M comments/month', 'All export formats', 'Bulk channel/playlist', 'Scheduled exports', 'REST API access', '3 team seats', 'Priority email support', 'CSV/Excel/JSON/HTML/TXT', 'AI Analysis (up to 50,000 comments)'],
-    notIncluded: ['SSO / SAML', 'White-label', 'Dedicated API quota'],
+    features: ['1M comments/month', 'All export formats', 'Bulk channel/playlist', 'Scheduled exports', '3 team seats', 'Priority email support', 'CSV/Excel/JSON/HTML/TXT', 'AI Analysis (up to 50,000 comments)'],
+    notIncluded: ['REST API access', 'SSO / SAML', 'White-label', 'Dedicated API quota'],
     cta: 'Start Business', href: '/auth/signup?plan=business', highlight: true, badge: 'Most Popular', note: null,
   },
   {
@@ -41,7 +41,7 @@ const comparisonFeatures = [
   { label: 'Reply threads', free: false, pro: true, business: true, enterprise: true },
   { label: 'Bulk channel/playlist', free: false, pro: false, business: true, enterprise: true },
   { label: 'Scheduled exports', free: false, pro: false, business: true, enterprise: true },
-  { label: 'REST API access', free: false, pro: false, business: true, enterprise: true },
+  { label: 'REST API access', free: false, pro: false, business: false, enterprise: true },
   { label: 'Team seats', free: '1', pro: '1', business: '3', enterprise: '10' },
   { label: 'SSO / SAML', free: false, pro: false, business: false, enterprise: true },
   { label: 'White-label exports', free: false, pro: false, business: false, enterprise: true },
