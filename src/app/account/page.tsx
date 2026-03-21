@@ -8,18 +8,27 @@ import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { LogOut, User as UserIcon, CreditCard } from 'lucide-react'
 
+type Subscription = { plan: string; status: string; current_period_end: string | null }
+
 export default function AccountPage() {
   const [user, setUser] = useState<User | null>(null)
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) {
         router.push('/auth/login')
       } else {
         setUser(user)
+        const { data } = await supabase
+          .from('subscriptions')
+          .select('plan, status, current_period_end')
+          .eq('user_id', user.id)
+          .single()
+        setSubscription(data)
       }
       setLoading(false)
     })
@@ -44,6 +53,13 @@ export default function AccountPage() {
   const displayName = user.user_metadata?.full_name || user.user_metadata?.name || null
   const initials = displayName ? displayName[0].toUpperCase() : (user.email?.[0]?.toUpperCase() ?? 'U')
   const isGoogleUser = user.app_metadata?.provider === 'google'
+
+  const plan = subscription?.plan ?? 'free'
+  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1)
+  const isPaidActive = subscription && subscription.plan !== 'free' && subscription.status === 'active'
+  const periodEnd = isPaidActive && subscription.current_period_end
+    ? new Date(subscription.current_period_end).toLocaleDateString()
+    : null
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
@@ -78,15 +94,22 @@ export default function AccountPage() {
               <CreditCard className="w-4 h-4 text-[#555555] shrink-0" />
               <div>
                 <div className="text-xs text-[#555555] mb-0.5">Current Plan</div>
-                <div className="text-white text-sm">Free</div>
+                <div className="text-white text-sm">{planLabel}</div>
+                {isPaidActive && (
+                  <div className="text-xs text-[#555555] mt-0.5">
+                    Status: {subscription.status}{periodEnd ? ` · Renews ${periodEnd}` : ''}
+                  </div>
+                )}
               </div>
             </div>
-            <Link
-              href="/pricing"
-              className="inline-flex items-center text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              Upgrade
-            </Link>
+            {plan === 'free' && (
+              <Link
+                href="/pricing"
+                className="inline-flex items-center text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Upgrade
+              </Link>
+            )}
           </div>
         </div>
 

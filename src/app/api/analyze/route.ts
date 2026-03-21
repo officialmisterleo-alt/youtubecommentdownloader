@@ -1,141 +1,132 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 
 export type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
 
 const TIER_LIMITS: Record<string, number> = {
+  pro: 500,
+  business: 2000,
+  enterprise: 10000,
   free: 0,
-  pro: 10000,
-  business: 50000,
-  enterprise: 100000,
 }
 
-const PROMPTS: Record<AnalysisType, (comments: string, sampleSize: number) => string> = {
-  sentiment: (comments, sampleSize) => `Analyze the sentiment of these ${sampleSize} YouTube comments in depth. Return a JSON object with this exact structure:
+const PROMPTS: Record<AnalysisType, (comments: string) => string> = {
+  sentiment: (comments) => `You are analyzing YouTube comments for a content creator. Analyze the sentiment of these comments.
+
+COMMENTS:
+${comments}
+
+Return ONLY valid JSON (no markdown, no explanation) in this exact shape:
 {
+  "overall": "Positive" | "Negative" | "Mixed",
   "positive": <number 0-100>,
   "neutral": <number 0-100>,
   "negative": <number 0-100>,
-  "summary": "<3-4 sentence narrative summary of the overall emotional tone, what drives the positivity/negativity, and any notable patterns>",
-  "themes": ["<specific recurring emotional theme>", "<theme>", "<theme>", "<theme>", "<theme>"],
-  "emotionalDrivers": {
-    "positive": ["<what specifically makes people react positively>", "<driver>", "<driver>", "<driver>"],
-    "negative": ["<what specifically triggers negative reactions>", "<driver>", "<driver>", "<driver>"]
-  },
-  "notableQuotes": ["<verbatim or near-verbatim comment that exemplifies the dominant sentiment>", "<quote>", "<quote>"],
-  "sentimentOverTime": "<observation about whether early vs later comments differ in tone, if detectable>"
-}
+  "positiveThemes": ["theme1", "theme2", "theme3"],
+  "negativeThemes": ["theme1", "theme2", "theme3"],
+  "summary": "<2 sentence summary of the overall audience mood>"
+}`,
 
-Return ONLY valid JSON (no markdown, no explanation).
+  audience: (comments) => `You are analyzing YouTube comments to profile the audience. Based on these comments, describe who is watching.
 
 COMMENTS:
-${comments}`,
+${comments}
 
-  audience: (comments, sampleSize) => `Analyze these ${sampleSize} YouTube comments to identify distinct audience segments. Return a JSON object:
+Return ONLY valid JSON (no markdown, no explanation) in this exact shape:
 {
-  "segments": [
-    {
-      "emoji": "<relevant emoji>",
-      "name": "<segment name>",
-      "percentage": <estimated % of comments>,
-      "description": "<2-3 sentences describing this segment's behavior, what they say, what they care about>",
-      "typicalComment": "<example of what this segment typically says>",
-      "engagementStyle": "<how they engage: e.g. asks questions, shares personal stories, debates others>"
-    }
-  ],
-  "audienceSummary": "<3-4 sentence overview of the overall audience composition and what that means for the creator>",
-  "geographicSignals": "<any language/cultural signals suggesting where the audience is from>",
-  "ageSignals": "<estimated age demographic based on language, references, tone>",
-  "loyaltySignal": "<are these mostly new viewers or a loyal returning fanbase? Evidence?>",
-  "recommendations": ["<actionable recommendation for the creator based on audience insights>", "<recommendation>", "<recommendation>"]
-}
-Provide 4-6 distinct segments. Return ONLY valid JSON (no markdown, no explanation).
+  "profile": "<1 sentence audience description>",
+  "expertise": "Beginner" | "Intermediate" | "Advanced" | "Mixed",
+  "useCases": ["use case 1", "use case 2", "use case 3"],
+  "context": "<professional or personal context of viewers>",
+  "motivations": ["why they watch 1", "why they watch 2", "why they watch 3"],
+  "summary": "<2 sentence summary of the audience profile>"
+}`,
+
+  topics: (comments) => `You are analyzing YouTube comments to identify the main discussion topics.
 
 COMMENTS:
-${comments}`,
+${comments}
 
-  topics: (comments, sampleSize) => `Identify the main topics discussed in these ${sampleSize} YouTube comments. Return a JSON object:
+Return ONLY valid JSON (no markdown, no explanation) in this exact shape:
 {
   "topics": [
-    {
-      "topic": "<topic name>",
-      "percentage": <% of comments mentioning this>,
-      "description": "<2-3 sentences on what people say about this topic, what angle they take>",
-      "sentiment": "positive",
-      "representativeComments": ["<example comment>", "<example comment>"]
-    }
+    { "name": "Topic Name", "percentage": <number>, "description": "<what people say about this>", "example": "<short example quote>" },
+    { "name": "Topic Name", "percentage": <number>, "description": "<what people say about this>", "example": "<short example quote>" },
+    { "name": "Topic Name", "percentage": <number>, "description": "<what people say about this>", "example": "<short example quote>" },
+    { "name": "Topic Name", "percentage": <number>, "description": "<what people say about this>", "example": "<short example quote>" },
+    { "name": "Topic Name", "percentage": <number>, "description": "<what people say about this>", "example": "<short example quote>" }
   ],
-  "topicSummary": "<3-4 sentence overview of the conversation landscape — what dominates, what's surprising, what's absent>",
-  "contentGaps": ["<topic the audience clearly wants but the video didn't cover>", "<gap>", "<gap>"],
-  "controversialTopics": ["<any topic generating debate or disagreement>"],
-  "unusualFindings": "<anything unexpected or surprising found in the topic analysis>"
-}
-Return 6-10 topics ordered by frequency. The sentiment field must be one of: positive, negative, mixed, neutral. Return ONLY valid JSON (no markdown, no explanation).
+  "summary": "<1 sentence summary of what dominates the conversation>"
+}`,
+
+  feedback: (comments) => `You are analyzing YouTube comments to extract creator feedback. Identify what the audience praises and what they want improved.
 
 COMMENTS:
-${comments}`,
+${comments}
 
-  feedback: (comments, sampleSize) => `Extract detailed actionable feedback from these ${sampleSize} YouTube comments. Return a JSON object:
+Return ONLY valid JSON (no markdown, no explanation) in this exact shape:
 {
-  "praise": ["<specific thing viewers loved, with context>", "<praise>", "<praise>", "<praise>", "<praise>"],
-  "requests": ["<specific thing viewers want more of or asked for>", "<request>", "<request>", "<request>", "<request>"],
-  "criticisms": ["<constructive criticism or complaint, with context>", "<criticism>", "<criticism>", "<criticism>"],
-  "questions": ["<common question viewers are asking>", "<question>", "<question>", "<question>"],
+  "praise": ["specific praise point 1", "specific praise point 2", "specific praise point 3"],
+  "requests": ["specific request 1", "specific request 2", "specific request 3"],
   "insights": [
-    {
-      "insight": "<actionable insight for the creator>",
-      "evidence": "<what in the comments supports this>",
-      "priority": "high"
-    },
-    {
-      "insight": "<actionable insight>",
-      "evidence": "<evidence>",
-      "priority": "medium"
-    },
-    {
-      "insight": "<actionable insight>",
-      "evidence": "<evidence>",
-      "priority": "low"
-    }
+    { "action": "<actionable recommendation>", "reason": "<why based on comments>" },
+    { "action": "<actionable recommendation>", "reason": "<why based on comments>" },
+    { "action": "<actionable recommendation>", "reason": "<why based on comments>" }
   ],
-  "overallFeedbackSummary": "<3-4 sentence narrative of what the audience is telling the creator, and the most important thing to act on>",
-  "contentStrengths": ["<what this creator clearly does well based on feedback>", "<strength>", "<strength>"],
-  "improvementAreas": ["<specific area to improve with concrete suggestion>", "<area>", "<area>"]
-}
-The priority field must be one of: high, medium, low. Return ONLY valid JSON (no markdown, no explanation).
+  "summary": "<2 sentence summary of creator feedback>"
+}`,
+
+  trends: (comments) => `You are analyzing YouTube comments to identify trending phrases, high-impact statements, and viral potential.
 
 COMMENTS:
-${comments}`,
+${comments}
 
-  trends: (comments, sampleSize) => `Analyze these ${sampleSize} YouTube comments for trends, viral moments, and emerging patterns. Return a JSON object:
+Return ONLY valid JSON (no markdown, no explanation) in this exact shape:
 {
-  "trendingPhrases": ["<phrase or term appearing repeatedly>", "<phrase>", "<phrase>", "<phrase>", "<phrase>", "<phrase>"],
+  "phrases": ["memorable phrase 1", "memorable phrase 2", "memorable phrase 3", "memorable phrase 4", "memorable phrase 5"],
   "viralComments": [
-    {
-      "comment": "<the comment text>",
-      "reason": "<why this comment resonated — humor, relatability, insight, controversy>"
-    },
-    {
-      "comment": "<comment text>",
-      "reason": "<reason>"
-    },
-    {
-      "comment": "<comment text>",
-      "reason": "<reason>"
-    }
+    { "text": "<actual comment text>", "reason": "<why it resonates>" },
+    { "text": "<actual comment text>", "reason": "<why it resonates>" },
+    { "text": "<actual comment text>", "reason": "<why it resonates>" }
   ],
-  "keywords": ["<high-frequency meaningful keyword>", "<keyword>", "<keyword>", "<keyword>", "<keyword>", "<keyword>", "<keyword>", "<keyword>"],
-  "emergingTrends": ["<trend or pattern emerging in this comment section>", "<trend>", "<trend>", "<trend>"],
-  "insideJokes": ["<recurring reference, meme, or in-joke specific to this community>"],
-  "viralityFactors": "<3-4 sentences on what makes this content shareable/viral based on comment analysis>",
-  "communityHealth": "<assessment of the comment section's overall health — toxic, positive, engaged, passive? with evidence>",
-  "contentMoments": ["<specific moment or segment of the video that generated the most comment activity>", "<moment>", "<moment>"],
-  "crossContentSignals": "<are commenters referencing other videos, creators, or trends? What?>",
-  "recommendations": ["<recommendation for maximizing virality or community engagement>", "<recommendation>", "<recommendation>"]
+  "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5", "keyword6"],
+  "summary": "<1 sentence on the overall viral quality of this comment section>"
+}`,
 }
-Identify 3-5 viral comments. Return ONLY valid JSON (no markdown, no explanation).
 
-COMMENTS:
-${comments}`,
+function createServiceClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  )
+}
+
+async function incrementAiUsage(userId: string) {
+  const serviceClient = createServiceClient()
+  const month = new Date().toISOString().slice(0, 7) // 'YYYY-MM'
+
+  const { data: existing } = await serviceClient
+    .from('usage')
+    .select('id, ai_analyses_count')
+    .eq('user_id', userId)
+    .eq('month', month)
+    .single()
+
+  if (existing) {
+    await serviceClient
+      .from('usage')
+      .update({
+        ai_analyses_count: (existing.ai_analyses_count ?? 0) + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+  } else {
+    await serviceClient
+      .from('usage')
+      .insert({ user_id: userId, month, ai_analyses_count: 1 })
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -145,17 +136,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'AI analysis not configured' }, { status: 503 })
     }
 
-    const { comments, analysisType, tier = 'pro' } = await req.json() as {
+    const { comments, analysisType } = await req.json() as {
       comments: Array<{ author: string; text: string; likes: number; date: string }>,
       analysisType: AnalysisType,
-      tier?: string,
     }
 
     if (!comments?.length) return NextResponse.json({ error: 'No comments provided' }, { status: 400 })
     if (!PROMPTS[analysisType]) return NextResponse.json({ error: 'Invalid analysis type' }, { status: 400 })
 
-    const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.pro
-    if (limit === 0) return NextResponse.json({ error: 'AI Analysis is not available on the free plan. Upgrade to Pro or above.' }, { status: 403 })
+    // Get authenticated user and their real subscription plan
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required for AI analysis' }, { status: 401 })
+    }
+
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('plan, status')
+      .eq('user_id', user.id)
+      .single()
+
+    const plan = (sub?.status === 'active' ? sub?.plan : null) ?? 'free'
+    const limit = TIER_LIMITS[plan] ?? TIER_LIMITS.free
+
+    if (limit === 0) {
+      return NextResponse.json({ error: 'AI analysis requires a Pro plan or higher' }, { status: 403 })
+    }
+
     const sample = comments.slice(0, limit)
 
     // Format comments for the prompt — include likes for weighting
@@ -163,14 +172,14 @@ export async function POST(req: NextRequest) {
       .map((c, i) => `[${i + 1}] ${c.author} (${c.likes} likes): ${c.text}`)
       .join('\n')
 
-    const prompt = PROMPTS[analysisType](formatted, sample.length)
+    const prompt = PROMPTS[analysisType](formatted)
 
     const OpenAI = (await import('openai')).default
     const client = new OpenAI({ apiKey })
 
     const completion = await client.chat.completions.create({
       model: 'gpt-4o-mini',
-      max_tokens: 3000,
+      max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
     })
@@ -180,6 +189,8 @@ export async function POST(req: NextRequest) {
     // Strip markdown code fences if model wraps in ```json```
     const cleaned = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
     const result = JSON.parse(cleaned)
+
+    await incrementAiUsage(user.id).catch(() => {})
 
     return NextResponse.json({ result, analysisType, commentCount: sample.length })
   } catch (e: unknown) {
