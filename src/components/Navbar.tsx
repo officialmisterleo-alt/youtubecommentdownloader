@@ -14,13 +14,14 @@ const navLinks = [
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [loaded, setLoaded] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const navRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+    supabase.auth.getUser().then(({ data: { user } }) => { setUser(user); setLoaded(true) })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
     })
@@ -53,7 +54,7 @@ export default function Navbar() {
     <>
       <nav ref={navRef} className="sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-sm border-b border-white/[0.07]">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between h-16">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center h-16">
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0">
@@ -78,7 +79,7 @@ export default function Navbar() {
             </div>
 
             {/* Right auth — desktop */}
-            <div className="hidden md:flex items-center gap-1">
+            <div className={`hidden md:flex items-center justify-end gap-1 transition-opacity duration-150 ${loaded ? 'opacity-100' : 'opacity-0'}`}>
               {user ? (
                 <div className="relative" ref={dropdownRef}>
                   <button
