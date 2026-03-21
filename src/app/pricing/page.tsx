@@ -7,8 +7,8 @@ const plans = [
   {
     name: 'Free', monthlyPrice: 0, annualPrice: 0,
     desc: 'Perfect for trying out the tool',
-    features: ['500 comments per export', '3 exports per day', 'CSV export only', 'No account required', 'Basic sorting', 'AI Analysis (up to 100 comments)'],
-    notIncluded: ['Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
+    features: ['100 comments per export', 'All export formats', 'No account required', 'Basic sorting'],
+    notIncluded: ['AI Analysis', 'Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
     cta: 'Start Free Trial', href: '/auth/signup?plan=free', highlight: false, badge: null, note: 'No credit card required.',
   },
   {
@@ -35,9 +35,9 @@ const plans = [
 ]
 
 const comparisonFeatures = [
-  { label: 'Comments per export', free: '500', pro: '100k', business: '1M', enterprise: 'Unlimited' },
-  { label: 'Exports per day', free: '3', pro: 'Unlimited', business: 'Unlimited', enterprise: 'Unlimited' },
-  { label: 'Export formats', free: 'CSV', pro: 'All 6', business: 'All 6', enterprise: 'All 6' },
+  { label: 'Comments per export', free: '100', pro: '100k', business: '1M', enterprise: 'Unlimited' },
+  { label: 'Export formats', free: 'All 6', pro: 'All 6', business: 'All 6', enterprise: 'All 6' },
+  { label: 'AI Analysis', free: false, pro: '10k comments', business: '50k comments', enterprise: '100k comments' },
   { label: 'Reply threads', free: false, pro: true, business: true, enterprise: true },
   { label: 'Bulk channel/playlist', free: false, pro: false, business: true, enterprise: true },
   { label: 'Scheduled exports', free: false, pro: false, business: true, enterprise: true },
