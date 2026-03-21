@@ -236,7 +236,23 @@ ${commentRows}
         })
         const data = await res.json()
         if (data.comments) {
-          allComments.push(...data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` })))
+          const videoComments: Comment[] = data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
+          allComments.push(...videoComments)
+          // Fire-and-forget export log (signed-in users only)
+          if (isSignedIn && videoComments.length > 0) {
+            const first = videoComments[0]
+            fetch('/api/exports/log', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                videoUrl: url,
+                videoTitle: first.videoTitle ?? '',
+                channelName: first.channelName ?? '',
+                commentCount: videoComments.length,
+                format,
+              }),
+            }).catch(() => {})
+          }
         }
       }
       setStatusMsg(`Processed ${allComments.length.toLocaleString()} comments`)
