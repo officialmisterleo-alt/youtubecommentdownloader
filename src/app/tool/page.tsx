@@ -299,7 +299,7 @@ ${commentRows}
               <div key={i} className="flex items-center gap-2">
                 <input value={u} onChange={e => updateUrl(i, e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="flex-1 min-w-0 bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-sm w-full" />
+                  className="flex-1 min-w-0 bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-base w-full" />
                 {i > 0 && (
                   <button onClick={() => removeUrl(i)} className="text-[#888888] hover:text-red-400 p-1 shrink-0">
                     <X size={16} />
@@ -345,7 +345,7 @@ ${commentRows}
             <label className="text-sm font-medium text-white block mb-2">Max Comments</label>
             <div className="relative">
               <select value={maxComments} onChange={e => setMaxComments(e.target.value)}
-                className="w-full bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white text-sm appearance-none focus:outline-none focus:border-red-600">
+                className="w-full bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white text-base appearance-none focus:outline-none focus:border-red-600">
                 <option value="100">100 comments</option>
                 <option value="500">500 comments</option>
                 <option value="1000">1,000 comments</option>
