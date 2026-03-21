@@ -694,29 +694,26 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
     }
   }
 
-  if (!isSignedIn) {
-    return (
-      <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl p-6 sm:p-8">
-        <div className="flex items-center gap-3 mb-3">
-          <Sparkles className="w-5 h-5 text-red-400" />
-          <h2 className="text-white font-bold text-base">AI Comment Analysis</h2>
-          <span className="bg-red-600/20 text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-red-600/30">Pro+</span>
-        </div>
-        <p className="text-[#888888] text-sm mb-5">AI Analysis is available on Pro and above. Upgrade to analyze up to 10,000 comments.</p>
-        <div className="flex items-center gap-3">
-          <Link href="/pricing" className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors">
-            <Lock className="w-4 h-4" /> Upgrade to unlock AI Analysis
-          </Link>
-          <Link href="/auth/signup" className="text-[#888888] hover:text-white text-sm transition-colors">
-            Sign in
-          </Link>
-        </div>
-      </div>
-    )
-  }
+  const showLockedOverlay = !isSignedIn
 
   return (
-    <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
+    <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden relative">
+      {/* Locked overlay for unauthenticated / free users */}
+      {showLockedOverlay && (
+        <div className="absolute inset-0 z-10 bg-gray-900/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-4 p-6 text-center">
+          <Lock className="w-10 h-10 text-red-400" />
+          <div>
+            <h3 className="text-white font-bold text-lg mb-1">AI Analysis — Pro Feature</h3>
+            <p className="text-[#888888] text-sm">Upgrade to Pro to analyze up to 10,000 comments and generate branded reports.</p>
+          </div>
+          <Link href="/pricing" className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors">
+            Upgrade to Pro
+          </Link>
+        </div>
+      )}
+
+      {/* Panel content — dimmed when locked */}
+      <div className={showLockedOverlay ? 'opacity-50 pointer-events-none' : undefined}>
       {/* Header */}
       <button
         onClick={() => setExpanded(e => !e)}
@@ -811,6 +808,7 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
           )}
         </div>
       )}
+      </div>
     </div>
   )
 }
