@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Sparkles, Lock, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
+import { Sparkles, Lock, RefreshCw, ChevronDown, ChevronUp, Download } from 'lucide-react'
 
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string }
@@ -208,6 +208,98 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
   const { comments: limit, label: tierLabel } = TIER_LIMITS[tier]
   const sampleSize = Math.min(comments.length, limit)
 
+  function exportReport() {
+    if (!result || !resultType) return
+    const typeInfo = ANALYSIS_TYPES.find(t => t.id === resultType)
+    const now = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
+    const renderSection = (label: string, value: string) =>
+      `<div class="section"><div class="label">${label}</div><div class="value">${value}</div></div>`
+
+    let bodyContent = ''
+    if (resultType === 'sentiment') {
+      const d = result as Parameters<typeof SentimentResult>[0]['data']
+      bodyContent = `
+        ${renderSection('Overall Sentiment', d.overall)}
+        ${renderSection('Breakdown', `Positive: ${d.positive}% &nbsp;|&nbsp; Neutral: ${d.neutral}% &nbsp;|&nbsp; Negative: ${d.negative}%`)}
+        ${renderSection('What they love', d.positiveThemes?.join(', '))}
+        ${renderSection('Pain points', d.negativeThemes?.join(', '))}
+        ${renderSection('Summary', d.summary)}`
+    } else if (resultType === 'audience') {
+      const d = result as Parameters<typeof AudienceResult>[0]['data']
+      bodyContent = `
+        ${renderSection('Audience Profile', d.profile)}
+        ${renderSection('Expertise Level', d.expertise)}
+        ${renderSection('Context', d.context)}
+        ${renderSection('Why they watch', d.motivations?.join(', '))}
+        ${renderSection('Top use cases', d.useCases?.join(', '))}
+        ${renderSection('Summary', d.summary)}`
+    } else if (resultType === 'topics') {
+      const d = result as Parameters<typeof TopicsResult>[0]['data']
+      bodyContent = d.topics?.map(t =>
+        renderSection(`${t.name} (${t.percentage}%)`, `${t.description}${t.example ? `<br><em>"${t.example}"</em>` : ''}`)
+      ).join('') + renderSection('Summary', d.summary)
+    } else if (resultType === 'feedback') {
+      const d = result as Parameters<typeof FeedbackResult>[0]['data']
+      bodyContent = `
+        ${renderSection('What they praise', d.praise?.join('<br>• '))}
+        ${renderSection('What they want', d.requests?.join('<br>• '))}
+        ${d.insights?.map(ins => renderSection(ins.action, ins.reason)).join('')}
+        ${renderSection('Summary', d.summary)}`
+    } else if (resultType === 'trends') {
+      const d = result as Parameters<typeof TrendsResult>[0]['data']
+      bodyContent = `
+        ${renderSection('Trending phrases', d.phrases?.map(p => `"${p}"`).join(', '))}
+        ${d.viralComments?.map(c => renderSection(`"${c.text}"`, `🔥 ${c.reason}`)).join('')}
+        ${renderSection('Top keywords', d.keywords?.join(', '))}
+        ${renderSection('Summary', d.summary)}`
+    }
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${typeInfo?.label} Analysis Report</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; margin: 0; padding: 40px 24px; }
+  .container { max-width: 720px; margin: 0 auto; }
+  .header { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #222; }
+  .logo { background: #dc2626; border-radius: 6px; padding: 6px 10px; color: white; font-weight: 800; font-size: 13px; text-decoration: none; }
+  .title { font-size: 22px; font-weight: 700; color: white; }
+  .meta { font-size: 12px; color: #666; margin-top: 2px; }
+  .badge { background: rgba(220,38,38,0.15); color: #f87171; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px; border: 1px solid rgba(220,38,38,0.3); }
+  .section { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
+  .label { font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .value { font-size: 14px; color: #ccc; line-height: 1.6; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #222; font-size: 11px; color: #444; text-align: center; }
+  .footer a { color: #666; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">YT</div>
+    <div>
+      <div class="title">${typeInfo?.icon} ${typeInfo?.label} Analysis Report</div>
+      <div class="meta">Generated ${now} &nbsp;·&nbsp; <span class="badge">AI Analysis</span> &nbsp;·&nbsp; ${sampleSize.toLocaleString()} comments analysed</div>
+    </div>
+  </div>
+  ${bodyContent}
+  <div class="footer">Generated by <a href="https://youtubecommentdownloader.com">youtubecommentdownloader.com</a></div>
+</div>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `yt-${resultType}-analysis-report.html`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function runAnalysis() {
     setLoading(true)
     setError('')
@@ -309,23 +401,39 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
             </button>
           </div>
 
+          {/* Hint — shown when no result yet */}
+          {!result && !loading && (
+            <p className="text-[#555555] text-xs">After running an analysis, you can download a full branded HTML report.</p>
+          )}
+
           {/* Error */}
           {error && <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-3 text-red-400 text-sm">{error}</div>}
 
           {/* Results */}
           {result && resultType && (
-            <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4 sm:p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-lg">{ANALYSIS_TYPES.find(t => t.id === resultType)?.icon}</span>
-                <span className="text-white font-semibold text-sm">{ANALYSIS_TYPES.find(t => t.id === resultType)?.label} Report</span>
-                <span className="text-[#555555] text-xs ml-auto">{sampleSize.toLocaleString()} comments</span>
+            <>
+              <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4 sm:p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-lg">{ANALYSIS_TYPES.find(t => t.id === resultType)?.icon}</span>
+                  <span className="text-white font-semibold text-sm">{ANALYSIS_TYPES.find(t => t.id === resultType)?.label} Report</span>
+                  <span className="text-[#555555] text-xs ml-auto">{sampleSize.toLocaleString()} comments</span>
+                </div>
+                {resultType === 'sentiment' && <SentimentResult data={result as Parameters<typeof SentimentResult>[0]['data']} />}
+                {resultType === 'audience' && <AudienceResult data={result as Parameters<typeof AudienceResult>[0]['data']} />}
+                {resultType === 'topics' && <TopicsResult data={result as Parameters<typeof TopicsResult>[0]['data']} />}
+                {resultType === 'feedback' && <FeedbackResult data={result as Parameters<typeof FeedbackResult>[0]['data']} />}
+                {resultType === 'trends' && <TrendsResult data={result as Parameters<typeof TrendsResult>[0]['data']} />}
               </div>
-              {resultType === 'sentiment' && <SentimentResult data={result as Parameters<typeof SentimentResult>[0]['data']} />}
-              {resultType === 'audience' && <AudienceResult data={result as Parameters<typeof AudienceResult>[0]['data']} />}
-              {resultType === 'topics' && <TopicsResult data={result as Parameters<typeof TopicsResult>[0]['data']} />}
-              {resultType === 'feedback' && <FeedbackResult data={result as Parameters<typeof FeedbackResult>[0]['data']} />}
-              {resultType === 'trends' && <TrendsResult data={result as Parameters<typeof TrendsResult>[0]['data']} />}
-            </div>
+
+              {/* Prominent export button */}
+              <button
+                onClick={exportReport}
+                className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold text-sm px-5 py-3.5 rounded-xl transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                ⬇ Download Analysis Report
+              </button>
+            </>
           )}
         </div>
       )}

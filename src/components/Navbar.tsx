@@ -142,7 +142,7 @@ export default function Navbar() {
             {/* Animated hamburger — mobile */}
             <button
               onClick={() => setOpen(!open)}
-              className="md:hidden relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/[0.05] transition-colors"
+              className="md:hidden col-start-3 justify-self-end relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/[0.05] transition-colors"
               aria-label="Toggle menu"
             >
               <span className={`absolute block w-5 h-0.5 bg-[#888] transition-all duration-200 ${open ? 'rotate-45' : '-translate-y-[6px]'}`} />
