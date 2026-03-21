@@ -76,18 +76,35 @@ function ToolPageContent() {
     } else if (fmt === 'JSON') {
       content = JSON.stringify(comments, null, 2); mimeType = 'application/json'; ext = 'json'
     } else if (fmt === 'HTML') {
+      const avatarColors = ['#1565C0','#2E7D32','#6A1B9A','#AD1457','#E65100','#00695C','#4527A0','#283593','#00838F','#558B2F']
+      const getAvatarColor = (name: string) => {
+        let hash = 0
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+        return avatarColors[Math.abs(hash) % avatarColors.length]
+      }
+      const thumbUpSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>`
+      const thumbDownSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>`
+      const sortSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h6v-2H3v2zm0-5h12v-2H3v2zm0-7v2h18V6H3z"/></svg>`
       const commentRows = comments.map(c => {
+        const handle = c.author.startsWith('@') ? c.author : `@${c.author}`
         const initial = c.author.replace('@', '')[0]?.toUpperCase() || '?'
+        const color = getAvatarColor(c.author)
+        const repliesHtml = c.replies > 0
+          ? `<button class="replies-btn">${sortSvg} ${c.replies} ${c.replies === 1 ? 'reply' : 'replies'}</button>`
+          : ''
         return `<div class="comment">
-  <div class="avatar">${initial}</div>
+  <div class="avatar" style="background:${color}">${initial}</div>
   <div class="comment-body">
-    <div class="comment-header">
-      <span class="author">${escapeHtml(c.author)}</span>
-      <span class="timestamp">${escapeHtml(c.date)}</span>
+    <div class="comment-meta">
+      <span class="author-name">${escapeHtml(handle)}</span>
+      <span class="comment-time">${escapeHtml(c.date)}</span>
     </div>
     <div class="comment-text">${escapeHtml(c.text)}</div>
     <div class="comment-actions">
-      <span class="likes">👍 ${c.likes.toLocaleString()}</span>${c.replies > 0 ? `\n      <span class="replies">${c.replies} ${c.replies === 1 ? 'reply' : 'replies'}</span>` : ''}
+      <button class="action-btn">${thumbUpSvg}<span class="like-count">${c.likes > 0 ? c.likes.toLocaleString() : ''}</span></button>
+      <button class="action-btn">${thumbDownSvg}</button>
+      <button class="action-btn reply-btn">Reply</button>
+      ${repliesHtml}
     </div>
   </div>
 </div>`
@@ -97,27 +114,39 @@ function ToolPageContent() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube Comments</title>
+<title>YouTube Comments Export</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f0f0f; color: #fff; font-family: Roboto, Arial, sans-serif; padding: 24px 16px; max-width: 860px; margin: 0 auto; }
-  .header { font-size: 20px; font-weight: 400; color: #fff; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #272727; }
-  .comment { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid #272727; }
-  .comment:last-child { border-bottom: none; }
-  .avatar { width: 40px; height: 40px; border-radius: 50%; background: #3f3f3f; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500; color: #fff; flex-shrink: 0; }
+  body { background: #0f0f0f; color: #f1f1f1; font-family: Roboto, Arial, sans-serif; padding: 24px 16px 64px; max-width: 860px; margin: 0 auto; }
+  .comments-header { display: flex; align-items: center; gap: 24px; margin-bottom: 24px; }
+  .comments-count { font-size: 16px; font-weight: 400; color: #f1f1f1; }
+  .sort-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: #f1f1f1; background: none; border: none; padding: 8px 12px; border-radius: 18px; cursor: default; }
+  .sort-chip:hover { background: rgba(255,255,255,0.1); }
+  .comment { display: flex; gap: 16px; margin-bottom: 24px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500; color: #fff; flex-shrink: 0; user-select: none; }
   .comment-body { flex: 1; min-width: 0; }
-  .comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
-  .author { font-size: 13px; font-weight: 500; color: #fff; }
-  .timestamp { font-size: 12px; color: #aaa; }
-  .comment-text { font-size: 14px; color: #f1f1f1; line-height: 1.6; margin-bottom: 8px; word-break: break-word; white-space: pre-wrap; }
-  .comment-actions { display: flex; align-items: center; gap: 16px; }
-  .likes { font-size: 13px; color: #aaa; }
-  .replies { font-size: 13px; color: #3ea6ff; }
+  .comment-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .author-name { font-size: 13px; font-weight: 500; color: #f1f1f1; }
+  .comment-time { font-size: 12px; color: #aaaaaa; }
+  .comment-text { font-size: 14px; color: #f1f1f1; line-height: 20px; margin-bottom: 8px; word-break: break-word; white-space: pre-wrap; }
+  .comment-actions { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+  .action-btn { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; color: #aaaaaa; font-size: 13px; cursor: pointer; padding: 6px 8px; border-radius: 18px; font-family: Roboto, Arial, sans-serif; }
+  .action-btn:hover { background: rgba(255,255,255,0.1); }
+  .like-count { font-size: 13px; color: #aaaaaa; min-width: 4px; }
+  .reply-btn { font-weight: 600; font-size: 13px; margin-left: 4px; }
+  .replies-btn { display: inline-flex; align-items: center; gap: 6px; color: #3ea6ff; font-size: 13px; font-weight: 600; background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: 18px; font-family: Roboto, Arial, sans-serif; margin-left: 4px; }
+  .replies-btn:hover { background: rgba(62,166,255,0.1); }
+  .watermark { text-align: center; margin-top: 48px; padding-top: 20px; border-top: 1px solid #272727; font-size: 12px; color: #555555; }
+  .watermark a { color: #3ea6ff; text-decoration: none; }
 </style>
 </head>
 <body>
-<div class="header">${comments.length.toLocaleString()} Comments</div>
+<div class="comments-header">
+  <span class="comments-count">${comments.length.toLocaleString()} Comments</span>
+  <button class="sort-chip">${sortSvg}&nbsp;Sort by top</button>
+</div>
 ${commentRows}
+<div class="watermark">Exported with <a href="https://youtubecommentdownloader.com" target="_blank">YTCommentDownloader.com</a></div>
 </body>
 </html>`
       mimeType = 'text/html'; ext = 'html'
@@ -132,28 +161,29 @@ ${commentRows}
   }
 
   const handleExport = async () => {
-    const url = urls[0]
-    if (!url) return
+    const activeUrls = urls.filter(u => u.trim())
+    if (!activeUrls.length) return
     setLoading(true); setDone(false); setProgress(0); setComments([])
 
-    const msgs = ['Fetching comments...', 'Processing comments...', 'Preparing export...']
-    for (let i = 0; i < msgs.length; i++) {
-      setStatusMsg(msgs[i]); setProgress((i + 1) * 33)
-      await new Promise(r => setTimeout(r, 800))
-    }
-
+    const allComments: Comment[] = []
     try {
-      const res = await fetch('/api/youtube/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, maxComments: parseInt(maxComments) || 100, includeReplies, sortBy }),
-      })
-      const data = await res.json()
-      if (data.comments) {
-        setComments(data.comments)
-        setStatusMsg(`Processed ${data.comments.length.toLocaleString()} comments`)
-        setDone(true)
+      for (let i = 0; i < activeUrls.length; i++) {
+        const url = activeUrls[i]
+        setStatusMsg(`Fetching comments from video ${i + 1} of ${activeUrls.length}…`)
+        setProgress(Math.round(((i) / activeUrls.length) * 90))
+        const res = await fetch('/api/youtube/comments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, maxComments: parseInt(maxComments) || 100, includeReplies, sortBy }),
+        })
+        const data = await res.json()
+        if (data.comments) {
+          allComments.push(...data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` })))
+        }
       }
+      setStatusMsg(`Processed ${allComments.length.toLocaleString()} comments`)
+      setComments(allComments)
+      setDone(true)
     } catch {
       setComments([
         { id: '1', author: '@techreviewer99', text: 'This is exactly what I needed! The tutorial was super clear.', likes: 342, date: '2 days ago', replies: 12 },

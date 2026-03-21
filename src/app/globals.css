@@ -26,7 +26,7 @@ body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 
 input, select { min-height: 44px; }
 button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
-a { display: inline-flex; align-items: center; justify-content: center; }
+a { display: inline-flex; align-items: center; }
 
 :root {
   --bg: #0a0a0a;
