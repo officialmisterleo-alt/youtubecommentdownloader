@@ -14,7 +14,7 @@ function decodeHtml(str: string): string {
 }
 
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
-type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList: Reply[] }
+type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
 
 const MOCK_COMMENTS: Comment[] = [
   {
@@ -60,13 +60,30 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.YOUTUBE_API_KEY
     if (!apiKey || apiKey === 'PLACEHOLDER_YOUTUBE_KEY') {
       await new Promise(r => setTimeout(r, 1500))
-      const mock = includeReplies ? MOCK_COMMENTS : MOCK_COMMENTS.map(c => ({ ...c, replyList: [] }))
-      return NextResponse.json({ comments: mock, total: mock.length, mock: true })
+      const mockWithMeta = (includeReplies ? MOCK_COMMENTS : MOCK_COMMENTS.map(c => ({ ...c, replyList: [] }))).map(c => ({
+        ...c,
+        videoTitle: 'Sample YouTube Video — Tutorial & Deep Dive',
+        channelName: 'CreatorChannel',
+        videoUrl: url,
+      }))
+      return NextResponse.json({ comments: mockWithMeta, total: mockWithMeta.length, mock: true })
     }
 
     const videoIdMatch = url.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/)
     if (!videoIdMatch) return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 })
     const videoId = videoIdMatch[1]
+
+    // Fetch video title and channel name
+    let videoTitle = ''
+    let channelName = ''
+    try {
+      const metaParams = new URLSearchParams({ part: 'snippet', id: videoId, key: apiKey })
+      const metaRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?${metaParams}`)
+      const metaData = await metaRes.json()
+      const snippet = metaData.items?.[0]?.snippet
+      videoTitle = snippet?.title ?? ''
+      channelName = snippet?.channelTitle ?? ''
+    } catch { /* non-fatal */ }
 
     const comments: Comment[] = []
     let pageToken = ''
@@ -106,6 +123,9 @@ export async function POST(req: NextRequest) {
           date: new Date(s.publishedAt).toLocaleDateString(),
           replies: replyCount,
           replyList,
+          videoTitle,
+          channelName,
+          videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
         })
         if (comments.length >= maxComments) break
       }

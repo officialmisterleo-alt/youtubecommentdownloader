@@ -3,12 +3,13 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import AnalysisPanel from '@/components/AnalysisPanel'
 import Link from 'next/link'
 import { Plus, Download, RefreshCw, ChevronDown, X, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
-type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[] }
+type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
 type Format = 'CSV' | 'Excel' | 'JSON' | 'HTML' | 'TXT'
 type SortBy = 'top' | 'newest' | 'oldest'
 
@@ -72,11 +73,16 @@ function ToolPageContent() {
     let mimeType = 'text/plain'
     let ext = 'txt'
     if (fmt === 'CSV') {
-      const rows = ['Type,Author,Comment,Likes,Date']
+      const rows = ['Type,VideoTitle,Channel,Author,Comment,Likes,Date']
+      let lastVideoTitle = ''
       for (const c of comments) {
-        rows.push(`comment,"${c.author}","${c.text.replace(/"/g, '""')}",${c.likes},"${c.date}"`)
+        const vt = c.videoTitle ?? ''; const ch = c.channelName ?? ''
+        if (vt && vt !== lastVideoTitle) {
+          rows.push(`video,"${vt.replace(/"/g, '""')}","${ch.replace(/"/g, '""')}","","","",""`); lastVideoTitle = vt
+        }
+        rows.push(`comment,"${vt.replace(/"/g, '""')}","${ch.replace(/"/g, '""')}","${c.author}","${c.text.replace(/"/g, '""')}",${c.likes},"${c.date}"`)
         for (const r of c.replyList ?? []) {
-          rows.push(`reply,"${r.author}","${r.text.replace(/"/g, '""')}",${r.likes},"${r.date}"`)
+          rows.push(`reply,"${vt.replace(/"/g, '""')}","${ch.replace(/"/g, '""')}","${r.author}","${r.text.replace(/"/g, '""')}",${r.likes},"${r.date}"`)
         }
       }
       content = rows.join('\n')
@@ -115,7 +121,16 @@ function ToolPageContent() {
   </div>
 </div>`
       }
+      let lastVideoTitle = ''
       const commentRows = comments.map(c => {
+        let videoHeader = ''
+        if (c.videoTitle && c.videoTitle !== lastVideoTitle) {
+          lastVideoTitle = c.videoTitle
+          videoHeader = `<div class="video-header">
+  <div class="video-title"><a href="${c.videoUrl ?? '#'}" target="_blank">${escapeHtml(c.videoTitle)}</a></div>
+  <div class="video-channel">${escapeHtml(c.channelName ?? '')}</div>
+</div>`
+        }
         const replyItems = (c.replyList ?? []).map(r => renderComment(r, 'small')).join('\n')
         const repliesSection = (c.replyList ?? []).length > 0
           ? `<details class="replies-section">
@@ -125,7 +140,7 @@ ${replyItems}
   </div>
 </details>`
           : ''
-        return `<div class="comment-thread">
+        return `${videoHeader}<div class="comment-thread">
 ${renderComment(c, 'large')}
 ${repliesSection}
 </div>`
@@ -160,6 +175,11 @@ ${repliesSection}
   .replies-toggle:hover { background: rgba(62,166,255,0.1); }
   .replies-toggle::-webkit-details-marker { display: none; }
   .replies-list { margin-top: 12px; }
+  .video-header { margin: 32px 0 20px; padding: 16px; background: #161616; border: 1px solid #272727; border-radius: 12px; }
+  .video-title { font-size: 15px; font-weight: 600; color: #f1f1f1; margin-bottom: 4px; }
+  .video-title a { color: #f1f1f1; text-decoration: none; }
+  .video-title a:hover { color: #3ea6ff; }
+  .video-channel { font-size: 12px; color: #aaaaaa; }
   .watermark { text-align: center; margin-top: 48px; padding-top: 20px; border-top: 1px solid #272727; font-size: 12px; color: #555555; }
   .watermark a { color: #3ea6ff; text-decoration: none; }
 </style>
@@ -175,13 +195,21 @@ ${commentRows}
 </html>`
       mimeType = 'text/html'; ext = 'html'
     } else {
-      content = comments.map(c => {
+      const blocks: string[] = []
+      let lastVideoTitle = ''
+      for (const c of comments) {
+        if (c.videoTitle && c.videoTitle !== lastVideoTitle) {
+          const sep = '═'.repeat(60)
+          blocks.push(`${sep}\n📹  ${c.videoTitle}\n    ${c.channelName ?? ''}\n    ${c.videoUrl ?? ''}\n${sep}`)
+          lastVideoTitle = c.videoTitle
+        }
         let block = `${c.author} · ${c.date} · ${c.likes} likes\n${c.text}`
         for (const r of c.replyList ?? []) {
           block += `\n\n  ↳ ${r.author} · ${r.date} · ${r.likes} likes\n    ${r.text}`
         }
-        return block
-      }).join('\n\n' + '─'.repeat(60) + '\n\n')
+        blocks.push(block)
+      }
+      content = blocks.join('\n\n' + '─'.repeat(60) + '\n\n')
       ext = 'txt'
     }
     const blob = new Blob([content], { type: mimeType })
@@ -215,12 +243,13 @@ ${commentRows}
       setComments(allComments)
       setDone(true)
     } catch {
+      const mockMeta = { videoTitle: 'Sample YouTube Video — Tutorial & Deep Dive', channelName: 'CreatorChannel', videoUrl: urls[0] }
       setComments([
-        { id: '1', author: '@techreviewer99', text: 'This is exactly what I needed! The tutorial was super clear.', likes: 342, date: '2 days ago', replies: 2, replyList: [{ id: '1-1', author: '@CreatorChannel', text: 'Thank you! Really glad it helped.', likes: 48, date: '2 days ago' }] },
-        { id: '2', author: '@marketingpro_sarah', text: 'Great content as always. Would love to see a follow-up.', likes: 187, date: '3 days ago', replies: 1, replyList: [{ id: '2-1', author: '@CreatorChannel', text: 'Advanced series coming next month!', likes: 34, date: '3 days ago' }] },
-        { id: '3', author: '@dataanalyst_mike', text: "I've been using this method for 6 months and it works perfectly.", likes: 156, date: '4 days ago', replies: 0, replyList: [] },
-        { id: '4', author: '@creativedirector', text: 'The production quality keeps improving. Keep up the amazing work!', likes: 134, date: '5 days ago', replies: 0, replyList: [] },
-        { id: '5', author: '@researcher_2024', text: 'Perfect for academic research. Downloaded 50k comments in 10 min.', likes: 98, date: '1 week ago', replies: 0, replyList: [] },
+        { id: '1', author: '@techreviewer99', text: 'This is exactly what I needed! The tutorial was super clear.', likes: 342, date: '2 days ago', replies: 2, replyList: [{ id: '1-1', author: '@CreatorChannel', text: 'Thank you! Really glad it helped.', likes: 48, date: '2 days ago' }], ...mockMeta },
+        { id: '2', author: '@marketingpro_sarah', text: 'Great content as always. Would love to see a follow-up.', likes: 187, date: '3 days ago', replies: 1, replyList: [{ id: '2-1', author: '@CreatorChannel', text: 'Advanced series coming next month!', likes: 34, date: '3 days ago' }], ...mockMeta },
+        { id: '3', author: '@dataanalyst_mike', text: "I've been using this method for 6 months and it works perfectly.", likes: 156, date: '4 days ago', replies: 0, replyList: [], ...mockMeta },
+        { id: '4', author: '@creativedirector', text: 'The production quality keeps improving. Keep up the amazing work!', likes: 134, date: '5 days ago', replies: 0, replyList: [], ...mockMeta },
+        { id: '5', author: '@researcher_2024', text: 'Perfect for academic research. Downloaded 50k comments in 10 min.', likes: 98, date: '1 week ago', replies: 0, replyList: [], ...mockMeta },
       ])
       setDone(true)
     }
@@ -417,6 +446,10 @@ ${commentRows}
           </div>
         )}
       </div>
+
+      {done && comments.length > 0 && (
+        <AnalysisPanel comments={comments} isSignedIn={isSignedIn} />
+      )}
 
       <Footer />
 
