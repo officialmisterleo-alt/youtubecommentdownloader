@@ -25,6 +25,14 @@ const PLAN_LIMITS: Record<string, { maxComments: number }> = {
   enterprise: { maxComments: 1000000 },
 }
 
+// Monthly comment quota per plan (0 = unlimited)
+const MONTHLY_QUOTA: Record<string, number> = {
+  free: 1000,
+  pro: 100000,
+  business: 1000000,
+  enterprise: 0,
+}
+
 const MOCK_COMMENTS: Comment[] = [
   {
     id: '1', author: '@techreviewer99', text: 'This is exactly what I needed! The tutorial was super clear and easy to follow.', likes: 342, date: '2 days ago', replies: 2,
@@ -96,6 +104,12 @@ async function incrementUsage(userId: string, commentsCount: number) {
   }
 }
 
+function nextMonthFirst(): string {
+  const now = new Date()
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  return next.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { url, maxComments = 100, includeReplies = false, sortBy = 'top' } = await req.json()
@@ -105,17 +119,41 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
+    let plan = 'anonymous'
     let planMaxComments: number
     if (!user) {
-      planMaxComments = 50 // unauthenticated limit
+      planMaxComments = 100 // unauthenticated hard cap
     } else {
+      const serviceClient = createServiceClient()
       const { data: sub } = await supabase
         .from('subscriptions')
         .select('plan, status')
         .eq('user_id', user.id)
         .single()
-      const plan = (sub?.status === 'active' ? sub?.plan : null) ?? 'free'
+      plan = (sub?.status === 'active' ? sub?.plan : null) ?? 'free'
       planMaxComments = PLAN_LIMITS[plan]?.maxComments ?? PLAN_LIMITS.free.maxComments
+
+      // Check monthly quota
+      const monthlyLimit = MONTHLY_QUOTA[plan] ?? 0
+      if (monthlyLimit > 0) {
+        const month = new Date().toISOString().slice(0, 7)
+        const { data: usage } = await serviceClient
+          .from('usage')
+          .select('comments_count')
+          .eq('user_id', user.id)
+          .eq('month', month)
+          .single()
+        const usedThisMonth = usage?.comments_count ?? 0
+        if (usedThisMonth >= monthlyLimit) {
+          return NextResponse.json({
+            error: 'monthly_quota_exceeded',
+            plan,
+            monthlyLimit,
+            usedThisMonth,
+            quotaResetDate: nextMonthFirst(),
+          }, { status: 429 })
+        }
+      }
     }
 
     // Enforce plan limit — client-requested value cannot exceed plan max
@@ -132,34 +170,55 @@ export async function POST(req: NextRequest) {
       }))
       const mockResult = mockWithMeta.slice(0, effectiveMax)
       if (user) await incrementUsage(user.id, mockResult.length).catch(() => {})
-      return NextResponse.json({ comments: mockResult, total: mockResult.length, mock: true })
+      return NextResponse.json({
+        comments: mockResult,
+        total: mockResult.length,
+        mock: true,
+        truncated: false,
+        plan,
+        perVideoLimit: planMaxComments,
+      })
     }
 
     const videoIdMatch = url.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/)
     if (!videoIdMatch) return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 })
     const videoId = videoIdMatch[1]
 
-    // Fetch video title and channel name
+    // Fetch video title, channel name, and comment count
     let videoTitle = ''
     let channelName = ''
+    let videoCommentCount: number | null = null
     try {
-      const metaParams = new URLSearchParams({ part: 'snippet', id: videoId, key: apiKey })
+      const metaParams = new URLSearchParams({ part: 'snippet,statistics', id: videoId, key: apiKey })
       const metaRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?${metaParams}`)
       const metaData = await metaRes.json()
-      const snippet = metaData.items?.[0]?.snippet
-      videoTitle = snippet?.title ?? ''
-      channelName = snippet?.channelTitle ?? ''
+      const item = metaData.items?.[0]
+      videoTitle = item?.snippet?.title ?? ''
+      channelName = item?.snippet?.channelTitle ?? ''
+      const countStr = item?.statistics?.commentCount
+      if (countStr != null) videoCommentCount = parseInt(countStr, 10) || null
     } catch { /* non-fatal */ }
 
     const comments: Comment[] = []
     let pageToken = ''
     const order = sortBy === 'newest' ? 'time' : 'relevance'
+    let hitLimit = false
 
     while (comments.length < effectiveMax) {
       const params = new URLSearchParams({ part: 'snippet', videoId, maxResults: '100', order, key: apiKey, ...(pageToken ? { pageToken } : {}) })
       const res = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?${params}`)
       const data = await res.json()
-      if (data.error) return NextResponse.json({ error: data.error.message }, { status: 400 })
+      if (data.error) {
+        const reason = data.error.errors?.[0]?.reason ?? ''
+        const message: string = data.error.message ?? ''
+        if (reason === 'commentsDisabled' || message.toLowerCase().includes('disabled')) {
+          return NextResponse.json({ error: 'comments_disabled', errorType: 'private_or_disabled' }, { status: 400 })
+        }
+        if (reason === 'forbidden' || res.status === 403) {
+          return NextResponse.json({ error: 'private_or_not_found', errorType: 'private_or_disabled' }, { status: 400 })
+        }
+        return NextResponse.json({ error: message, errorType: 'generic' }, { status: 400 })
+      }
 
       for (const item of data.items || []) {
         const s = item.snippet.topLevelComment.snippet
@@ -193,16 +252,36 @@ export async function POST(req: NextRequest) {
           channelName,
           videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
         })
-        if (comments.length >= effectiveMax) break
+        if (comments.length >= effectiveMax) {
+          hitLimit = true
+          break
+        }
       }
+      if (hitLimit) break
       if (!data.nextPageToken) break
       pageToken = data.nextPageToken
     }
 
+    // Determine if the video was truncated (we hit our limit and there are more comments)
+    const totalAvailable = videoCommentCount ?? null
+    const truncated = hitLimit && (totalAvailable === null || totalAvailable > comments.length)
+    const truncatedReason: 'unauthenticated' | 'plan_limit' | undefined = truncated
+      ? (user ? 'plan_limit' : 'unauthenticated')
+      : undefined
+
     if (user) await incrementUsage(user.id, comments.length).catch(() => {})
 
-    return NextResponse.json({ comments, total: comments.length, mock: false })
+    return NextResponse.json({
+      comments,
+      total: comments.length,
+      mock: false,
+      truncated,
+      ...(truncatedReason ? { truncatedReason } : {}),
+      ...(totalAvailable !== null ? { totalAvailable } : {}),
+      plan,
+      perVideoLimit: planMaxComments,
+    })
   } catch {
-    return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch comments', errorType: 'generic' }, { status: 500 })
   }
 }

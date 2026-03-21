@@ -11,6 +11,33 @@ type Comment = { id: string; author: string; text: string; likes: number; date: 
 type Format = 'CSV' | 'Excel' | 'JSON' | 'HTML' | 'TXT'
 type SortBy = 'top' | 'newest' | 'oldest'
 
+type TruncationInfo = {
+  truncated: boolean
+  truncatedReason?: 'unauthenticated' | 'plan_limit'
+  totalAvailable?: number
+  returnedCount: number
+  plan: string
+  perVideoLimit: number
+}
+
+type ApiError =
+  | { type: 'quota'; plan: string; monthlyLimit: number; usedThisMonth: number; quotaResetDate: string }
+  | { type: 'private_or_disabled' }
+  | { type: 'generic'; message?: string }
+
+const PLAN_DISPLAY: Record<string, string> = {
+  free: 'Free',
+  pro: 'Pro',
+  business: 'Business',
+  enterprise: 'Enterprise',
+}
+
+const NEXT_PLAN: Record<string, { name: string; label: string }> = {
+  free: { name: 'pro', label: 'Pro' },
+  pro: { name: 'business', label: 'Business' },
+  business: { name: 'enterprise', label: 'Enterprise' },
+}
+
 const GATED_FORMATS: Format[] = ['CSV', 'Excel', 'JSON']
 const ALL_FORMATS: Format[] = ['CSV', 'Excel', 'JSON', 'HTML', 'TXT']
 
@@ -52,6 +79,9 @@ function ToolPageContent() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userPlan, setUserPlan] = useState<string>('free')
   const [showAuthGate, setShowAuthGate] = useState(false)
+  const [truncationInfo, setTruncationInfo] = useState<TruncationInfo | null>(null)
+  const [apiError, setApiError] = useState<ApiError | null>(null)
+  const [dismissedTruncation, setDismissedTruncation] = useState(false)
 
   // Pre-fill URL from query param
   useEffect(() => {
@@ -85,7 +115,7 @@ function ToolPageContent() {
 
   // Reset maxComments if it exceeds plan limit
   useEffect(() => {
-    const limit = isSignedIn ? (PLAN_LIMIT[userPlan] ?? 100) : 50
+    const limit = isSignedIn ? (PLAN_LIMIT[userPlan] ?? 100) : 100
     const current = parseInt(maxComments) || 0
     if (limit !== 0 && (current === 0 || current > limit)) {
       setMaxComments(String(limit))
@@ -93,7 +123,7 @@ function ToolPageContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userPlan, isSignedIn])
 
-  const effectiveLimit = isSignedIn ? (PLAN_LIMIT[userPlan] ?? 100) : 50
+  const effectiveLimit = isSignedIn ? (PLAN_LIMIT[userPlan] ?? 100) : 100
 
   const availableOptions = effectiveLimit === 0
     ? ALL_COMMENT_OPTIONS
@@ -272,8 +302,10 @@ ${commentRows}
     const activeUrls = urls.filter(u => u.trim())
     if (!activeUrls.length) return
     setLoading(true); setDone(false); setProgress(0); setComments([])
+    setApiError(null); setTruncationInfo(null); setDismissedTruncation(false)
 
     const allComments: Comment[] = []
+    let firstTruncation: TruncationInfo | null = null
     try {
       for (let i = 0; i < activeUrls.length; i++) {
         const url = activeUrls[i]
@@ -285,9 +317,40 @@ ${commentRows}
           body: JSON.stringify({ url, maxComments: parseInt(maxComments) || 100, includeReplies, sortBy }),
         })
         const data = await res.json()
+
+        if (res.status === 429 && data.error === 'monthly_quota_exceeded') {
+          setApiError({ type: 'quota', plan: data.plan, monthlyLimit: data.monthlyLimit, usedThisMonth: data.usedThisMonth, quotaResetDate: data.quotaResetDate })
+          setProgress(100); setLoading(false)
+          return
+        }
+
+        if (!res.ok || data.error) {
+          const errorType = data.errorType ?? 'generic'
+          if (errorType === 'private_or_disabled') {
+            setApiError({ type: 'private_or_disabled' })
+          } else {
+            setApiError({ type: 'generic', message: data.error })
+          }
+          setProgress(100); setLoading(false)
+          return
+        }
+
         if (data.comments) {
           const videoComments: Comment[] = data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
           allComments.push(...videoComments)
+
+          // Capture first truncation signal
+          if (data.truncated && !firstTruncation) {
+            firstTruncation = {
+              truncated: true,
+              truncatedReason: data.truncatedReason,
+              totalAvailable: data.totalAvailable,
+              returnedCount: videoComments.length,
+              plan: data.plan ?? (isSignedIn ? userPlan : 'anonymous'),
+              perVideoLimit: data.perVideoLimit ?? 100,
+            }
+          }
+
           // Fire-and-forget export log (signed-in users only)
           if (isSignedIn && videoComments.length > 0) {
             const first = videoComments[0]
@@ -307,17 +370,10 @@ ${commentRows}
       }
       setStatusMsg(`Processed ${allComments.length.toLocaleString()} comments`)
       setComments(allComments)
+      if (firstTruncation) setTruncationInfo(firstTruncation)
       setDone(true)
     } catch {
-      const mockMeta = { videoTitle: 'Sample YouTube Video — Tutorial & Deep Dive', channelName: 'CreatorChannel', videoUrl: urls[0] }
-      setComments([
-        { id: '1', author: '@techreviewer99', text: 'This is exactly what I needed! The tutorial was super clear.', likes: 342, date: '2 days ago', replies: 2, replyList: [{ id: '1-1', author: '@CreatorChannel', text: 'Thank you! Really glad it helped.', likes: 48, date: '2 days ago' }], ...mockMeta },
-        { id: '2', author: '@marketingpro_sarah', text: 'Great content as always. Would love to see a follow-up.', likes: 187, date: '3 days ago', replies: 1, replyList: [{ id: '2-1', author: '@CreatorChannel', text: 'Advanced series coming next month!', likes: 34, date: '3 days ago' }], ...mockMeta },
-        { id: '3', author: '@dataanalyst_mike', text: "I've been using this method for 6 months and it works perfectly.", likes: 156, date: '4 days ago', replies: 0, replyList: [], ...mockMeta },
-        { id: '4', author: '@creativedirector', text: 'The production quality keeps improving. Keep up the amazing work!', likes: 134, date: '5 days ago', replies: 0, replyList: [], ...mockMeta },
-        { id: '5', author: '@researcher_2024', text: 'Perfect for academic research. Downloaded 50k comments in 10 min.', likes: 98, date: '1 week ago', replies: 0, replyList: [], ...mockMeta },
-      ])
-      setDone(true)
+      setApiError({ type: 'generic' })
     }
     setProgress(100); setLoading(false)
   }
@@ -480,6 +536,40 @@ ${commentRows}
           </div>
         )}
 
+        {/* Scenario B: monthly quota exceeded */}
+        {!loading && apiError?.type === 'quota' && (
+          <div className="mt-4 sm:mt-6 bg-amber-950/40 border border-amber-700/50 rounded-2xl p-4 sm:p-6">
+            <p className="text-amber-300 font-semibold mb-1">Monthly limit reached</p>
+            <p className="text-amber-200/80 text-sm mb-4">
+              {"You've reached your"} <strong>{PLAN_DISPLAY[apiError.plan] ?? apiError.plan}</strong>{' '}
+              monthly limit of <strong>{apiError.monthlyLimit.toLocaleString()} comments</strong>.
+              Your quota resets on <strong>{apiError.quotaResetDate}</strong>.
+              {NEXT_PLAN[apiError.plan] && <>{' '}Upgrade to {NEXT_PLAN[apiError.plan].label} to continue.</>}
+            </p>
+            {NEXT_PLAN[apiError.plan] && (
+              <Link href="/pricing" className="inline-block bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                Upgrade Plan
+              </Link>
+            )}
+          </div>
+        )}
+
+        {/* Scenario E: generic error */}
+        {!loading && apiError?.type === 'generic' && (
+          <div className="mt-4 sm:mt-6 bg-red-950/40 border border-red-700/50 rounded-2xl p-4 sm:p-6">
+            <p className="text-red-300 font-semibold mb-1">Something went wrong</p>
+            <p className="text-red-200/80 text-sm">Something went wrong fetching comments. Please check the video URL and try again.</p>
+          </div>
+        )}
+
+        {/* Scenario F: private or comments disabled */}
+        {!loading && apiError?.type === 'private_or_disabled' && (
+          <div className="mt-4 sm:mt-6 bg-red-950/40 border border-red-700/50 rounded-2xl p-4 sm:p-6">
+            <p className="text-red-300 font-semibold mb-1">Comments unavailable</p>
+            <p className="text-red-200/80 text-sm">{"This video's comments are disabled or the video is private."}</p>
+          </div>
+        )}
+
         {done && comments.length > 0 && (
           <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-white/[0.07] flex flex-wrap items-center justify-between gap-3">
@@ -518,6 +608,66 @@ ${commentRows}
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Scenario A: unauthenticated, video truncated at 100 */}
+        {done && !dismissedTruncation && truncationInfo?.truncatedReason === 'unauthenticated' && (
+          <div className="mt-4 bg-blue-950/40 border border-blue-700/50 rounded-2xl p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-blue-200 text-sm">
+                  Showing <strong>{truncationInfo.returnedCount.toLocaleString()}</strong>
+                  {truncationInfo.totalAvailable ? <> of <strong>{truncationInfo.totalAvailable.toLocaleString()}</strong></> : null}
+                  {' '}comments.{' '}
+                  Sign in for free to fetch up to <strong>1,000 comments/month</strong>, or upgrade to Pro for 100,000.
+                </p>
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  <Link href="/auth/login" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Sign In</Link>
+                  <Link href="/auth/signup" className="border border-blue-600/50 hover:border-blue-500 text-blue-300 hover:text-blue-200 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Sign Up Free</Link>
+                </div>
+              </div>
+              <button onClick={() => setDismissedTruncation(true)} className="text-blue-400/60 hover:text-blue-300 shrink-0 mt-0.5">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Scenario C: free plan, video has more */}
+        {done && !dismissedTruncation && truncationInfo?.truncatedReason === 'plan_limit' && truncationInfo.plan === 'free' && (
+          <div className="mt-4 bg-blue-950/40 border border-blue-700/50 rounded-2xl p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-blue-200 text-sm">
+                  Showing <strong>{truncationInfo.returnedCount.toLocaleString()}</strong>
+                  {truncationInfo.totalAvailable ? <> of <strong>{truncationInfo.totalAvailable.toLocaleString()}</strong></> : null}
+                  {' '}comments — the maximum for the Free plan. Upgrade to Pro to fetch up to <strong>10,000 comments per video</strong>.
+                </p>
+                <div className="mt-3">
+                  <Link href="/pricing" className="inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Upgrade to Pro →</Link>
+                </div>
+              </div>
+              <button onClick={() => setDismissedTruncation(true)} className="text-blue-400/60 hover:text-blue-300 shrink-0 mt-0.5">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Scenario D: paid plan, video has more (subtle info) */}
+        {done && !dismissedTruncation && truncationInfo?.truncatedReason === 'plan_limit' && truncationInfo.plan !== 'free' && truncationInfo.plan !== 'anonymous' && (
+          <div className="mt-4 bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-[#888888] text-sm">
+                Showing <strong className="text-white">{truncationInfo.returnedCount.toLocaleString()}</strong>
+                {truncationInfo.totalAvailable ? <> of <strong className="text-white">{truncationInfo.totalAvailable.toLocaleString()}</strong></> : null}
+                {' '}comments — your <strong className="text-white">{PLAN_DISPLAY[truncationInfo.plan] ?? truncationInfo.plan}</strong> plan maximum per video.
+              </p>
+              <button onClick={() => setDismissedTruncation(true)} className="text-[#555] hover:text-[#888] shrink-0 mt-0.5">
+                <X size={16} />
+              </button>
             </div>
           </div>
         )}
