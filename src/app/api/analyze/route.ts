@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 export type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
 
 const TIER_LIMITS: Record<string, number> = {
-  free: 1000,
-  pro: 5000,
-  business: 10000,
-  enterprise: 50000,
+  free: 0,
+  pro: 10000,
+  business: 50000,
+  enterprise: 100000,
 }
 
 const PROMPTS: Record<AnalysisType, (comments: string, sampleSize: number) => string> = {
@@ -155,6 +155,7 @@ export async function POST(req: NextRequest) {
     if (!PROMPTS[analysisType]) return NextResponse.json({ error: 'Invalid analysis type' }, { status: 400 })
 
     const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.pro
+    if (limit === 0) return NextResponse.json({ error: 'AI Analysis is not available on the free plan. Upgrade to Pro or above.' }, { status: 403 })
     const sample = comments.slice(0, limit)
 
     // Format comments for the prompt — include likes for weighting

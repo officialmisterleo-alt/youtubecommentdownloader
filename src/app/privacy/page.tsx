@@ -2,8 +2,8 @@ import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Privacy Policy — YTCommentDownloader',
-  description: 'Privacy Policy for YTCommentDownloader.',
+  title: 'Privacy Policy — YouTubeCommentDownloader',
+  description: 'Privacy Policy for YouTubeCommentDownloader.',
 }
 
 export default function PrivacyPage() {
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
           <p className="text-[#555555] text-sm mb-10">Effective Date: March 2026</p>
 
           <p className="text-[#888888] leading-relaxed mb-8">
-            This Privacy Policy explains how YTCommentDownloader (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) collects, uses, stores, and protects information about you when you use our website and Service. By using the Service you agree to the practices described in this policy.
+            This Privacy Policy explains how YouTubeCommentDownloader (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) collects, uses, stores, and protects information about you when you use our website and Service. By using the Service you agree to the practices described in this policy.
           </p>
 
           <section className="mb-8">

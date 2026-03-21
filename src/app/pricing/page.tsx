@@ -9,8 +9,8 @@ const plans = [
   {
     name: 'Free', monthlyPrice: 0, annualPrice: 0,
     desc: 'Perfect for trying out the tool',
-    features: ['100 comments per export', 'All export formats', 'No account required', 'Basic sorting', 'AI Analysis (up to 100 comments)'],
-    notIncluded: ['Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
+    features: ['100 comments per export', 'All export formats', 'No account required', 'Basic sorting'],
+    notIncluded: ['AI Analysis', 'Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
     cta: 'Start Free Trial', href: '/auth/signup?plan=free', highlight: false, badge: null, note: 'No credit card required.',
   },
   {
@@ -46,6 +46,7 @@ const comparisonFeatures = [
   { label: 'Team seats', free: '1', pro: '1', business: '3', enterprise: '10' },
   { label: 'SSO / SAML', free: false, pro: false, business: false, enterprise: true },
   { label: 'White-label exports', free: false, pro: false, business: false, enterprise: true },
+  { label: 'AI Analysis', free: false, pro: '10,000 comments', business: '50,000 comments', enterprise: '100,000 comments' },
   { label: 'SLA guarantee', free: false, pro: false, business: false, enterprise: true },
 ]
 

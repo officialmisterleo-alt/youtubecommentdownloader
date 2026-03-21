@@ -17,10 +17,10 @@ const ANALYSIS_TYPES: { id: AnalysisType; label: string; description: string; ic
 ]
 
 const TIER_LIMITS: Record<string, { comments: number; label: string }> = {
-  free: { comments: 1000, label: 'Free' },
-  pro: { comments: 5000, label: 'Pro' },
-  business: { comments: 10000, label: 'Business' },
-  enterprise: { comments: 50000, label: 'Enterprise' },
+  free: { comments: 0, label: 'Free' },
+  pro: { comments: 10000, label: 'Pro' },
+  business: { comments: 50000, label: 'Business' },
+  enterprise: { comments: 100000, label: 'Enterprise' },
 }
 
 // ── Result renderers ──────────────────────────────────────────────────────────
@@ -702,10 +702,15 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
           <h2 className="text-white font-bold text-base">AI Comment Analysis</h2>
           <span className="bg-red-600/20 text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-red-600/30">Pro+</span>
         </div>
-        <p className="text-[#888888] text-sm mb-5">Get AI-powered insights on audience sentiment, topics, feedback, and trends. Sign in to unlock.</p>
-        <Link href="/auth/signup" className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors">
-          <Lock className="w-4 h-4" /> Sign in to unlock AI Analysis
-        </Link>
+        <p className="text-[#888888] text-sm mb-5">AI Analysis is available on Pro and above. Upgrade to analyze up to 10,000 comments.</p>
+        <div className="flex items-center gap-3">
+          <Link href="/pricing" className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors">
+            <Lock className="w-4 h-4" /> Upgrade to unlock AI Analysis
+          </Link>
+          <Link href="/auth/signup" className="text-[#888888] hover:text-white text-sm transition-colors">
+            Sign in
+          </Link>
+        </div>
       </div>
     )
   }
