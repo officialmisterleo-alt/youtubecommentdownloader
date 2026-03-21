@@ -61,7 +61,7 @@ function ToolPageContent() {
   }
 
   const escapeHtml = (str: string) =>
-    str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
   const downloadComments = (comments: Comment[], fmt: Format) => {
     if (GATED_FORMATS.includes(fmt) && !isSignedIn) {
@@ -170,7 +170,7 @@ ${repliesSection}
   <button class="sort-chip">${sortSvg}&nbsp;Sort by top</button>
 </div>
 ${commentRows}
-<div class="watermark">Exported with <a href="https://youtubecommentdownloader.com" target="_blank">YTCommentDownloader.com</a></div>
+<div class="watermark">Exported with <a href="https://youtubecommentdownloader.com" target="_blank">youtubecommentdownloader.com</a></div>
 </body>
 </html>`
       mimeType = 'text/html'; ext = 'html'
