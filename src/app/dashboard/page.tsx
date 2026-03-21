@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Plus, Key, Users, ExternalLink, FileText } from 'lucide-react'
+import MonthlyQuotaCard from '@/components/MonthlyQuotaCard'
 
 type ExportRecord = {
   id: string
@@ -78,7 +79,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           {[
             { label: 'Exports This Month', value: exportsThisMonth.toLocaleString() },
             { label: 'Comments Downloaded', value: commentsThisMonth.toLocaleString() },
@@ -89,6 +90,11 @@ export default async function DashboardPage() {
               <div className="text-[#888888] text-xs">{s.label}</div>
             </div>
           ))}
+        </div>
+
+        {/* Monthly Quota */}
+        <div className="mb-8">
+          <MonthlyQuotaCard />
         </div>
 
         {/* Recent Exports */}
