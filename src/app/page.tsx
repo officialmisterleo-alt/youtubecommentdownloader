@@ -1,8 +1,20 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import HeroInput from '@/components/HeroInput'
 import Footer from '@/components/Footer'
 import { Download, FileSpreadsheet, Zap, Users, Key, Shield } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'YouTube Comment Downloader – Export & Analyze Comments',
+  description: 'Free YouTube comment downloader. Export YouTube comments to CSV, JSON, Excel, TXT, and HTML. Download comments from any video, playlist, or channel in seconds.',
+  alternates: { canonical: 'https://youtubecommentdownloader.com' },
+  openGraph: {
+    title: 'YouTube Comment Downloader – Export & Analyze Comments',
+    description: 'Free YouTube comment downloader. Export YouTube comments to CSV, JSON, Excel, TXT, and HTML. Download comments from any video, playlist, or channel in seconds.',
+    url: 'https://youtubecommentdownloader.com',
+  },
+}
 
 // Bevel card class — reused across all cards
 const bevel = [
@@ -35,7 +47,7 @@ export default function Home() {
         </span>
 
         <h1 className="text-5xl md:text-7xl font-bold text-white leading-[1.05] tracking-tight max-w-4xl mb-6">
-          Extract any YouTube<br />comment thread
+          YouTube Comment<br />Downloader
         </h1>
 
         <p className="text-[#888888] text-lg md:text-xl max-w-xl mb-10 leading-relaxed">
@@ -192,6 +204,42 @@ export default function Home() {
                 View Pricing
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="py-16 px-6 border-t border-white/[0.07]">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-white mb-10">Frequently Asked Questions</h2>
+          <div className="space-y-6">
+            {[
+              {
+                q: 'How do I download YouTube comments?',
+                a: 'Paste any YouTube video, playlist, or channel URL into the input box and click Extract. Your comments will be fetched instantly and ready to export in your chosen format — no software installation required.',
+              },
+              {
+                q: 'What formats can I export YouTube comments to?',
+                a: 'YouTubeCommentDownloader supports CSV, JSON, Excel (XLSX), TXT, and HTML export formats. Choose the format that fits your workflow — spreadsheets, databases, or custom analytics pipelines.',
+              },
+              {
+                q: 'Is there a limit to how many comments I can download?',
+                a: 'The free plan lets you export up to 500 comments per export, 3 times per day. Pro and Business plans unlock up to 100,000 and 1,000,000 comments per month respectively. Enterprise plans have no limits.',
+              },
+              {
+                q: 'Can I analyze YouTube comments with AI?',
+                a: 'Yes. Pro and higher plans include AI-powered comment analysis — sentiment analysis, topic clustering, spam detection, question extraction, and highlight identification — all with one click.',
+              },
+              {
+                q: 'Is YouTubeCommentDownloader free?',
+                a: 'Yes, there is a free tier that requires no credit card. You can export up to 500 comments per export in TXT format immediately. Sign up for a free account to unlock CSV exports and more.',
+              },
+            ].map(({ q, a }) => (
+              <div key={q} className="border-b border-white/[0.07] pb-6">
+                <h3 className="text-white font-semibold mb-2">{q}</h3>
+                <p className="text-[#888888] text-sm leading-relaxed">{a}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
