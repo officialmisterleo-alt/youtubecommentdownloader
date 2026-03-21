@@ -4,50 +4,36 @@ import Link from 'next/link'
 import { Sparkles, Lock, RefreshCw, ChevronDown, ChevronUp, Download } from 'lucide-react'
 
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
-type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string }
+type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
 
 type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
 
 const ANALYSIS_TYPES: { id: AnalysisType; label: string; description: string; icon: string }[] = [
-  { id: 'sentiment', label: 'Sentiment', description: 'Positive/negative breakdown, emotional drivers & notable quotes', icon: '😊' },
-  { id: 'audience', label: 'Audience', description: 'Distinct audience segments, demographics & recommendations', icon: '👥' },
-  { id: 'topics', label: 'Topics', description: 'What people are actually talking about, content gaps & surprises', icon: '💬' },
-  { id: 'feedback', label: 'Feedback', description: 'Praise, requests, criticisms, questions & priority insights', icon: '💡' },
-  { id: 'trends', label: 'Trends', description: 'Viral phrases, community health & engagement recommendations', icon: '🔥' },
+  { id: 'sentiment', label: 'Sentiment', description: 'Positive/negative breakdown & emotional themes', icon: '😊' },
+  { id: 'audience', label: 'Audience', description: 'Who is watching and why', icon: '👥' },
+  { id: 'topics', label: 'Topics', description: 'What people are actually talking about', icon: '💬' },
+  { id: 'feedback', label: 'Feedback', description: 'Praise, requests & actionable insights', icon: '💡' },
+  { id: 'trends', label: 'Trends', description: 'Viral phrases & high-impact comments', icon: '🔥' },
 ]
 
 const TIER_LIMITS: Record<string, { comments: number; label: string }> = {
-  free: { comments: 0, label: 'Free' },
-  pro: { comments: 10000, label: 'Pro' },
-  business: { comments: 50000, label: 'Business' },
-  enterprise: { comments: 100000, label: 'Enterprise' },
+  pro: { comments: 500, label: 'Pro' },
+  business: { comments: 2000, label: 'Business' },
+  enterprise: { comments: 10000, label: 'Enterprise' },
 }
 
 // ── Result renderers ──────────────────────────────────────────────────────────
 
-type SentimentData = {
-  positive: number
-  neutral: number
-  negative: number
-  summary: string
-  themes?: string[]
-  emotionalDrivers?: { positive: string[]; negative: string[] }
-  notableQuotes?: string[]
-  sentimentOverTime?: string
-}
-
-function SentimentResult({ data }: { data: SentimentData }) {
+function SentimentResult({ data }: { data: { overall: string; positive: number; neutral: number; negative: number; positiveThemes: string[]; negativeThemes: string[]; summary: string } }) {
   const bars = [
     { label: 'Positive', value: data.positive, color: 'bg-green-500' },
     { label: 'Neutral', value: data.neutral, color: 'bg-[#444444]' },
     { label: 'Negative', value: data.negative, color: 'bg-red-500' },
   ]
-  const dominant = data.positive >= data.negative && data.positive >= data.neutral ? 'Positive'
-    : data.negative >= data.positive && data.negative >= data.neutral ? 'Negative' : 'Mixed'
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <span className={`text-2xl font-bold ${dominant === 'Positive' ? 'text-green-400' : dominant === 'Negative' ? 'text-red-400' : 'text-yellow-400'}`}>{dominant}</span>
+        <span className={`text-2xl font-bold ${data.overall === 'Positive' ? 'text-green-400' : data.overall === 'Negative' ? 'text-red-400' : 'text-yellow-400'}`}>{data.overall}</span>
         <span className="text-[#888888] text-sm">overall sentiment</span>
       </div>
       <div className="space-y-2.5">
@@ -61,148 +47,26 @@ function SentimentResult({ data }: { data: SentimentData }) {
           </div>
         ))}
       </div>
-
-      {data.themes && data.themes.length > 0 && (
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">Recurring emotional themes</div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">What they love</div>
           <div className="flex flex-wrap gap-1.5">
-            {data.themes.map((t, i) => <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-[#aaaaaa] text-xs px-2.5 py-1 rounded-full">{t}</span>)}
+            {data.positiveThemes?.map((t, i) => <span key={i} className="bg-green-900/30 text-green-400 text-xs px-2.5 py-1 rounded-full border border-green-900/50">{t}</span>)}
           </div>
         </div>
-      )}
-
-      {data.emotionalDrivers && (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <div className="text-xs text-green-400 mb-2 font-medium">What drives positivity</div>
-            <ul className="space-y-1.5">
-              {data.emotionalDrivers.positive?.map((d, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
-                  <span className="text-green-500 mt-0.5 shrink-0">✓</span>{d}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <div className="text-xs text-red-400 mb-2 font-medium">What triggers negativity</div>
-            <ul className="space-y-1.5">
-              {data.emotionalDrivers.negative?.map((d, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
-                  <span className="text-red-500 mt-0.5 shrink-0">✗</span>{d}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {data.notableQuotes && data.notableQuotes.length > 0 && (
         <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">Notable quotes</div>
-          <div className="space-y-2">
-            {data.notableQuotes.map((q, i) => (
-              <blockquote key={i} className="bg-[#0a0a0a] border-l-2 border-red-600/50 pl-3 pr-3 py-2 rounded-r-xl text-xs text-[#aaaaaa] italic">&ldquo;{q}&rdquo;</blockquote>
-            ))}
+          <div className="text-xs text-[#888888] mb-2 font-medium">Pain points</div>
+          <div className="flex flex-wrap gap-1.5">
+            {data.negativeThemes?.map((t, i) => <span key={i} className="bg-red-900/30 text-red-400 text-xs px-2.5 py-1 rounded-full border border-red-900/50">{t}</span>)}
           </div>
         </div>
-      )}
-
+      </div>
       <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
-
-      {data.sentimentOverTime && (
-        <p className="text-[#666666] text-xs italic">{data.sentimentOverTime}</p>
-      )}
     </div>
   )
 }
 
-type AudienceSegment = { emoji: string; name: string; percentage: number; description: string; typicalComment: string; engagementStyle: string }
-type AudienceData = {
-  segments?: AudienceSegment[]
-  audienceSummary?: string
-  geographicSignals?: string
-  ageSignals?: string
-  loyaltySignal?: string
-  recommendations?: string[]
-  // legacy fields
-  profile?: string
-  expertise?: string
-  useCases?: string[]
-  context?: string
-  motivations?: string[]
-  summary?: string
-}
-
-function AudienceResult({ data }: { data: AudienceData }) {
-  if (data.segments) {
-    return (
-      <div className="space-y-4">
-        {data.audienceSummary && (
-          <p className="text-[#aaaaaa] text-sm leading-relaxed bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">{data.audienceSummary}</p>
-        )}
-        <div className="space-y-3">
-          {data.segments.map((seg, i) => (
-            <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl leading-none">{seg.emoji}</span>
-                  <span className="text-white text-sm font-medium">{seg.name}</span>
-                </div>
-                <span className="text-[#888888] text-xs font-medium">{seg.percentage}%</span>
-              </div>
-              <div className="bg-[#171717] rounded-full h-1.5 mb-3 overflow-hidden">
-                <div className="bg-red-600 h-full rounded-full transition-all duration-700" style={{ width: `${seg.percentage}%` }} />
-              </div>
-              <p className="text-[#aaaaaa] text-xs mb-2 leading-relaxed">{seg.description}</p>
-              {seg.typicalComment && (
-                <p className="text-[#555555] text-xs italic border-t border-white/[0.05] pt-2 mt-2">&ldquo;{seg.typicalComment}&rdquo;</p>
-              )}
-              {seg.engagementStyle && (
-                <div className="mt-2">
-                  <span className="bg-[#171717] text-[#888888] text-xs px-2 py-0.5 rounded-full border border-white/[0.07]">{seg.engagementStyle}</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        {(data.geographicSignals || data.ageSignals || data.loyaltySignal) && (
-          <div className="grid grid-cols-1 gap-2">
-            {data.geographicSignals && (
-              <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3">
-                <div className="text-xs text-[#888888] mb-1 font-medium">Geographic signals</div>
-                <p className="text-white text-xs">{data.geographicSignals}</p>
-              </div>
-            )}
-            {data.ageSignals && (
-              <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3">
-                <div className="text-xs text-[#888888] mb-1 font-medium">Age demographic signals</div>
-                <p className="text-white text-xs">{data.ageSignals}</p>
-              </div>
-            )}
-            {data.loyaltySignal && (
-              <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3">
-                <div className="text-xs text-[#888888] mb-1 font-medium">Viewer loyalty</div>
-                <p className="text-white text-xs">{data.loyaltySignal}</p>
-              </div>
-            )}
-          </div>
-        )}
-        {data.recommendations && data.recommendations.length > 0 && (
-          <div>
-            <div className="text-xs text-[#888888] mb-2 font-medium">Creator recommendations</div>
-            <ul className="space-y-1.5">
-              {data.recommendations.map((r, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-[#aaaaaa]">
-                  <span className="text-red-500 mt-0.5 shrink-0">→</span>{r}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-    )
-  }
-  // legacy fallback
+function AudienceResult({ data }: { data: { profile: string; expertise: string; useCases: string[]; context: string; motivations: string[]; summary: string } }) {
   return (
     <div className="space-y-4">
       <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
@@ -225,115 +89,47 @@ function AudienceResult({ data }: { data: AudienceData }) {
           {data.motivations?.map((m, i) => <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-[#aaaaaa] text-xs px-2.5 py-1 rounded-full">{m}</span>)}
         </div>
       </div>
+      <div>
+        <div className="text-xs text-[#888888] mb-2 font-medium">Top use cases</div>
+        <div className="flex flex-wrap gap-1.5">
+          {data.useCases?.map((u, i) => <span key={i} className="bg-red-900/20 border border-red-900/40 text-red-400 text-xs px-2.5 py-1 rounded-full">{u}</span>)}
+        </div>
+      </div>
       <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
     </div>
   )
 }
 
-type TopicItem = { topic?: string; name?: string; percentage: number; description: string; sentiment?: string; representativeComments?: string[]; example?: string }
-type TopicsData = {
-  topics?: TopicItem[]
-  topicSummary?: string
-  summary?: string
-  contentGaps?: string[]
-  controversialTopics?: string[]
-  unusualFindings?: string
-}
-
-const sentimentBadgeClass = (s?: string) => {
-  if (s === 'positive') return 'bg-green-900/30 text-green-400 border-green-900/50'
-  if (s === 'negative') return 'bg-red-900/30 text-red-400 border-red-900/50'
-  if (s === 'mixed') return 'bg-yellow-900/30 text-yellow-400 border-yellow-900/50'
-  return 'bg-[#171717] text-[#888888] border-white/[0.07]'
-}
-
-function TopicsResult({ data }: { data: TopicsData }) {
+function TopicsResult({ data }: { data: { topics: Array<{ name: string; percentage: number; description: string; example: string }>; summary: string } }) {
   return (
     <div className="space-y-3">
       {data.topics?.map((t, i) => (
         <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-white text-sm font-medium">{t.topic ?? t.name}</span>
-              {t.sentiment && (
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${sentimentBadgeClass(t.sentiment)}`}>{t.sentiment}</span>
-              )}
-            </div>
-            <span className="text-[#888888] text-xs font-medium shrink-0 ml-2">{t.percentage}%</span>
+            <span className="text-white text-sm font-medium">{t.name}</span>
+            <span className="text-[#888888] text-xs font-medium">{t.percentage}%</span>
           </div>
           <div className="bg-[#171717] rounded-full h-1.5 mb-3 overflow-hidden">
             <div className="bg-red-600 h-full rounded-full transition-all duration-700" style={{ width: `${t.percentage}%` }} />
           </div>
-          <p className="text-[#888888] text-xs mb-2 leading-relaxed">{t.description}</p>
-          {t.representativeComments && t.representativeComments.length > 0 && (
-            <details className="mt-1">
-              <summary className="text-[#555555] text-xs cursor-pointer hover:text-[#888888] transition-colors">Example comments ▸</summary>
-              <div className="mt-2 space-y-1.5 pl-2">
-                {t.representativeComments.map((c, j) => (
-                  <p key={j} className="text-[#555555] text-xs italic">&ldquo;{c}&rdquo;</p>
-                ))}
-              </div>
-            </details>
-          )}
-          {t.example && !t.representativeComments && (
-            <p className="text-[#555555] text-xs italic">&ldquo;{t.example}&rdquo;</p>
-          )}
+          <p className="text-[#888888] text-xs mb-1.5">{t.description}</p>
+          {t.example && <p className="text-[#555555] text-xs italic">&ldquo;{t.example}&rdquo;</p>}
         </div>
       ))}
-      <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.topicSummary ?? data.summary}</p>
-      {data.contentGaps && data.contentGaps.length > 0 && (
-        <div className="bg-yellow-900/10 border border-yellow-900/30 rounded-xl p-4">
-          <div className="text-xs text-yellow-400 mb-2 font-medium">Content gaps — what viewers want but didn&apos;t get</div>
-          <ul className="space-y-1">
-            {data.contentGaps.map((g, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
-                <span className="text-yellow-500 mt-0.5 shrink-0">→</span>{g}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {data.unusualFindings && (
-        <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
-          <div className="text-xs text-[#888888] mb-1 font-medium">Unusual findings</div>
-          <p className="text-[#aaaaaa] text-xs">{data.unusualFindings}</p>
-        </div>
-      )}
+      <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
     </div>
   )
 }
 
-type FeedbackInsight = { insight?: string; action?: string; evidence?: string; reason?: string; priority?: string }
-type FeedbackData = {
-  praise: string[]
-  requests: string[]
-  criticisms?: string[]
-  questions?: string[]
-  insights?: FeedbackInsight[]
-  overallFeedbackSummary?: string
-  contentStrengths?: string[]
-  improvementAreas?: string[]
-  summary?: string
-}
-
-const priorityClass = (p?: string) => {
-  if (p === 'high') return 'bg-red-900/30 text-red-400 border-red-900/50'
-  if (p === 'medium') return 'bg-yellow-900/30 text-yellow-400 border-yellow-900/50'
-  return 'bg-[#0a0a0a] text-[#888888] border-white/[0.07]'
-}
-
-function FeedbackResult({ data }: { data: FeedbackData }) {
+function FeedbackResult({ data }: { data: { praise: string[]; requests: string[]; insights: Array<{ action: string; reason: string }>; summary: string } }) {
   return (
     <div className="space-y-4">
-      {data.overallFeedbackSummary && (
-        <p className="text-[#aaaaaa] text-sm leading-relaxed bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">{data.overallFeedbackSummary}</p>
-      )}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <div className="text-xs text-green-400 mb-2 font-medium">👏 What they praise</div>
           <ul className="space-y-1.5">
             {data.praise?.map((p, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
+              <li key={i} className="flex items-start gap-2 text-sm text-[#aaaaaa]">
                 <span className="text-green-500 mt-0.5 shrink-0">✓</span>{p}
               </li>
             ))}
@@ -343,194 +139,205 @@ function FeedbackResult({ data }: { data: FeedbackData }) {
           <div className="text-xs text-yellow-400 mb-2 font-medium">💬 What they want</div>
           <ul className="space-y-1.5">
             {data.requests?.map((r, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
+              <li key={i} className="flex items-start gap-2 text-sm text-[#aaaaaa]">
                 <span className="text-yellow-500 mt-0.5 shrink-0">→</span>{r}
               </li>
             ))}
           </ul>
         </div>
-        {data.criticisms && data.criticisms.length > 0 && (
-          <div>
-            <div className="text-xs text-orange-400 mb-2 font-medium">⚠️ Criticisms</div>
-            <ul className="space-y-1.5">
-              {data.criticisms.map((c, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
-                  <span className="text-orange-500 mt-0.5 shrink-0">!</span>{c}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
-      {data.questions && data.questions.length > 0 && (
-        <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">Common questions from viewers</div>
-          <div className="flex flex-wrap gap-1.5">
-            {data.questions.map((q, i) => (
-              <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-[#aaaaaa] text-xs px-2.5 py-1 rounded-full">{q}</span>
-            ))}
-          </div>
-        </div>
-      )}
-      {data.insights && data.insights.length > 0 && (
-        <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">Priority insights</div>
-          <div className="space-y-2">
-            {data.insights.map((ins, i) => (
-              <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <div className="text-white text-sm font-medium">{ins.insight ?? ins.action}</div>
-                  {ins.priority && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${priorityClass(ins.priority)}`}>{ins.priority}</span>
-                  )}
-                </div>
-                <div className="text-[#888888] text-xs">{ins.evidence ?? ins.reason}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {(data.contentStrengths || data.improvementAreas) && (
-        <div className="grid grid-cols-2 gap-3">
-          {data.contentStrengths && (
-            <div className="bg-green-900/10 border border-green-900/30 rounded-xl p-3">
-              <div className="text-xs text-green-400 mb-2 font-medium">Content strengths</div>
-              <ul className="space-y-1">
-                {data.contentStrengths.map((s, i) => (
-                  <li key={i} className="text-xs text-[#aaaaaa] flex items-start gap-1.5">
-                    <span className="text-green-500 mt-0.5 shrink-0">✓</span>{s}
-                  </li>
-                ))}
-              </ul>
+      <div>
+        <div className="text-xs text-[#888888] mb-2 font-medium">Actionable insights</div>
+        <div className="space-y-2">
+          {data.insights?.map((ins, i) => (
+            <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3">
+              <div className="text-white text-sm font-medium mb-1">{ins.action}</div>
+              <div className="text-[#888888] text-xs">{ins.reason}</div>
             </div>
-          )}
-          {data.improvementAreas && (
-            <div className="bg-orange-900/10 border border-orange-900/30 rounded-xl p-3">
-              <div className="text-xs text-orange-400 mb-2 font-medium">Areas to improve</div>
-              <ul className="space-y-1">
-                {data.improvementAreas.map((a, i) => (
-                  <li key={i} className="text-xs text-[#aaaaaa] flex items-start gap-1.5">
-                    <span className="text-orange-500 mt-0.5 shrink-0">→</span>{a}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          ))}
         </div>
-      )}
-      {data.summary && !data.overallFeedbackSummary && (
-        <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
-      )}
+      </div>
+      <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
     </div>
   )
 }
 
-type ViralComment = { comment?: string; text?: string; reason: string }
-type TrendsData = {
-  trendingPhrases?: string[]
-  phrases?: string[]
-  viralComments?: ViralComment[]
-  keywords?: string[]
-  emergingTrends?: string[]
-  insideJokes?: string[]
-  viralityFactors?: string
-  communityHealth?: string
-  contentMoments?: string[]
-  crossContentSignals?: string
-  recommendations?: string[]
-  summary?: string
-}
-
-function TrendsResult({ data }: { data: TrendsData }) {
-  const phrases = data.trendingPhrases ?? data.phrases ?? []
+function TrendsResult({ data }: { data: { phrases: string[]; viralComments: Array<{ text: string; reason: string }>; keywords: string[]; summary: string } }) {
   return (
     <div className="space-y-4">
-      {phrases.length > 0 && (
-        <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">Trending phrases</div>
-          <div className="flex flex-wrap gap-1.5">
-            {phrases.map((p, i) => <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-white text-xs px-3 py-1.5 rounded-full">&ldquo;{p}&rdquo;</span>)}
-          </div>
+      <div>
+        <div className="text-xs text-[#888888] mb-2 font-medium">Trending phrases</div>
+        <div className="flex flex-wrap gap-1.5">
+          {data.phrases?.map((p, i) => <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-white text-xs px-3 py-1.5 rounded-full">&ldquo;{p}&rdquo;</span>)}
         </div>
-      )}
-      {data.viralComments && data.viralComments.length > 0 && (
-        <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">High-impact comments</div>
-          <div className="space-y-2">
-            {data.viralComments.map((c, i) => (
-              <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3.5">
-                <p className="text-white text-sm mb-1.5 leading-relaxed">&ldquo;{c.comment ?? c.text}&rdquo;</p>
-                <p className="text-[#888888] text-xs">🔥 {c.reason}</p>
-              </div>
-            ))}
-          </div>
+      </div>
+      <div>
+        <div className="text-xs text-[#888888] mb-2 font-medium">High-impact comments</div>
+        <div className="space-y-2">
+          {data.viralComments?.map((c, i) => (
+            <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3.5">
+              <p className="text-white text-sm mb-1.5 leading-relaxed">&ldquo;{c.text}&rdquo;</p>
+              <p className="text-[#888888] text-xs">🔥 {c.reason}</p>
+            </div>
+          ))}
         </div>
-      )}
-      {data.emergingTrends && data.emergingTrends.length > 0 && (
-        <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">Emerging trends</div>
-          <div className="flex flex-wrap gap-1.5">
-            {data.emergingTrends.map((t, i) => <span key={i} className="bg-red-900/20 border border-red-900/40 text-red-400 text-xs px-2.5 py-1 rounded-full">{t}</span>)}
-          </div>
+      </div>
+      <div>
+        <div className="text-xs text-[#888888] mb-2 font-medium">Top keywords</div>
+        <div className="flex flex-wrap gap-1.5">
+          {data.keywords?.map((k, i) => <span key={i} className="bg-red-900/20 border border-red-900/40 text-red-400 text-xs px-2.5 py-1 rounded-full">{k}</span>)}
         </div>
-      )}
-      {data.keywords && data.keywords.length > 0 && (
-        <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">Top keywords</div>
-          <div className="flex flex-wrap gap-1.5">
-            {data.keywords.map((k, i) => <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-[#888888] text-xs px-2.5 py-1 rounded-full">{k}</span>)}
-          </div>
-        </div>
-      )}
-      {data.insideJokes && data.insideJokes.length > 0 && (
-        <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">In-jokes &amp; community references</div>
-          <div className="flex flex-wrap gap-1.5">
-            {data.insideJokes.map((j, i) => <span key={i} className="bg-[#0a0a0a] border border-purple-900/40 text-purple-400 text-xs px-2.5 py-1 rounded-full">{j}</span>)}
-          </div>
-        </div>
-      )}
-      {data.communityHealth && (
-        <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
-          <div className="text-xs text-[#888888] mb-1 font-medium">Community health</div>
-          <p className="text-[#aaaaaa] text-xs leading-relaxed">{data.communityHealth}</p>
-        </div>
-      )}
-      {data.viralityFactors && (
-        <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
-          <div className="text-xs text-[#888888] mb-1 font-medium">Virality factors</div>
-          <p className="text-[#aaaaaa] text-xs leading-relaxed">{data.viralityFactors}</p>
-        </div>
-      )}
-      {data.contentMoments && data.contentMoments.length > 0 && (
-        <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">High-activity content moments</div>
-          <ul className="space-y-1.5">
-            {data.contentMoments.map((m, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
-                <span className="text-red-500 mt-0.5 shrink-0">▶</span>{m}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {data.recommendations && data.recommendations.length > 0 && (
-        <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">Recommendations</div>
-          <ul className="space-y-1.5">
-            {data.recommendations.map((r, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
-                <span className="text-red-500 mt-0.5 shrink-0">→</span>{r}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {data.summary && (
-        <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
-      )}
+      </div>
+      <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
     </div>
   )
+}
+
+// ── HTML report generation ────────────────────────────────────────────────────
+
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function getVideoId(url: string): string {
+  const match = url.match(/[?&]v=([^&]+)/)
+  return match ? match[1] : ''
+}
+
+function renderSentimentHtml(data: { overall: string; positive: number; neutral: number; negative: number; positiveThemes: string[]; negativeThemes: string[]; summary: string }): string {
+  const overallColor = data.overall === 'Positive' ? '#22c55e' : data.overall === 'Negative' ? '#ef4444' : '#eab308'
+  const bars = [
+    { label: 'Positive', value: data.positive, color: '#22c55e' },
+    { label: 'Neutral', value: data.neutral, color: '#888888' },
+    { label: 'Negative', value: data.negative, color: '#ef4444' },
+  ]
+  return `
+    <div class="analysis-section">
+      <div class="analysis-title">😊 Sentiment Analysis</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <span style="font-size:24px;font-weight:700;color:${overallColor}">${esc(data.overall)}</span>
+        <span style="color:#64748b;font-size:14px">overall sentiment</span>
+      </div>
+      ${bars.map(b => `
+        <div class="sentiment-bar-wrap">
+          <div class="sentiment-label"><span>${b.label}</span><span>${b.value}%</span></div>
+          <div class="sentiment-bar"><div class="sentiment-bar-fill" style="width:${b.value}%;background:${b.color}"></div></div>
+        </div>
+      `).join('')}
+      <div class="two-col" style="margin-top:20px">
+        <div class="card">
+          <h4>What they love</h4>
+          <div>${(data.positiveThemes || []).map(t => `<span class="chip" style="background:#dcfce7;color:#166534">${esc(t)}</span>`).join('')}</div>
+        </div>
+        <div class="card">
+          <h4>Pain points</h4>
+          <div>${(data.negativeThemes || []).map(t => `<span class="chip" style="background:#fee2e2;color:#991b1b">${esc(t)}</span>`).join('')}</div>
+        </div>
+      </div>
+      <p style="color:#64748b;font-size:14px;line-height:1.6;margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0">${esc(data.summary)}</p>
+    </div>`
+}
+
+function renderAudienceHtml(data: { profile: string; expertise: string; useCases: string[]; context: string; motivations: string[]; summary: string }): string {
+  return `
+    <div class="analysis-section">
+      <div class="analysis-title">👥 Audience Insights</div>
+      <div class="card" style="margin-bottom:16px">
+        <h4>Audience Profile</h4>
+        <p style="margin:0;font-size:14px;color:#334155">${esc(data.profile)}</p>
+      </div>
+      <div class="two-col" style="margin-bottom:16px">
+        <div class="card">
+          <h4>Expertise Level</h4>
+          <p style="margin:0;font-size:14px;font-weight:600;color:#0f172a">${esc(data.expertise)}</p>
+        </div>
+        <div class="card">
+          <h4>Context</h4>
+          <p style="margin:0;font-size:14px;color:#334155">${esc(data.context)}</p>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <h4>Why they watch</h4>
+        <div>${(data.motivations || []).map(m => `<span class="chip">${esc(m)}</span>`).join('')}</div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <h4>Top use cases</h4>
+        <div>${(data.useCases || []).map(u => `<span class="chip" style="background:#fee2e2;color:#991b1b">${esc(u)}</span>`).join('')}</div>
+      </div>
+      <p style="color:#64748b;font-size:14px;line-height:1.6;padding-top:16px;border-top:1px solid #e2e8f0">${esc(data.summary)}</p>
+    </div>`
+}
+
+function renderTopicsHtml(data: { topics: Array<{ name: string; percentage: number; description: string; example: string }>; summary: string }): string {
+  return `
+    <div class="analysis-section">
+      <div class="analysis-title">💬 Top Topics</div>
+      ${(data.topics || []).map(t => `
+        <div style="background:#f8fafc;border-radius:8px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:14px;font-weight:600;color:#0f172a">${esc(t.name)}</span>
+            <span style="font-size:13px;color:#64748b;font-weight:500">${t.percentage}%</span>
+          </div>
+          <div class="sentiment-bar" style="margin-bottom:8px"><div class="sentiment-bar-fill" style="width:${t.percentage}%;background:#dc2626"></div></div>
+          <p style="font-size:13px;color:#64748b;margin:0 0 4px">${esc(t.description)}</p>
+          ${t.example ? `<p style="font-size:12px;color:#94a3b8;font-style:italic;margin:0">&ldquo;${esc(t.example)}&rdquo;</p>` : ''}
+        </div>
+      `).join('')}
+      <p style="color:#64748b;font-size:14px;line-height:1.6;padding-top:16px;border-top:1px solid #e2e8f0">${esc(data.summary)}</p>
+    </div>`
+}
+
+function renderFeedbackHtml(data: { praise: string[]; requests: string[]; insights: Array<{ action: string; reason: string }>; summary: string }): string {
+  return `
+    <div class="analysis-section">
+      <div class="analysis-title">💡 Feedback Breakdown</div>
+      <div class="two-col" style="margin-bottom:20px">
+        <div class="card">
+          <h4 style="color:#166534">👏 What they love</h4>
+          <ul>${(data.praise || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+        </div>
+        <div class="card">
+          <h4 style="color:#92400e">💬 What they want</h4>
+          <ul>${(data.requests || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+        </div>
+      </div>
+      <div class="card">
+        <h4>Key Insights</h4>
+        <ul>${(data.insights || []).map(ins => `<li><strong>${esc(ins.action)}</strong> — ${esc(ins.reason)}</li>`).join('')}</ul>
+      </div>
+      <p style="color:#64748b;font-size:14px;line-height:1.6;margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0">${esc(data.summary)}</p>
+    </div>`
+}
+
+function renderTrendsHtml(data: { phrases: string[]; viralComments: Array<{ text: string; reason: string }>; keywords: string[]; summary: string }): string {
+  return `
+    <div class="analysis-section">
+      <div class="analysis-title">🔥 Trending Signals</div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Trending Phrases</div>
+        <div>${(data.phrases || []).map(p => `<span class="chip">&ldquo;${esc(p)}&rdquo;</span>`).join('')}</div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">High-Impact Comments</div>
+        ${(data.viralComments || []).map(c => `
+          <div class="viral-comment">&ldquo;${esc(c.text)}&rdquo;<br><span style="font-style:normal;font-weight:600">🔥 ${esc(c.reason)}</span></div>
+        `).join('')}
+      </div>
+      <div>
+        <div style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Top Keywords</div>
+        <div>${(data.keywords || []).map(k => `<span class="chip" style="background:#fee2e2;color:#991b1b">${esc(k)}</span>`).join('')}</div>
+      </div>
+      <p style="color:#64748b;font-size:14px;line-height:1.6;margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0">${esc(data.summary)}</p>
+    </div>`
+}
+
+function renderAnalysisSectionHtml(type: AnalysisType, data: Record<string, unknown>): string {
+  if (type === 'sentiment') return renderSentimentHtml(data as Parameters<typeof renderSentimentHtml>[0])
+  if (type === 'audience') return renderAudienceHtml(data as Parameters<typeof renderAudienceHtml>[0])
+  if (type === 'topics') return renderTopicsHtml(data as Parameters<typeof renderTopicsHtml>[0])
+  if (type === 'feedback') return renderFeedbackHtml(data as Parameters<typeof renderFeedbackHtml>[0])
+  if (type === 'trends') return renderTrendsHtml(data as Parameters<typeof renderTrendsHtml>[0])
+  return ''
 }
 
 // ── Main panel ────────────────────────────────────────────────────────────────
@@ -538,8 +345,7 @@ function TrendsResult({ data }: { data: TrendsData }) {
 export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comment[]; isSignedIn: boolean }) {
   const [activeType, setActiveType] = useState<AnalysisType>('sentiment')
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<Record<string, unknown> | null>(null)
-  const [resultType, setResultType] = useState<AnalysisType | null>(null)
+  const [analysisResults, setAnalysisResults] = useState<Partial<Record<AnalysisType, Record<string, unknown>>>>({})
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState(true)
 
@@ -547,132 +353,12 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
   const tier = 'pro'
   const { comments: limit, label: tierLabel } = TIER_LIMITS[tier]
   const sampleSize = Math.min(comments.length, limit)
-
-  function exportReport() {
-    if (!result || !resultType) return
-    const typeInfo = ANALYSIS_TYPES.find(t => t.id === resultType)
-    const now = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-
-    const renderSection = (label: string, value: string) =>
-      `<div class="section"><div class="label">${label}</div><div class="value">${value}</div></div>`
-
-    let bodyContent = ''
-    if (resultType === 'sentiment') {
-      const d = result as SentimentData
-      const dominant = (d.positive ?? 0) >= (d.negative ?? 0) && (d.positive ?? 0) >= (d.neutral ?? 0) ? 'Positive'
-        : (d.negative ?? 0) >= (d.neutral ?? 0) ? 'Negative' : 'Mixed'
-      bodyContent = `
-        ${renderSection('Overall Sentiment', dominant)}
-        ${renderSection('Breakdown', `Positive: ${d.positive}% &nbsp;|&nbsp; Neutral: ${d.neutral}% &nbsp;|&nbsp; Negative: ${d.negative}%`)}
-        ${d.themes?.length ? renderSection('Emotional themes', d.themes.join(', ')) : ''}
-        ${d.emotionalDrivers?.positive?.length ? renderSection('What drives positivity', d.emotionalDrivers.positive.join('<br>• ')) : ''}
-        ${d.emotionalDrivers?.negative?.length ? renderSection('What triggers negativity', d.emotionalDrivers.negative.join('<br>• ')) : ''}
-        ${d.notableQuotes?.length ? renderSection('Notable quotes', d.notableQuotes.map(q => `"${q}"`).join('<br>')) : ''}
-        ${renderSection('Summary', d.summary)}
-        ${d.sentimentOverTime ? renderSection('Sentiment over time', d.sentimentOverTime) : ''}`
-    } else if (resultType === 'audience') {
-      const d = result as AudienceData
-      if (d.segments) {
-        bodyContent = `
-          ${d.audienceSummary ? renderSection('Audience Overview', d.audienceSummary) : ''}
-          ${d.segments.map(s => renderSection(`${s.emoji} ${s.name} (${s.percentage}%)`, `${s.description}${s.typicalComment ? `<br><em>"${s.typicalComment}"</em>` : ''}`)).join('')}
-          ${d.geographicSignals ? renderSection('Geographic signals', d.geographicSignals) : ''}
-          ${d.ageSignals ? renderSection('Age signals', d.ageSignals) : ''}
-          ${d.loyaltySignal ? renderSection('Viewer loyalty', d.loyaltySignal) : ''}
-          ${d.recommendations?.length ? renderSection('Recommendations', d.recommendations.join('<br>• ')) : ''}`
-      } else {
-        bodyContent = `
-          ${renderSection('Audience Profile', d.profile ?? '')}
-          ${renderSection('Expertise Level', d.expertise ?? '')}
-          ${renderSection('Context', d.context ?? '')}
-          ${renderSection('Why they watch', d.motivations?.join(', ') ?? '')}
-          ${renderSection('Summary', d.summary ?? '')}`
-      }
-    } else if (resultType === 'topics') {
-      const d = result as TopicsData
-      bodyContent = (d.topics ?? []).map(t =>
-        renderSection(`${t.topic ?? t.name} (${t.percentage}%)${t.sentiment ? ` — ${t.sentiment}` : ''}`, `${t.description}${t.representativeComments?.length ? `<br><em>"${t.representativeComments[0]}"</em>` : t.example ? `<br><em>"${t.example}"</em>` : ''}`)
-      ).join('')
-        + renderSection('Summary', d.topicSummary ?? d.summary ?? '')
-        + (d.contentGaps?.length ? renderSection('Content gaps', d.contentGaps.join('<br>• ')) : '')
-        + (d.unusualFindings ? renderSection('Unusual findings', d.unusualFindings) : '')
-    } else if (resultType === 'feedback') {
-      const d = result as FeedbackData
-      bodyContent = `
-        ${d.overallFeedbackSummary ? renderSection('Overview', d.overallFeedbackSummary) : ''}
-        ${renderSection('What they praise', d.praise?.join('<br>• ') ?? '')}
-        ${renderSection('What they want', d.requests?.join('<br>• ') ?? '')}
-        ${d.criticisms?.length ? renderSection('Criticisms', d.criticisms.join('<br>• ')) : ''}
-        ${d.questions?.length ? renderSection('Common questions', d.questions.join('<br>• ')) : ''}
-        ${d.insights?.map(ins => renderSection(`[${(ins.priority ?? 'insight').toUpperCase()}] ${ins.insight ?? ins.action}`, ins.evidence ?? ins.reason ?? '')).join('') ?? ''}
-        ${d.contentStrengths?.length ? renderSection('Content strengths', d.contentStrengths.join('<br>• ')) : ''}
-        ${d.improvementAreas?.length ? renderSection('Improvement areas', d.improvementAreas.join('<br>• ')) : ''}
-        ${d.summary ? renderSection('Summary', d.summary) : ''}`
-    } else if (resultType === 'trends') {
-      const d = result as TrendsData
-      const phrases = d.trendingPhrases ?? d.phrases ?? []
-      bodyContent = `
-        ${phrases.length ? renderSection('Trending phrases', phrases.map(p => `"${p}"`).join(', ')) : ''}
-        ${d.viralComments?.map(c => renderSection(`"${c.comment ?? c.text}"`, `🔥 ${c.reason}`)).join('') ?? ''}
-        ${d.emergingTrends?.length ? renderSection('Emerging trends', d.emergingTrends.join('<br>• ')) : ''}
-        ${d.keywords?.length ? renderSection('Top keywords', d.keywords.join(', ')) : ''}
-        ${d.insideJokes?.length ? renderSection('In-jokes & references', d.insideJokes.join(', ')) : ''}
-        ${d.communityHealth ? renderSection('Community health', d.communityHealth) : ''}
-        ${d.viralityFactors ? renderSection('Virality factors', d.viralityFactors) : ''}
-        ${d.contentMoments?.length ? renderSection('High-activity moments', d.contentMoments.join('<br>• ')) : ''}
-        ${d.recommendations?.length ? renderSection('Recommendations', d.recommendations.join('<br>• ')) : ''}
-        ${d.summary ? renderSection('Summary', d.summary) : ''}`
-    }
-
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${typeInfo?.label} Analysis Report</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; margin: 0; padding: 40px 24px; }
-  .container { max-width: 720px; margin: 0 auto; }
-  .header { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #222; }
-  .logo { background: #dc2626; border-radius: 6px; padding: 6px 10px; color: white; font-weight: 800; font-size: 13px; text-decoration: none; }
-  .title { font-size: 22px; font-weight: 700; color: white; }
-  .meta { font-size: 12px; color: #666; margin-top: 2px; }
-  .badge { background: rgba(220,38,38,0.15); color: #f87171; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px; border: 1px solid rgba(220,38,38,0.3); }
-  .section { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
-  .label { font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-  .value { font-size: 14px; color: #ccc; line-height: 1.6; }
-  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #222; font-size: 11px; color: #444; text-align: center; }
-  .footer a { color: #666; }
-</style>
-</head>
-<body>
-<div class="container">
-  <div class="header">
-    <div class="logo">YT</div>
-    <div>
-      <div class="title">${typeInfo?.icon} ${typeInfo?.label} Analysis Report</div>
-      <div class="meta">Generated ${now} &nbsp;·&nbsp; <span class="badge">AI Analysis</span> &nbsp;·&nbsp; ${sampleSize.toLocaleString()} comments analysed</div>
-    </div>
-  </div>
-  ${bodyContent}
-  <div class="footer">Generated by <a href="https://youtubecommentdownloader.com">youtubecommentdownloader.com</a></div>
-</div>
-</body>
-</html>`
-
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `yt-${resultType}-analysis-report.html`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const hasResults = Object.keys(analysisResults).length > 0
+  const currentResult = analysisResults[activeType] ?? null
 
   async function runAnalysis() {
     setLoading(true)
     setError('')
-    setResult(null)
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -685,8 +371,7 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
       })
       const data = await res.json()
       if (data.error) { setError(data.error); return }
-      setResult(data.result)
-      setResultType(activeType)
+      setAnalysisResults(prev => ({ ...prev, [activeType]: data.result }))
     } catch {
       setError('Analysis failed. Please try again.')
     } finally {
@@ -694,26 +379,142 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
     }
   }
 
-  const showLockedOverlay = !isSignedIn
+  function generateReport() {
+    // Group comments by videoUrl to get per-video metadata
+    const videoMap = new Map<string, { videoTitle: string; channelName: string; videoUrl: string; count: number }>()
+    for (const c of comments) {
+      const url = c.videoUrl || 'unknown'
+      if (!videoMap.has(url)) {
+        videoMap.set(url, {
+          videoTitle: c.videoTitle || 'Unknown Video',
+          channelName: c.channelName || 'Unknown Channel',
+          videoUrl: url,
+          count: 0,
+        })
+      }
+      videoMap.get(url)!.count++
+    }
+    const videos = Array.from(videoMap.values())
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    const reportTitle = videos.length === 1 ? videos[0].videoTitle : 'Multiple Videos'
+
+    // Build analysis HTML (same results shown across all videos since analysis is combined)
+    const analysisHtml = (Object.entries(analysisResults) as [AnalysisType, Record<string, unknown>][])
+      .map(([type, data]) => renderAnalysisSectionHtml(type, data))
+      .join('')
+
+    // Build video sections
+    const videoSectionsHtml = videos.map((video, i) => {
+      const videoId = getVideoId(video.videoUrl)
+      const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''
+      const videoLink = video.videoUrl !== 'unknown' ? video.videoUrl : '#'
+      const isFirst = i === 0
+
+      return `
+        <div class="video-section" ${!isFirst ? 'style="page-break-before:always"' : ''}>
+          <div class="video-header">
+            ${thumbnailUrl ? `<img class="video-thumbnail" src="${esc(thumbnailUrl)}" alt="Video thumbnail" onerror="this.style.display='none'" />` : ''}
+            <div class="video-info">
+              <h2><a href="${esc(videoLink)}" style="color:#0f172a;text-decoration:none" target="_blank">${esc(video.videoTitle)}</a></h2>
+              <div class="channel">📺 ${esc(video.channelName)}</div>
+              <div class="stats">${video.count.toLocaleString()} comments analyzed</div>
+            </div>
+          </div>
+          ${isFirst || videos.length === 1 ? analysisHtml : ''}
+        </div>`
+    }).join('')
+
+    // If multiple videos, append analysis after all video cards (for subsequent videos, show analysis in its own section)
+    const multiVideoAnalysis = videos.length > 1 ? `
+      <div class="video-section" style="page-break-before:always">
+        <div style="padding:24px 28px 0;font-size:18px;font-weight:700;color:#0f172a">📊 Analysis Results</div>
+        <div style="padding:0 4px 4px;color:#64748b;font-size:13px;padding-left:28px;padding-bottom:12px">Combined analysis across all ${videos.length} videos · ${sampleSize.toLocaleString()} comments</div>
+        ${analysisHtml}
+      </div>` : ''
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comment Analysis Report - ${esc(reportTitle)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 0; }
+    .report-header { background: linear-gradient(135deg, #dc2626, #991b1b); color: white; padding: 40px 48px; }
+    .report-header h1 { margin: 0 0 8px; font-size: 28px; font-weight: 700; }
+    .report-header .meta { opacity: 0.85; font-size: 14px; }
+    .video-section { background: white; margin: 32px auto; max-width: 900px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+    .video-header { display: flex; gap: 20px; padding: 24px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; align-items: center; }
+    .video-thumbnail { width: 160px; height: 90px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+    .video-info h2 { margin: 0 0 6px; font-size: 18px; font-weight: 600; color: #0f172a; }
+    .video-info .channel { color: #64748b; font-size: 14px; margin-bottom: 6px; }
+    .video-info .stats { font-size: 13px; color: #94a3b8; }
+    .analysis-section { padding: 28px; border-bottom: 1px solid #f1f5f9; }
+    .analysis-section:last-child { border-bottom: none; }
+    .analysis-title { font-size: 16px; font-weight: 600; color: #0f172a; margin: 0 0 20px; }
+    .sentiment-bar-wrap { margin-bottom: 10px; }
+    .sentiment-label { display: flex; justify-content: space-between; font-size: 13px; color: #64748b; margin-bottom: 4px; }
+    .sentiment-bar { height: 8px; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+    .sentiment-bar-fill { height: 100%; border-radius: 4px; }
+    .chip { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; margin: 3px; background: #f1f5f9; color: #475569; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card { background: #f8fafc; border-radius: 8px; padding: 16px; }
+    .card h4 { margin: 0 0 10px; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card ul { margin: 0; padding-left: 16px; }
+    .card li { font-size: 14px; color: #334155; margin-bottom: 6px; line-height: 1.5; }
+    .viral-comment { background: #fef9c3; border-left: 3px solid #eab308; padding: 10px 14px; margin-bottom: 8px; border-radius: 0 6px 6px 0; font-size: 13px; font-style: italic; color: #713f12; line-height: 1.6; }
+    .report-footer { text-align: center; padding: 32px; color: #94a3b8; font-size: 13px; }
+    .report-footer a { color: #dc2626; text-decoration: none; }
+    @media print {
+      .report-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .video-section { box-shadow: none; border: 1px solid #e2e8f0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    <h1>📊 Comment Analysis Report</h1>
+    <div class="meta">Generated by YouTubeCommentDownloader.com · ${date}</div>
+  </div>
+
+  ${videoSectionsHtml}
+  ${multiVideoAnalysis}
+
+  <div class="report-footer">
+    Generated by <a href="https://youtubecommentdownloader.com">YouTubeCommentDownloader.com</a>
+  </div>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `comment-analysis-${Date.now()}.html`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-3">
+          <Sparkles className="w-5 h-5 text-red-400" />
+          <h2 className="text-white font-bold text-base">AI Comment Analysis</h2>
+          <span className="bg-red-600/20 text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-red-600/30">Pro+</span>
+        </div>
+        <p className="text-[#888888] text-sm mb-5">Get AI-powered insights on audience sentiment, topics, feedback, and trends. Sign in to unlock.</p>
+        <Link href="/auth/signup" className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors">
+          <Lock className="w-4 h-4" /> Sign in to unlock AI Analysis
+        </Link>
+      </div>
+    )
+  }
 
   return (
-    <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden relative">
-      {/* Locked overlay for unauthenticated / free users */}
-      {showLockedOverlay && (
-        <div className="absolute inset-0 z-10 bg-gray-900/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-4 p-6 text-center">
-          <Lock className="w-10 h-10 text-red-400" />
-          <div>
-            <h3 className="text-white font-bold text-lg mb-1">AI Analysis — Pro Feature</h3>
-            <p className="text-[#888888] text-sm">Upgrade to Pro to analyze up to 10,000 comments and generate branded reports.</p>
-          </div>
-          <Link href="/pricing" className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors">
-            Upgrade to Pro
-          </Link>
-        </div>
-      )}
-
-      {/* Panel content — dimmed when locked */}
-      <div className={showLockedOverlay ? 'opacity-50 pointer-events-none' : undefined}>
+    <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
       {/* Header */}
       <button
         onClick={() => setExpanded(e => !e)}
@@ -739,7 +540,7 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
             {ANALYSIS_TYPES.map(t => (
               <button
                 key={t.id}
-                onClick={() => { setActiveType(t.id); setResult(null); setError('') }}
+                onClick={() => { setActiveType(t.id); setError('') }}
                 className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-xs font-medium transition-colors border ${
                   activeType === t.id
                     ? 'bg-red-600 border-transparent text-white'
@@ -760,55 +561,48 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
             <span className="text-[#888888] text-xs bg-[#0a0a0a] border border-white/[0.07] px-3 py-1.5 rounded-full">
               {sampleSize.toLocaleString()} of {comments.length.toLocaleString()} comments selected
             </span>
-            <button
-              onClick={runAnalysis}
-              disabled={loading}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors min-h-[40px]"
-            >
-              {loading
-                ? <><RefreshCw className="w-4 h-4 animate-spin" /> Analyzing…</>
-                : <><Sparkles className="w-4 h-4" /> Run Analysis</>
-              }
-            </button>
+            <div className="flex items-center gap-2">
+              {hasResults && (
+                <button
+                  onClick={generateReport}
+                  className="flex items-center gap-2 bg-[#0a0a0a] hover:bg-[#111111] border border-white/[0.12] hover:border-red-600/50 text-[#aaaaaa] hover:text-red-400 text-sm font-medium px-4 py-2.5 rounded-xl transition-colors min-h-[40px]"
+                >
+                  <Download className="w-4 h-4" /> Export Report
+                </button>
+              )}
+              <button
+                onClick={runAnalysis}
+                disabled={loading}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors min-h-[40px]"
+              >
+                {loading
+                  ? <><RefreshCw className="w-4 h-4 animate-spin" /> Analyzing…</>
+                  : <><Sparkles className="w-4 h-4" /> Run Analysis</>
+                }
+              </button>
+            </div>
           </div>
-
-          {/* Hint — shown when no result yet */}
-          {!result && !loading && (
-            <p className="text-[#555555] text-xs">After running an analysis, you can download a full branded HTML report.</p>
-          )}
 
           {/* Error */}
           {error && <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-3 text-red-400 text-sm">{error}</div>}
 
           {/* Results */}
-          {result && resultType && (
-            <>
-              <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4 sm:p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-lg">{ANALYSIS_TYPES.find(t => t.id === resultType)?.icon}</span>
-                  <span className="text-white font-semibold text-sm">{ANALYSIS_TYPES.find(t => t.id === resultType)?.label} Report</span>
-                  <span className="text-[#555555] text-xs ml-auto">{sampleSize.toLocaleString()} comments</span>
-                </div>
-                {resultType === 'sentiment' && <SentimentResult data={result as SentimentData} />}
-                {resultType === 'audience' && <AudienceResult data={result as AudienceData} />}
-                {resultType === 'topics' && <TopicsResult data={result as TopicsData} />}
-                {resultType === 'feedback' && <FeedbackResult data={result as FeedbackData} />}
-                {resultType === 'trends' && <TrendsResult data={result as TrendsData} />}
+          {currentResult && (
+            <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-lg">{ANALYSIS_TYPES.find(t => t.id === activeType)?.icon}</span>
+                <span className="text-white font-semibold text-sm">{ANALYSIS_TYPES.find(t => t.id === activeType)?.label} Report</span>
+                <span className="text-[#555555] text-xs ml-auto">{sampleSize.toLocaleString()} comments</span>
               </div>
-
-              {/* Prominent export button */}
-              <button
-                onClick={exportReport}
-                className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold text-sm px-5 py-3.5 rounded-xl transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                ⬇ Download Analysis Report
-              </button>
-            </>
+              {activeType === 'sentiment' && <SentimentResult data={currentResult as Parameters<typeof SentimentResult>[0]['data']} />}
+              {activeType === 'audience' && <AudienceResult data={currentResult as Parameters<typeof AudienceResult>[0]['data']} />}
+              {activeType === 'topics' && <TopicsResult data={currentResult as Parameters<typeof TopicsResult>[0]['data']} />}
+              {activeType === 'feedback' && <FeedbackResult data={currentResult as Parameters<typeof FeedbackResult>[0]['data']} />}
+              {activeType === 'trends' && <TrendsResult data={currentResult as Parameters<typeof TrendsResult>[0]['data']} />}
+            </div>
           )}
         </div>
       )}
-      </div>
     </div>
   )
 }
