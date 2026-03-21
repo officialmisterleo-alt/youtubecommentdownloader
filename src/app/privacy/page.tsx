@@ -94,7 +94,7 @@ export default function PrivacyPage() {
               <li><strong>Objection or restriction:</strong> object to certain processing or ask us to restrict it.</li>
             </ul>
             <p className="text-[#888888] leading-relaxed">
-              To exercise any of these rights, email us at <a href="mailto:support@youtubecommentdownloader.com" className="text-red-600 hover:underline">support@youtubecommentdownloader.com</a>. We will respond within 30 days.
+              To exercise any of these rights, <Link href="/contact" className="text-red-600 hover:underline">contact us</Link>. We will respond within 30 days.
             </p>
           </section>
 
@@ -111,7 +111,7 @@ export default function PrivacyPage() {
               <strong>GDPR (EU/EEA users):</strong> Our lawful bases for processing are performance of a contract (to provide the Service you signed up for), compliance with legal obligations, and our legitimate interests (security monitoring and abuse prevention). You have the right to lodge a complaint with your local data protection authority.
             </p>
             <p className="text-[#888888] leading-relaxed">
-              <strong>CCPA (California residents):</strong> We do not sell your personal information. California residents have the right to know what personal information is collected, the right to delete personal information, and the right not to be discriminated against for exercising these rights. To submit a request, contact <a href="mailto:support@youtubecommentdownloader.com" className="text-red-600 hover:underline">support@youtubecommentdownloader.com</a>.
+              <strong>CCPA (California residents):</strong> We do not sell your personal information. California residents have the right to know what personal information is collected, the right to delete personal information, and the right not to be discriminated against for exercising these rights. To submit a request, <Link href="/contact" className="text-red-600 hover:underline">contact us</Link>.
             </p>
           </section>
 
@@ -132,10 +132,7 @@ export default function PrivacyPage() {
           <section className="mb-2">
             <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">11. Contact</h2>
             <p className="text-[#888888] leading-relaxed">
-              For privacy-related questions or requests, contact us at{' '}
-              <a href="mailto:support@youtubecommentdownloader.com" className="text-red-600 hover:underline">
-                support@youtubecommentdownloader.com
-              </a>.
+              For privacy-related questions or requests, <Link href="/contact" className="text-red-600 hover:underline">contact us</Link>.
             </p>
           </section>
 
@@ -150,7 +147,7 @@ export default function PrivacyPage() {
             <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-            <a href="mailto:support@youtubecommentdownloader.com" className="hover:text-white transition-colors">Support</a>
+            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
           </div>
         </div>
       </footer>

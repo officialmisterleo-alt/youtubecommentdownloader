@@ -32,7 +32,7 @@ const plans = [
     desc: 'For large teams and enterprise use',
     features: ['Unlimited comments', 'Dedicated API quota', '10 team seats', 'SSO / SAML', 'White-label exports', 'Custom data retention', '99.9% SLA', 'Priority phone support', 'Custom onboarding'],
     notIncluded: [],
-    cta: 'Contact Sales', href: 'mailto:enterprise@youtubecommentdownloader.com', highlight: false, badge: null, note: null,
+    cta: 'Contact Sales', href: '/contact', highlight: false, badge: null, note: null,
   },
 ]
 

@@ -20,12 +20,7 @@ export default function Footer() {
             <div className="flex flex-col gap-3">
               <Link href="/terms"   className="hover:text-white transition-colors">Terms of Service</Link>
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-              <a
-                href="mailto:support@youtubecommentdownloader.com"
-                className="hover:text-white transition-colors"
-              >
-                Support
-              </a>
+              <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
             </div>
           </div>
         </div>

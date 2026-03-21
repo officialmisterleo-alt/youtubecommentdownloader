@@ -40,7 +40,7 @@ export default function TermsPage() {
           <section className="mb-8">
             <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">3. User Accounts and Responsibilities</h2>
             <p className="text-[#888888] leading-relaxed mb-3">
-              To access certain features you must register for an account. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately at <a href="mailto:support@youtubecommentdownloader.com" className="text-red-600 hover:underline">support@youtubecommentdownloader.com</a> if you become aware of any unauthorised use of your account.
+              To access certain features you must register for an account. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately via our <Link href="/contact" className="text-red-600 hover:underline">contact page</Link> if you become aware of any unauthorised use of your account.
             </p>
             <p className="text-[#888888] leading-relaxed">
               You must provide accurate and complete information when registering. We reserve the right to suspend or terminate accounts that contain false or misleading information.
@@ -85,7 +85,7 @@ export default function TermsPage() {
               Usage-based fees, charges for API calls already consumed, and fees for subscription periods already in progress are non-refundable. Lifetime plan purchases are non-refundable after 48 hours.
             </p>
             <p className="text-[#888888] leading-relaxed">
-              To request a refund, email <a href="mailto:support@youtubecommentdownloader.com" className="text-red-600 hover:underline">support@youtubecommentdownloader.com</a> with your account email and a description of the issue.
+              To request a refund, <Link href="/contact" className="text-red-600 hover:underline">contact us</Link> with your account email and a description of the issue.
             </p>
           </section>
 
@@ -143,10 +143,7 @@ export default function TermsPage() {
           <section className="mb-2">
             <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">13. Contact</h2>
             <p className="text-[#888888] leading-relaxed">
-              If you have questions about these Terms, please contact us at{' '}
-              <a href="mailto:support@youtubecommentdownloader.com" className="text-red-600 hover:underline">
-                support@youtubecommentdownloader.com
-              </a>.
+              If you have questions about these Terms, please <Link href="/contact" className="text-red-600 hover:underline">contact us</Link>.
             </p>
           </section>
 
@@ -161,7 +158,7 @@ export default function TermsPage() {
             <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-            <a href="mailto:support@youtubecommentdownloader.com" className="hover:text-white transition-colors">Support</a>
+            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
           </div>
         </div>
       </footer>
