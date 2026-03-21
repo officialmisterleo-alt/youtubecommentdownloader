@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
 
 const TIER_LIMITS: Record<string, number> = {
-  free: 100,
+  free: 0,
   pro: 10000,
   business: 50000,
   enterprise: 100000,

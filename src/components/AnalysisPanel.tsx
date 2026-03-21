@@ -17,7 +17,7 @@ const ANALYSIS_TYPES: { id: AnalysisType; label: string; description: string; ic
 ]
 
 const TIER_LIMITS: Record<string, { comments: number; label: string }> = {
-  free: { comments: 100, label: 'Free' },
+  free: { comments: 0, label: 'Free' },
   pro: { comments: 10000, label: 'Pro' },
   business: { comments: 50000, label: 'Business' },
   enterprise: { comments: 100000, label: 'Enterprise' },
@@ -696,16 +696,39 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
 
   if (!isSignedIn) {
     return (
-      <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl p-6 sm:p-8">
-        <div className="flex items-center gap-3 mb-3">
-          <Sparkles className="w-5 h-5 text-red-400" />
-          <h2 className="text-white font-bold text-base">AI Comment Analysis</h2>
-          <span className="bg-red-600/20 text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-red-600/30">Pro+</span>
+      <div className="mt-4 sm:mt-6 relative bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
+        {/* Blurred preview behind the overlay */}
+        <div className="p-4 sm:p-5 select-none pointer-events-none blur-sm opacity-40">
+          <div className="flex items-center gap-3 mb-4">
+            <Sparkles className="w-5 h-5 text-red-400" />
+            <span className="text-white font-bold text-base">AI Comment Analysis</span>
+            <span className="bg-red-600/20 text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-red-600/30">Pro+</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+            {ANALYSIS_TYPES.map(t => (
+              <div key={t.id} className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-xs font-medium border bg-[#0a0a0a] border-white/[0.07] text-[#888888]">
+                <span className="text-lg leading-none">{t.icon}</span>
+                <span>{t.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="h-10 bg-red-600/50 rounded-xl w-32" />
         </div>
-        <p className="text-[#888888] text-sm mb-5">Get AI-powered insights on audience sentiment, topics, feedback, and trends. Sign in to unlock.</p>
-        <Link href="/auth/signup" className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors">
-          <Lock className="w-4 h-4" /> Sign in to unlock AI Analysis
-        </Link>
+        {/* Locked overlay */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a]/70 backdrop-blur-[2px] p-6 text-center">
+          <div className="bg-[#1a1a1a] border border-white/[0.1] rounded-2xl px-8 py-6 flex flex-col items-center gap-3 max-w-xs">
+            <div className="bg-red-600/20 rounded-full p-3">
+              <Lock className="w-6 h-6 text-red-400" />
+            </div>
+            <div>
+              <div className="text-white font-bold text-base mb-1">AI Analysis — Pro+</div>
+              <p className="text-[#888888] text-xs leading-relaxed">Sign in and upgrade to unlock sentiment, topics, feedback, and trend insights.</p>
+            </div>
+            <Link href="/auth/signup" className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors">
+              <Sparkles className="w-4 h-4" /> Unlock AI Analysis
+            </Link>
+          </div>
+        </div>
       </div>
     )
   }

@@ -7,7 +7,7 @@ const plans = [
   {
     name: 'Free', monthlyPrice: 0, annualPrice: 0,
     desc: 'Perfect for trying out the tool',
-    features: ['100 comments per export', 'All export formats', 'No account required', 'Basic sorting'],
+    features: ['100 comments per video', 'No account required', 'Basic sorting'],
     notIncluded: ['AI Analysis', 'Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
     cta: 'Start Free Trial', href: '/auth/signup?plan=free', highlight: false, badge: null, note: 'No credit card required.',
   },
@@ -35,7 +35,7 @@ const plans = [
 ]
 
 const comparisonFeatures = [
-  { label: 'Comments per export', free: '100', pro: '100k', business: '1M', enterprise: 'Unlimited' },
+  { label: 'Comments per video', free: '100', pro: '100k', business: '1M', enterprise: 'Unlimited' },
   { label: 'Export formats', free: 'All 6', pro: 'All 6', business: 'All 6', enterprise: 'All 6' },
   { label: 'AI Analysis', free: false, pro: '10k comments', business: '50k comments', enterprise: '100k comments' },
   { label: 'Reply threads', free: false, pro: true, business: true, enterprise: true },
