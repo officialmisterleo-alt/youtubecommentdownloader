@@ -52,6 +52,7 @@ function ToolPageContent() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userPlan, setUserPlan] = useState<string>('free')
   const [showAuthGate, setShowAuthGate] = useState(false)
+  const [monthlyUsage, setMonthlyUsage] = useState<{ used: number; limit: number | null; plan: string } | null>(null)
 
   // Pre-fill URL from query param
   useEffect(() => {
@@ -82,6 +83,19 @@ function ToolPageContent() {
         if (data?.status === 'active') setUserPlan(data.plan)
       })
   }, [isSignedIn, userId])
+
+  // Fetch monthly usage quota
+  const refreshMonthlyUsage = () => {
+    fetch('/api/usage/monthly')
+      .then(r => r.json())
+      .then(data => { if (data.used !== undefined) setMonthlyUsage(data) })
+      .catch(() => {})
+  }
+  useEffect(() => {
+    if (!isSignedIn) return
+    refreshMonthlyUsage()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSignedIn])
 
   // Reset maxComments if it exceeds plan limit
   useEffect(() => {
@@ -285,6 +299,11 @@ ${commentRows}
           body: JSON.stringify({ url, maxComments: parseInt(maxComments) || 100, includeReplies, sortBy }),
         })
         const data = await res.json()
+        if (res.status === 429) {
+          setStatusMsg(data.error || 'Monthly comment limit reached. Upgrade your plan for more.')
+          refreshMonthlyUsage()
+          break
+        }
         if (data.comments) {
           const videoComments: Comment[] = data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
           allComments.push(...videoComments)
@@ -308,6 +327,7 @@ ${commentRows}
       setStatusMsg(`Processed ${allComments.length.toLocaleString()} comments`)
       setComments(allComments)
       setDone(true)
+      if (isSignedIn) refreshMonthlyUsage()
     } catch {
       const mockMeta = { videoTitle: 'Sample YouTube Video — Tutorial & Deep Dive', channelName: 'CreatorChannel', videoUrl: urls[0] }
       setComments([
@@ -415,6 +435,32 @@ ${commentRows}
               )}
             </p>
           </div>
+
+          {/* Monthly usage quota */}
+          {isSignedIn && monthlyUsage && monthlyUsage.limit !== null && (() => {
+            const pct = Math.round((monthlyUsage.used / monthlyUsage.limit) * 100)
+            const isOver = pct >= 100
+            const isWarn = pct >= 80 && !isOver
+            return (
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-[#888888]">Monthly usage</span>
+                  <span className={isOver ? 'text-red-400' : isWarn ? 'text-amber-400' : 'text-[#666666]'}>
+                    {monthlyUsage.used.toLocaleString()} of {monthlyUsage.limit.toLocaleString()} comments used
+                  </span>
+                </div>
+                <div className="bg-[#0a0a0a] rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${isOver ? 'bg-red-600' : isWarn ? 'bg-amber-500' : 'bg-red-600'}`}
+                    style={{ width: `${Math.min(100, pct)}%` }}
+                  />
+                </div>
+                {isOver && (
+                  <p className="mt-1.5 text-xs text-red-400">Monthly limit reached. <Link href="/pricing" className="underline hover:text-red-300">Upgrade your plan</Link> to continue.</p>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Export Format */}
           <div>

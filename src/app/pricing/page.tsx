@@ -7,28 +7,28 @@ const plans = [
   {
     name: 'Free', monthlyPrice: 0, annualPrice: 0,
     desc: 'Perfect for trying out the tool',
-    features: ['100 comments per video', 'No account required', 'Basic sorting'],
+    features: ['100 comments per video', '1,000 comments/month', 'No account required', 'Basic sorting'],
     notIncluded: ['AI Analysis', 'Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
     cta: 'Start Free Trial', href: '/auth/signup?plan=free', highlight: false, badge: null, note: 'No credit card required.',
   },
   {
     name: 'Pro', monthlyPrice: 29, annualPrice: 24,
     desc: 'For individual power users',
-    features: ['10,000 comments per video', 'All export formats', 'Reply thread capture', 'Email support', 'Priority processing', 'Basic sorting & filtering', 'AI Analysis (up to 10,000 comments)'],
+    features: ['10,000 comments per video', '100,000 comments/month', 'All export formats', 'Reply thread capture', 'Email support', 'Priority processing', 'Basic sorting & filtering', 'AI Analysis (up to 10,000 comments)'],
     notIncluded: ['Bulk channel exports', 'REST API access', 'Team seats', 'Scheduled exports'],
     cta: 'Start Pro', href: '/auth/signup?plan=pro', highlight: false, badge: null, note: null,
   },
   {
     name: 'Business', monthlyPrice: 79, annualPrice: 65,
     desc: 'For agencies and growing teams',
-    features: ['100,000 comments per video', 'All export formats', 'Bulk channel/playlist', 'Scheduled exports', '3 team seats', 'Priority email support', 'AI Analysis (up to 50,000 comments)'],
+    features: ['100,000 comments per video', '1,000,000 comments/month', 'All export formats', 'Bulk channel/playlist', 'Scheduled exports', '3 team seats', 'Priority email support', 'AI Analysis (up to 50,000 comments)'],
     notIncluded: ['REST API access', 'SSO / SAML', 'White-label', 'Dedicated API quota'],
     cta: 'Start Business', href: '/auth/signup?plan=business', highlight: true, badge: 'Most Popular', note: null,
   },
   {
     name: 'Enterprise', monthlyPrice: 299, annualPrice: 249,
     desc: 'For large teams and enterprise use',
-    features: ['Unlimited comments', 'Dedicated API quota', '10 team seats', 'SSO / SAML', 'White-label exports', 'Custom data retention', '99.9% SLA', 'Priority phone support', 'Custom onboarding', 'AI Analysis (up to 100,000 comments)'],
+    features: ['Unlimited comments/month', 'Unlimited per video', 'Dedicated API quota', '10 team seats', 'SSO / SAML', 'White-label exports', 'Custom data retention', '99.9% SLA', 'Priority phone support', 'Custom onboarding', 'AI Analysis (up to 100,000 comments)'],
     notIncluded: [],
     cta: 'Contact Sales', href: '/contact', highlight: false, badge: null, note: null,
   },
@@ -36,6 +36,7 @@ const plans = [
 
 const comparisonFeatures = [
   { label: 'Comments per video', free: '100', pro: '10k', business: '100k', enterprise: 'Unlimited' },
+  { label: 'Monthly comment quota', free: '1k', pro: '100k', business: '1M', enterprise: 'Unlimited' },
   { label: 'Export formats', free: 'All 6', pro: 'All 6', business: 'All 6', enterprise: 'All 6' },
   { label: 'AI Analysis', free: false, pro: '10k comments', business: '50k comments', enterprise: '100k comments' },
   { label: 'Reply threads', free: false, pro: true, business: true, enterprise: true },

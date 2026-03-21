@@ -18,11 +18,21 @@ function decodeHtml(str: string): string {
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
 
+// Per-video (per-fetch) limits
 const PLAN_LIMITS: Record<string, { maxComments: number }> = {
   free: { maxComments: 100 },
   pro: { maxComments: 10000 },
   business: { maxComments: 100000 },
   enterprise: { maxComments: 1000000 },
+}
+
+// Monthly cumulative limits (null = unlimited)
+// NOTE: To enforce these you must run supabase/migrations/monthly_usage.sql first.
+const MONTHLY_LIMITS: Record<string, number | null> = {
+  free: 1000,
+  pro: 100000,
+  business: 1000000,
+  enterprise: null, // unlimited
 }
 
 const MOCK_COMMENTS: Comment[] = [
@@ -69,30 +79,29 @@ function createServiceClient() {
   )
 }
 
-async function incrementUsage(userId: string, commentsCount: number) {
+async function upsertMonthlyUsage(userId: string, commentsCount: number) {
   const serviceClient = createServiceClient()
-  const month = new Date().toISOString().slice(0, 7) // 'YYYY-MM'
+  const yearMonth = new Date().toISOString().slice(0, 7) // 'YYYY-MM'
 
   const { data: existing } = await serviceClient
-    .from('usage')
-    .select('id, exports_count, comments_count')
+    .from('monthly_usage')
+    .select('id, comments_fetched')
     .eq('user_id', userId)
-    .eq('month', month)
+    .eq('year_month', yearMonth)
     .single()
 
   if (existing) {
     await serviceClient
-      .from('usage')
+      .from('monthly_usage')
       .update({
-        exports_count: (existing.exports_count ?? 0) + 1,
-        comments_count: (existing.comments_count ?? 0) + commentsCount,
+        comments_fetched: (existing.comments_fetched ?? 0) + commentsCount,
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
   } else {
     await serviceClient
-      .from('usage')
-      .insert({ user_id: userId, month, exports_count: 1, comments_count: commentsCount })
+      .from('monthly_usage')
+      .insert({ user_id: userId, year_month: yearMonth, comments_fetched: commentsCount })
   }
 }
 
@@ -105,21 +114,49 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
+    let plan = 'free'
     let planMaxComments: number
     if (!user) {
-      planMaxComments = 50 // unauthenticated limit
+      planMaxComments = 50 // unauthenticated per-video limit
     } else {
       const { data: sub } = await supabase
         .from('subscriptions')
         .select('plan, status')
         .eq('user_id', user.id)
         .single()
-      const plan = (sub?.status === 'active' ? sub?.plan : null) ?? 'free'
+      plan = (sub?.status === 'active' ? sub?.plan : null) ?? 'free'
       planMaxComments = PLAN_LIMITS[plan]?.maxComments ?? PLAN_LIMITS.free.maxComments
     }
 
-    // Enforce plan limit — client-requested value cannot exceed plan max
+    // Enforce per-video limit — client-requested value cannot exceed plan max
     const effectiveMax = Math.min(maxComments, planMaxComments)
+
+    // Monthly cap check (authenticated users only)
+    // Requires monthly_usage table — see supabase/migrations/monthly_usage.sql
+    if (user) {
+      const monthlyLimit = MONTHLY_LIMITS[plan] ?? MONTHLY_LIMITS.free
+      if (monthlyLimit !== null) {
+        const yearMonth = new Date().toISOString().slice(0, 7)
+        const serviceClient = createServiceClient()
+        const { data: usageRow } = await serviceClient
+          .from('monthly_usage')
+          .select('comments_fetched')
+          .eq('user_id', user.id)
+          .eq('year_month', yearMonth)
+          .single()
+
+        const alreadyFetched = usageRow?.comments_fetched ?? 0
+        if (alreadyFetched + effectiveMax > monthlyLimit) {
+          const remaining = Math.max(0, monthlyLimit - alreadyFetched)
+          return NextResponse.json({
+            error: `Monthly limit reached. You've used ${alreadyFetched.toLocaleString()} of ${monthlyLimit.toLocaleString()} comments this month.`,
+            used: alreadyFetched,
+            limit: monthlyLimit,
+            remaining,
+          }, { status: 429 })
+        }
+      }
+    }
 
     const apiKey = process.env.YOUTUBE_API_KEY
     if (!apiKey || apiKey === 'PLACEHOLDER_YOUTUBE_KEY') {
@@ -131,7 +168,7 @@ export async function POST(req: NextRequest) {
         videoUrl: url,
       }))
       const mockResult = mockWithMeta.slice(0, effectiveMax)
-      if (user) await incrementUsage(user.id, mockResult.length).catch(() => {})
+      if (user) await upsertMonthlyUsage(user.id, mockResult.length).catch(() => {})
       return NextResponse.json({ comments: mockResult, total: mockResult.length, mock: true })
     }
 
@@ -199,7 +236,7 @@ export async function POST(req: NextRequest) {
       pageToken = data.nextPageToken
     }
 
-    if (user) await incrementUsage(user.id, comments.length).catch(() => {})
+    if (user) await upsertMonthlyUsage(user.id, comments.length).catch(() => {})
 
     return NextResponse.json({ comments, total: comments.length, mock: false })
   } catch {
