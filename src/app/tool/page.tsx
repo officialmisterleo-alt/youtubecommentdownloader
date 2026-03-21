@@ -1,8 +1,6 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import AnalysisPanel from '@/components/AnalysisPanel'
 import Link from 'next/link'
 import { Plus, Download, RefreshCw, ChevronDown, X, Lock } from 'lucide-react'
@@ -273,8 +271,7 @@ ${commentRows}
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] overflow-x-hidden">
-      <Navbar />
+    <div className="flex-1 overflow-x-hidden">
 
       {showBanner && (
         <div className="bg-red-700 py-1.5 px-4 flex items-center justify-center gap-3 text-sm text-white">
@@ -468,8 +465,6 @@ ${commentRows}
           <AnalysisPanel comments={comments} isSignedIn={isSignedIn} />
         </div>
       )}
-
-      <Footer />
 
       {/* Auth gate modal */}
       {showAuthGate && (

@@ -2,7 +2,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Youtube } from 'lucide-react'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -34,7 +33,7 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="border border-white/[0.07] rounded-2xl p-8 w-full max-w-md text-center">
           <div className="text-4xl mb-4">✉️</div>
           <h2 className="text-xl font-bold text-white mb-2">Check your email</h2>
@@ -45,11 +44,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4">
-      <Link href="/" className="flex items-center gap-2 mb-8">
-        <div className="bg-red-600 rounded p-1.5"><Youtube className="w-5 h-5 text-white" /></div>
-        <span className="font-bold text-white">YTCommentDownloader</span>
-      </Link>
+    <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
       <div className="border border-white/[0.07] rounded-2xl p-8 w-full max-w-md">
         <h1 className="text-2xl font-bold text-white mb-2">Create your account</h1>
         <p className="text-[#888888] text-sm mb-6">Start with 500 free comment exports</p>

@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { LogOut, User as UserIcon, CreditCard } from 'lucide-react'
@@ -33,7 +31,7 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -46,8 +44,7 @@ export default function AccountPage() {
   const isGoogleUser = user.app_metadata?.provider === 'google'
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      <Navbar />
+    <div className="flex-1 flex flex-col">
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 py-10">
         <h1 className="text-2xl font-bold text-white mb-8">Account</h1>
 
@@ -103,7 +100,6 @@ export default function AccountPage() {
           </button>
         </div>
       </div>
-      <Footer />
     </div>
   )
 }

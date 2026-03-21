@@ -1,7 +1,5 @@
 import Link from 'next/link'
-import Navbar from '@/components/Navbar'
 import HeroInput from '@/components/HeroInput'
-import Footer from '@/components/Footer'
 import { Download, FileSpreadsheet, Zap, Users, Key, Shield } from 'lucide-react'
 
 // Bevel card class — reused across all cards
@@ -25,9 +23,7 @@ const surfaces = ['Video Comments', 'Playlist Comments', 'Channel Comments', 'Yo
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] overflow-x-hidden text-white">
-      <Navbar />
-
+    <div className="flex-1 overflow-x-hidden">
       {/* ── HERO — centered, no split ── */}
       <section className="flex flex-col items-center text-center px-6 pt-16 sm:pt-28 pb-24">
         <span className="text-xs font-semibold tracking-widest text-red-500 uppercase mb-6">
@@ -195,8 +191,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   )
 }

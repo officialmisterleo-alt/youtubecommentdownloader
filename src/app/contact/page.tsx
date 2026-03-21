@@ -1,6 +1,4 @@
 import type { Metadata } from 'next'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import ContactForm from './ContactForm'
 
 export const metadata: Metadata = {
@@ -11,8 +9,7 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      <Navbar />
+    <div className="flex-1 flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4 py-16">
         <div className="w-full max-w-lg">
           <div className="text-center mb-8">
@@ -24,7 +21,6 @@ export default function ContactPage() {
           <ContactForm />
         </div>
       </div>
-      <Footer />
     </div>
   )
 }

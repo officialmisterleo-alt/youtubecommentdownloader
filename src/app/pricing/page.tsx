@@ -1,7 +1,5 @@
 'use client'
 import { useState } from 'react'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import Link from 'next/link'
 import { Check, X, Zap } from 'lucide-react'
 
@@ -61,9 +59,8 @@ export default function PricingPage() {
   const [annual, setAnnual] = useState(false)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      <Navbar />
-      <div className="flex-1 max-w-7xl mx-auto px-4 py-16">
+    <div className="flex-1 flex flex-col">
+      <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-16">
         <div className="text-center mb-14">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4">Simple, transparent pricing</h1>
           <p className="text-[#888888] text-lg mb-8">Start free. Scale as you grow. No hidden fees.</p>
@@ -75,7 +72,7 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
           {plans.map(plan => (
             <div key={plan.name} className={`rounded-2xl p-6 border flex flex-col ${plan.highlight ? 'bg-red-950/20 border-red-700 ring-1 ring-red-700' : 'bg-[#171717] border-white/[0.07]'}`}>
               {plan.badge && <div className="inline-flex items-center gap-1 text-red-400 text-xs font-semibold uppercase tracking-widest mb-3"><Zap className="w-3 h-3" /> {plan.badge}</div>}
@@ -116,19 +113,19 @@ export default function PricingPage() {
             <div className="text-white font-bold text-xl mb-1">Lifetime Deal — $149</div>
             <p className="text-[#888888] text-sm">Everything in Business, forever. One payment, no recurring fees. Perfect for freelancers and indie hackers.</p>
           </div>
-          <Link href="/auth/signup?plan=lifetime" className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors whitespace-nowrap">
+          <Link href="/auth/signup?plan=lifetime" className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap">
             Get Lifetime Access →
           </Link>
         </div>
 
-        {/* Comparison table */}
+        {/* Comparison table — scrollable on mobile */}
         <div className="mb-16">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Full Feature Comparison</h2>
-          <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-2xl border border-white/[0.07]">
+            <table className="w-full text-sm min-w-[560px]">
               <thead>
-                <tr className="border-b border-white/[0.07]">
-                  <th className="text-left px-6 py-4 text-[#888888] font-medium w-1/3">Feature</th>
+                <tr className="border-b border-white/[0.07] bg-[#171717]">
+                  <th className="text-left px-6 py-4 text-[#888888] font-medium w-2/5">Feature</th>
                   {['Free', 'Pro', 'Business', 'Enterprise'].map(p => (
                     <th key={p} className="px-4 py-4 text-center text-white font-semibold">{p}</th>
                   ))}
@@ -136,7 +133,7 @@ export default function PricingPage() {
               </thead>
               <tbody>
                 {comparisonFeatures.map((row, i) => (
-                  <tr key={row.label} className={`border-b border-white/[0.07] ${i % 2 === 0 ? 'bg-[#0a0a0a]' : ''}`}>
+                  <tr key={row.label} className={`border-b border-white/[0.07] ${i % 2 === 0 ? 'bg-[#0a0a0a]' : 'bg-[#171717]'}`}>
                     <td className="px-6 py-3.5 text-[#888888]">{row.label}</td>
                     {[row.free, row.pro, row.business, row.enterprise].map((v, j) => (
                       <td key={j} className="px-4 py-3.5 text-center">
@@ -167,7 +164,6 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   )
 }
