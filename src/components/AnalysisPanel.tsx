@@ -9,31 +9,45 @@ type Comment = { id: string; author: string; text: string; likes: number; date: 
 type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
 
 const ANALYSIS_TYPES: { id: AnalysisType; label: string; description: string; icon: string }[] = [
-  { id: 'sentiment', label: 'Sentiment', description: 'Positive/negative breakdown & emotional themes', icon: '😊' },
-  { id: 'audience', label: 'Audience', description: 'Who is watching and why', icon: '👥' },
-  { id: 'topics', label: 'Topics', description: 'What people are actually talking about', icon: '💬' },
-  { id: 'feedback', label: 'Feedback', description: 'Praise, requests & actionable insights', icon: '💡' },
-  { id: 'trends', label: 'Trends', description: 'Viral phrases & high-impact comments', icon: '🔥' },
+  { id: 'sentiment', label: 'Sentiment', description: 'Positive/negative breakdown, emotional drivers & notable quotes', icon: '😊' },
+  { id: 'audience', label: 'Audience', description: 'Distinct audience segments, demographics & recommendations', icon: '👥' },
+  { id: 'topics', label: 'Topics', description: 'What people are actually talking about, content gaps & surprises', icon: '💬' },
+  { id: 'feedback', label: 'Feedback', description: 'Praise, requests, criticisms, questions & priority insights', icon: '💡' },
+  { id: 'trends', label: 'Trends', description: 'Viral phrases, community health & engagement recommendations', icon: '🔥' },
 ]
 
 const TIER_LIMITS: Record<string, { comments: number; label: string }> = {
-  pro: { comments: 500, label: 'Pro' },
-  business: { comments: 2000, label: 'Business' },
-  enterprise: { comments: 10000, label: 'Enterprise' },
+  free: { comments: 1000, label: 'Free' },
+  pro: { comments: 5000, label: 'Pro' },
+  business: { comments: 10000, label: 'Business' },
+  enterprise: { comments: 50000, label: 'Enterprise' },
 }
 
 // ── Result renderers ──────────────────────────────────────────────────────────
 
-function SentimentResult({ data }: { data: { overall: string; positive: number; neutral: number; negative: number; positiveThemes: string[]; negativeThemes: string[]; summary: string } }) {
+type SentimentData = {
+  positive: number
+  neutral: number
+  negative: number
+  summary: string
+  themes?: string[]
+  emotionalDrivers?: { positive: string[]; negative: string[] }
+  notableQuotes?: string[]
+  sentimentOverTime?: string
+}
+
+function SentimentResult({ data }: { data: SentimentData }) {
   const bars = [
     { label: 'Positive', value: data.positive, color: 'bg-green-500' },
     { label: 'Neutral', value: data.neutral, color: 'bg-[#444444]' },
     { label: 'Negative', value: data.negative, color: 'bg-red-500' },
   ]
+  const dominant = data.positive >= data.negative && data.positive >= data.neutral ? 'Positive'
+    : data.negative >= data.positive && data.negative >= data.neutral ? 'Negative' : 'Mixed'
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <span className={`text-2xl font-bold ${data.overall === 'Positive' ? 'text-green-400' : data.overall === 'Negative' ? 'text-red-400' : 'text-yellow-400'}`}>{data.overall}</span>
+        <span className={`text-2xl font-bold ${dominant === 'Positive' ? 'text-green-400' : dominant === 'Negative' ? 'text-red-400' : 'text-yellow-400'}`}>{dominant}</span>
         <span className="text-[#888888] text-sm">overall sentiment</span>
       </div>
       <div className="space-y-2.5">
@@ -47,26 +61,148 @@ function SentimentResult({ data }: { data: { overall: string; positive: number; 
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+
+      {data.themes && data.themes.length > 0 && (
         <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">What they love</div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">Recurring emotional themes</div>
           <div className="flex flex-wrap gap-1.5">
-            {data.positiveThemes?.map((t, i) => <span key={i} className="bg-green-900/30 text-green-400 text-xs px-2.5 py-1 rounded-full border border-green-900/50">{t}</span>)}
+            {data.themes.map((t, i) => <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-[#aaaaaa] text-xs px-2.5 py-1 rounded-full">{t}</span>)}
           </div>
         </div>
-        <div>
-          <div className="text-xs text-[#888888] mb-2 font-medium">Pain points</div>
-          <div className="flex flex-wrap gap-1.5">
-            {data.negativeThemes?.map((t, i) => <span key={i} className="bg-red-900/30 text-red-400 text-xs px-2.5 py-1 rounded-full border border-red-900/50">{t}</span>)}
+      )}
+
+      {data.emotionalDrivers && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <div className="text-xs text-green-400 mb-2 font-medium">What drives positivity</div>
+            <ul className="space-y-1.5">
+              {data.emotionalDrivers.positive?.map((d, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
+                  <span className="text-green-500 mt-0.5 shrink-0">✓</span>{d}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <div className="text-xs text-red-400 mb-2 font-medium">What triggers negativity</div>
+            <ul className="space-y-1.5">
+              {data.emotionalDrivers.negative?.map((d, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
+                  <span className="text-red-500 mt-0.5 shrink-0">✗</span>{d}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
-      </div>
+      )}
+
+      {data.notableQuotes && data.notableQuotes.length > 0 && (
+        <div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">Notable quotes</div>
+          <div className="space-y-2">
+            {data.notableQuotes.map((q, i) => (
+              <blockquote key={i} className="bg-[#0a0a0a] border-l-2 border-red-600/50 pl-3 pr-3 py-2 rounded-r-xl text-xs text-[#aaaaaa] italic">&ldquo;{q}&rdquo;</blockquote>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
+
+      {data.sentimentOverTime && (
+        <p className="text-[#666666] text-xs italic">{data.sentimentOverTime}</p>
+      )}
     </div>
   )
 }
 
-function AudienceResult({ data }: { data: { profile: string; expertise: string; useCases: string[]; context: string; motivations: string[]; summary: string } }) {
+type AudienceSegment = { emoji: string; name: string; percentage: number; description: string; typicalComment: string; engagementStyle: string }
+type AudienceData = {
+  segments?: AudienceSegment[]
+  audienceSummary?: string
+  geographicSignals?: string
+  ageSignals?: string
+  loyaltySignal?: string
+  recommendations?: string[]
+  // legacy fields
+  profile?: string
+  expertise?: string
+  useCases?: string[]
+  context?: string
+  motivations?: string[]
+  summary?: string
+}
+
+function AudienceResult({ data }: { data: AudienceData }) {
+  if (data.segments) {
+    return (
+      <div className="space-y-4">
+        {data.audienceSummary && (
+          <p className="text-[#aaaaaa] text-sm leading-relaxed bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">{data.audienceSummary}</p>
+        )}
+        <div className="space-y-3">
+          {data.segments.map((seg, i) => (
+            <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl leading-none">{seg.emoji}</span>
+                  <span className="text-white text-sm font-medium">{seg.name}</span>
+                </div>
+                <span className="text-[#888888] text-xs font-medium">{seg.percentage}%</span>
+              </div>
+              <div className="bg-[#171717] rounded-full h-1.5 mb-3 overflow-hidden">
+                <div className="bg-red-600 h-full rounded-full transition-all duration-700" style={{ width: `${seg.percentage}%` }} />
+              </div>
+              <p className="text-[#aaaaaa] text-xs mb-2 leading-relaxed">{seg.description}</p>
+              {seg.typicalComment && (
+                <p className="text-[#555555] text-xs italic border-t border-white/[0.05] pt-2 mt-2">&ldquo;{seg.typicalComment}&rdquo;</p>
+              )}
+              {seg.engagementStyle && (
+                <div className="mt-2">
+                  <span className="bg-[#171717] text-[#888888] text-xs px-2 py-0.5 rounded-full border border-white/[0.07]">{seg.engagementStyle}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {(data.geographicSignals || data.ageSignals || data.loyaltySignal) && (
+          <div className="grid grid-cols-1 gap-2">
+            {data.geographicSignals && (
+              <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3">
+                <div className="text-xs text-[#888888] mb-1 font-medium">Geographic signals</div>
+                <p className="text-white text-xs">{data.geographicSignals}</p>
+              </div>
+            )}
+            {data.ageSignals && (
+              <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3">
+                <div className="text-xs text-[#888888] mb-1 font-medium">Age demographic signals</div>
+                <p className="text-white text-xs">{data.ageSignals}</p>
+              </div>
+            )}
+            {data.loyaltySignal && (
+              <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3">
+                <div className="text-xs text-[#888888] mb-1 font-medium">Viewer loyalty</div>
+                <p className="text-white text-xs">{data.loyaltySignal}</p>
+              </div>
+            )}
+          </div>
+        )}
+        {data.recommendations && data.recommendations.length > 0 && (
+          <div>
+            <div className="text-xs text-[#888888] mb-2 font-medium">Creator recommendations</div>
+            <ul className="space-y-1.5">
+              {data.recommendations.map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-[#aaaaaa]">
+                  <span className="text-red-500 mt-0.5 shrink-0">→</span>{r}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    )
+  }
+  // legacy fallback
   return (
     <div className="space-y-4">
       <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
@@ -89,47 +225,115 @@ function AudienceResult({ data }: { data: { profile: string; expertise: string; 
           {data.motivations?.map((m, i) => <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-[#aaaaaa] text-xs px-2.5 py-1 rounded-full">{m}</span>)}
         </div>
       </div>
-      <div>
-        <div className="text-xs text-[#888888] mb-2 font-medium">Top use cases</div>
-        <div className="flex flex-wrap gap-1.5">
-          {data.useCases?.map((u, i) => <span key={i} className="bg-red-900/20 border border-red-900/40 text-red-400 text-xs px-2.5 py-1 rounded-full">{u}</span>)}
-        </div>
-      </div>
       <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
     </div>
   )
 }
 
-function TopicsResult({ data }: { data: { topics: Array<{ name: string; percentage: number; description: string; example: string }>; summary: string } }) {
+type TopicItem = { topic?: string; name?: string; percentage: number; description: string; sentiment?: string; representativeComments?: string[]; example?: string }
+type TopicsData = {
+  topics?: TopicItem[]
+  topicSummary?: string
+  summary?: string
+  contentGaps?: string[]
+  controversialTopics?: string[]
+  unusualFindings?: string
+}
+
+const sentimentBadgeClass = (s?: string) => {
+  if (s === 'positive') return 'bg-green-900/30 text-green-400 border-green-900/50'
+  if (s === 'negative') return 'bg-red-900/30 text-red-400 border-red-900/50'
+  if (s === 'mixed') return 'bg-yellow-900/30 text-yellow-400 border-yellow-900/50'
+  return 'bg-[#171717] text-[#888888] border-white/[0.07]'
+}
+
+function TopicsResult({ data }: { data: TopicsData }) {
   return (
     <div className="space-y-3">
       {data.topics?.map((t, i) => (
         <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-white text-sm font-medium">{t.name}</span>
-            <span className="text-[#888888] text-xs font-medium">{t.percentage}%</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-white text-sm font-medium">{t.topic ?? t.name}</span>
+              {t.sentiment && (
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${sentimentBadgeClass(t.sentiment)}`}>{t.sentiment}</span>
+              )}
+            </div>
+            <span className="text-[#888888] text-xs font-medium shrink-0 ml-2">{t.percentage}%</span>
           </div>
           <div className="bg-[#171717] rounded-full h-1.5 mb-3 overflow-hidden">
             <div className="bg-red-600 h-full rounded-full transition-all duration-700" style={{ width: `${t.percentage}%` }} />
           </div>
-          <p className="text-[#888888] text-xs mb-1.5">{t.description}</p>
-          {t.example && <p className="text-[#555555] text-xs italic">&ldquo;{t.example}&rdquo;</p>}
+          <p className="text-[#888888] text-xs mb-2 leading-relaxed">{t.description}</p>
+          {t.representativeComments && t.representativeComments.length > 0 && (
+            <details className="mt-1">
+              <summary className="text-[#555555] text-xs cursor-pointer hover:text-[#888888] transition-colors">Example comments ▸</summary>
+              <div className="mt-2 space-y-1.5 pl-2">
+                {t.representativeComments.map((c, j) => (
+                  <p key={j} className="text-[#555555] text-xs italic">&ldquo;{c}&rdquo;</p>
+                ))}
+              </div>
+            </details>
+          )}
+          {t.example && !t.representativeComments && (
+            <p className="text-[#555555] text-xs italic">&ldquo;{t.example}&rdquo;</p>
+          )}
         </div>
       ))}
-      <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
+      <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.topicSummary ?? data.summary}</p>
+      {data.contentGaps && data.contentGaps.length > 0 && (
+        <div className="bg-yellow-900/10 border border-yellow-900/30 rounded-xl p-4">
+          <div className="text-xs text-yellow-400 mb-2 font-medium">Content gaps — what viewers want but didn&apos;t get</div>
+          <ul className="space-y-1">
+            {data.contentGaps.map((g, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
+                <span className="text-yellow-500 mt-0.5 shrink-0">→</span>{g}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {data.unusualFindings && (
+        <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
+          <div className="text-xs text-[#888888] mb-1 font-medium">Unusual findings</div>
+          <p className="text-[#aaaaaa] text-xs">{data.unusualFindings}</p>
+        </div>
+      )}
     </div>
   )
 }
 
-function FeedbackResult({ data }: { data: { praise: string[]; requests: string[]; insights: Array<{ action: string; reason: string }>; summary: string } }) {
+type FeedbackInsight = { insight?: string; action?: string; evidence?: string; reason?: string; priority?: string }
+type FeedbackData = {
+  praise: string[]
+  requests: string[]
+  criticisms?: string[]
+  questions?: string[]
+  insights?: FeedbackInsight[]
+  overallFeedbackSummary?: string
+  contentStrengths?: string[]
+  improvementAreas?: string[]
+  summary?: string
+}
+
+const priorityClass = (p?: string) => {
+  if (p === 'high') return 'bg-red-900/30 text-red-400 border-red-900/50'
+  if (p === 'medium') return 'bg-yellow-900/30 text-yellow-400 border-yellow-900/50'
+  return 'bg-[#0a0a0a] text-[#888888] border-white/[0.07]'
+}
+
+function FeedbackResult({ data }: { data: FeedbackData }) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      {data.overallFeedbackSummary && (
+        <p className="text-[#aaaaaa] text-sm leading-relaxed bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">{data.overallFeedbackSummary}</p>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <div className="text-xs text-green-400 mb-2 font-medium">👏 What they praise</div>
           <ul className="space-y-1.5">
             {data.praise?.map((p, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-[#aaaaaa]">
+              <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
                 <span className="text-green-500 mt-0.5 shrink-0">✓</span>{p}
               </li>
             ))}
@@ -139,56 +343,192 @@ function FeedbackResult({ data }: { data: { praise: string[]; requests: string[]
           <div className="text-xs text-yellow-400 mb-2 font-medium">💬 What they want</div>
           <ul className="space-y-1.5">
             {data.requests?.map((r, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-[#aaaaaa]">
+              <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
                 <span className="text-yellow-500 mt-0.5 shrink-0">→</span>{r}
               </li>
             ))}
           </ul>
         </div>
+        {data.criticisms && data.criticisms.length > 0 && (
+          <div>
+            <div className="text-xs text-orange-400 mb-2 font-medium">⚠️ Criticisms</div>
+            <ul className="space-y-1.5">
+              {data.criticisms.map((c, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
+                  <span className="text-orange-500 mt-0.5 shrink-0">!</span>{c}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
-      <div>
-        <div className="text-xs text-[#888888] mb-2 font-medium">Actionable insights</div>
-        <div className="space-y-2">
-          {data.insights?.map((ins, i) => (
-            <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3">
-              <div className="text-white text-sm font-medium mb-1">{ins.action}</div>
-              <div className="text-[#888888] text-xs">{ins.reason}</div>
-            </div>
-          ))}
+      {data.questions && data.questions.length > 0 && (
+        <div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">Common questions from viewers</div>
+          <div className="flex flex-wrap gap-1.5">
+            {data.questions.map((q, i) => (
+              <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-[#aaaaaa] text-xs px-2.5 py-1 rounded-full">{q}</span>
+            ))}
+          </div>
         </div>
-      </div>
-      <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
+      )}
+      {data.insights && data.insights.length > 0 && (
+        <div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">Priority insights</div>
+          <div className="space-y-2">
+            {data.insights.map((ins, i) => (
+              <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <div className="text-white text-sm font-medium">{ins.insight ?? ins.action}</div>
+                  {ins.priority && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${priorityClass(ins.priority)}`}>{ins.priority}</span>
+                  )}
+                </div>
+                <div className="text-[#888888] text-xs">{ins.evidence ?? ins.reason}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {(data.contentStrengths || data.improvementAreas) && (
+        <div className="grid grid-cols-2 gap-3">
+          {data.contentStrengths && (
+            <div className="bg-green-900/10 border border-green-900/30 rounded-xl p-3">
+              <div className="text-xs text-green-400 mb-2 font-medium">Content strengths</div>
+              <ul className="space-y-1">
+                {data.contentStrengths.map((s, i) => (
+                  <li key={i} className="text-xs text-[#aaaaaa] flex items-start gap-1.5">
+                    <span className="text-green-500 mt-0.5 shrink-0">✓</span>{s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {data.improvementAreas && (
+            <div className="bg-orange-900/10 border border-orange-900/30 rounded-xl p-3">
+              <div className="text-xs text-orange-400 mb-2 font-medium">Areas to improve</div>
+              <ul className="space-y-1">
+                {data.improvementAreas.map((a, i) => (
+                  <li key={i} className="text-xs text-[#aaaaaa] flex items-start gap-1.5">
+                    <span className="text-orange-500 mt-0.5 shrink-0">→</span>{a}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+      {data.summary && !data.overallFeedbackSummary && (
+        <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
+      )}
     </div>
   )
 }
 
-function TrendsResult({ data }: { data: { phrases: string[]; viralComments: Array<{ text: string; reason: string }>; keywords: string[]; summary: string } }) {
+type ViralComment = { comment?: string; text?: string; reason: string }
+type TrendsData = {
+  trendingPhrases?: string[]
+  phrases?: string[]
+  viralComments?: ViralComment[]
+  keywords?: string[]
+  emergingTrends?: string[]
+  insideJokes?: string[]
+  viralityFactors?: string
+  communityHealth?: string
+  contentMoments?: string[]
+  crossContentSignals?: string
+  recommendations?: string[]
+  summary?: string
+}
+
+function TrendsResult({ data }: { data: TrendsData }) {
+  const phrases = data.trendingPhrases ?? data.phrases ?? []
   return (
     <div className="space-y-4">
-      <div>
-        <div className="text-xs text-[#888888] mb-2 font-medium">Trending phrases</div>
-        <div className="flex flex-wrap gap-1.5">
-          {data.phrases?.map((p, i) => <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-white text-xs px-3 py-1.5 rounded-full">&ldquo;{p}&rdquo;</span>)}
+      {phrases.length > 0 && (
+        <div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">Trending phrases</div>
+          <div className="flex flex-wrap gap-1.5">
+            {phrases.map((p, i) => <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-white text-xs px-3 py-1.5 rounded-full">&ldquo;{p}&rdquo;</span>)}
+          </div>
         </div>
-      </div>
-      <div>
-        <div className="text-xs text-[#888888] mb-2 font-medium">High-impact comments</div>
-        <div className="space-y-2">
-          {data.viralComments?.map((c, i) => (
-            <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3.5">
-              <p className="text-white text-sm mb-1.5 leading-relaxed">&ldquo;{c.text}&rdquo;</p>
-              <p className="text-[#888888] text-xs">🔥 {c.reason}</p>
-            </div>
-          ))}
+      )}
+      {data.viralComments && data.viralComments.length > 0 && (
+        <div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">High-impact comments</div>
+          <div className="space-y-2">
+            {data.viralComments.map((c, i) => (
+              <div key={i} className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3.5">
+                <p className="text-white text-sm mb-1.5 leading-relaxed">&ldquo;{c.comment ?? c.text}&rdquo;</p>
+                <p className="text-[#888888] text-xs">🔥 {c.reason}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <div>
-        <div className="text-xs text-[#888888] mb-2 font-medium">Top keywords</div>
-        <div className="flex flex-wrap gap-1.5">
-          {data.keywords?.map((k, i) => <span key={i} className="bg-red-900/20 border border-red-900/40 text-red-400 text-xs px-2.5 py-1 rounded-full">{k}</span>)}
+      )}
+      {data.emergingTrends && data.emergingTrends.length > 0 && (
+        <div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">Emerging trends</div>
+          <div className="flex flex-wrap gap-1.5">
+            {data.emergingTrends.map((t, i) => <span key={i} className="bg-red-900/20 border border-red-900/40 text-red-400 text-xs px-2.5 py-1 rounded-full">{t}</span>)}
+          </div>
         </div>
-      </div>
-      <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
+      )}
+      {data.keywords && data.keywords.length > 0 && (
+        <div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">Top keywords</div>
+          <div className="flex flex-wrap gap-1.5">
+            {data.keywords.map((k, i) => <span key={i} className="bg-[#0a0a0a] border border-white/[0.07] text-[#888888] text-xs px-2.5 py-1 rounded-full">{k}</span>)}
+          </div>
+        </div>
+      )}
+      {data.insideJokes && data.insideJokes.length > 0 && (
+        <div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">In-jokes &amp; community references</div>
+          <div className="flex flex-wrap gap-1.5">
+            {data.insideJokes.map((j, i) => <span key={i} className="bg-[#0a0a0a] border border-purple-900/40 text-purple-400 text-xs px-2.5 py-1 rounded-full">{j}</span>)}
+          </div>
+        </div>
+      )}
+      {data.communityHealth && (
+        <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
+          <div className="text-xs text-[#888888] mb-1 font-medium">Community health</div>
+          <p className="text-[#aaaaaa] text-xs leading-relaxed">{data.communityHealth}</p>
+        </div>
+      )}
+      {data.viralityFactors && (
+        <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
+          <div className="text-xs text-[#888888] mb-1 font-medium">Virality factors</div>
+          <p className="text-[#aaaaaa] text-xs leading-relaxed">{data.viralityFactors}</p>
+        </div>
+      )}
+      {data.contentMoments && data.contentMoments.length > 0 && (
+        <div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">High-activity content moments</div>
+          <ul className="space-y-1.5">
+            {data.contentMoments.map((m, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
+                <span className="text-red-500 mt-0.5 shrink-0">▶</span>{m}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {data.recommendations && data.recommendations.length > 0 && (
+        <div>
+          <div className="text-xs text-[#888888] mb-2 font-medium">Recommendations</div>
+          <ul className="space-y-1.5">
+            {data.recommendations.map((r, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-[#aaaaaa]">
+                <span className="text-red-500 mt-0.5 shrink-0">→</span>{r}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {data.summary && (
+        <p className="text-[#aaaaaa] text-sm leading-relaxed border-t border-white/[0.07] pt-4">{data.summary}</p>
+      )}
     </div>
   )
 }
@@ -218,41 +558,70 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
 
     let bodyContent = ''
     if (resultType === 'sentiment') {
-      const d = result as Parameters<typeof SentimentResult>[0]['data']
+      const d = result as SentimentData
+      const dominant = (d.positive ?? 0) >= (d.negative ?? 0) && (d.positive ?? 0) >= (d.neutral ?? 0) ? 'Positive'
+        : (d.negative ?? 0) >= (d.neutral ?? 0) ? 'Negative' : 'Mixed'
       bodyContent = `
-        ${renderSection('Overall Sentiment', d.overall)}
+        ${renderSection('Overall Sentiment', dominant)}
         ${renderSection('Breakdown', `Positive: ${d.positive}% &nbsp;|&nbsp; Neutral: ${d.neutral}% &nbsp;|&nbsp; Negative: ${d.negative}%`)}
-        ${renderSection('What they love', d.positiveThemes?.join(', '))}
-        ${renderSection('Pain points', d.negativeThemes?.join(', '))}
-        ${renderSection('Summary', d.summary)}`
+        ${d.themes?.length ? renderSection('Emotional themes', d.themes.join(', ')) : ''}
+        ${d.emotionalDrivers?.positive?.length ? renderSection('What drives positivity', d.emotionalDrivers.positive.join('<br>• ')) : ''}
+        ${d.emotionalDrivers?.negative?.length ? renderSection('What triggers negativity', d.emotionalDrivers.negative.join('<br>• ')) : ''}
+        ${d.notableQuotes?.length ? renderSection('Notable quotes', d.notableQuotes.map(q => `"${q}"`).join('<br>')) : ''}
+        ${renderSection('Summary', d.summary)}
+        ${d.sentimentOverTime ? renderSection('Sentiment over time', d.sentimentOverTime) : ''}`
     } else if (resultType === 'audience') {
-      const d = result as Parameters<typeof AudienceResult>[0]['data']
-      bodyContent = `
-        ${renderSection('Audience Profile', d.profile)}
-        ${renderSection('Expertise Level', d.expertise)}
-        ${renderSection('Context', d.context)}
-        ${renderSection('Why they watch', d.motivations?.join(', '))}
-        ${renderSection('Top use cases', d.useCases?.join(', '))}
-        ${renderSection('Summary', d.summary)}`
+      const d = result as AudienceData
+      if (d.segments) {
+        bodyContent = `
+          ${d.audienceSummary ? renderSection('Audience Overview', d.audienceSummary) : ''}
+          ${d.segments.map(s => renderSection(`${s.emoji} ${s.name} (${s.percentage}%)`, `${s.description}${s.typicalComment ? `<br><em>"${s.typicalComment}"</em>` : ''}`)).join('')}
+          ${d.geographicSignals ? renderSection('Geographic signals', d.geographicSignals) : ''}
+          ${d.ageSignals ? renderSection('Age signals', d.ageSignals) : ''}
+          ${d.loyaltySignal ? renderSection('Viewer loyalty', d.loyaltySignal) : ''}
+          ${d.recommendations?.length ? renderSection('Recommendations', d.recommendations.join('<br>• ')) : ''}`
+      } else {
+        bodyContent = `
+          ${renderSection('Audience Profile', d.profile ?? '')}
+          ${renderSection('Expertise Level', d.expertise ?? '')}
+          ${renderSection('Context', d.context ?? '')}
+          ${renderSection('Why they watch', d.motivations?.join(', ') ?? '')}
+          ${renderSection('Summary', d.summary ?? '')}`
+      }
     } else if (resultType === 'topics') {
-      const d = result as Parameters<typeof TopicsResult>[0]['data']
-      bodyContent = d.topics?.map(t =>
-        renderSection(`${t.name} (${t.percentage}%)`, `${t.description}${t.example ? `<br><em>"${t.example}"</em>` : ''}`)
-      ).join('') + renderSection('Summary', d.summary)
+      const d = result as TopicsData
+      bodyContent = (d.topics ?? []).map(t =>
+        renderSection(`${t.topic ?? t.name} (${t.percentage}%)${t.sentiment ? ` — ${t.sentiment}` : ''}`, `${t.description}${t.representativeComments?.length ? `<br><em>"${t.representativeComments[0]}"</em>` : t.example ? `<br><em>"${t.example}"</em>` : ''}`)
+      ).join('')
+        + renderSection('Summary', d.topicSummary ?? d.summary ?? '')
+        + (d.contentGaps?.length ? renderSection('Content gaps', d.contentGaps.join('<br>• ')) : '')
+        + (d.unusualFindings ? renderSection('Unusual findings', d.unusualFindings) : '')
     } else if (resultType === 'feedback') {
-      const d = result as Parameters<typeof FeedbackResult>[0]['data']
+      const d = result as FeedbackData
       bodyContent = `
-        ${renderSection('What they praise', d.praise?.join('<br>• '))}
-        ${renderSection('What they want', d.requests?.join('<br>• '))}
-        ${d.insights?.map(ins => renderSection(ins.action, ins.reason)).join('')}
-        ${renderSection('Summary', d.summary)}`
+        ${d.overallFeedbackSummary ? renderSection('Overview', d.overallFeedbackSummary) : ''}
+        ${renderSection('What they praise', d.praise?.join('<br>• ') ?? '')}
+        ${renderSection('What they want', d.requests?.join('<br>• ') ?? '')}
+        ${d.criticisms?.length ? renderSection('Criticisms', d.criticisms.join('<br>• ')) : ''}
+        ${d.questions?.length ? renderSection('Common questions', d.questions.join('<br>• ')) : ''}
+        ${d.insights?.map(ins => renderSection(`[${(ins.priority ?? 'insight').toUpperCase()}] ${ins.insight ?? ins.action}`, ins.evidence ?? ins.reason ?? '')).join('') ?? ''}
+        ${d.contentStrengths?.length ? renderSection('Content strengths', d.contentStrengths.join('<br>• ')) : ''}
+        ${d.improvementAreas?.length ? renderSection('Improvement areas', d.improvementAreas.join('<br>• ')) : ''}
+        ${d.summary ? renderSection('Summary', d.summary) : ''}`
     } else if (resultType === 'trends') {
-      const d = result as Parameters<typeof TrendsResult>[0]['data']
+      const d = result as TrendsData
+      const phrases = d.trendingPhrases ?? d.phrases ?? []
       bodyContent = `
-        ${renderSection('Trending phrases', d.phrases?.map(p => `"${p}"`).join(', '))}
-        ${d.viralComments?.map(c => renderSection(`"${c.text}"`, `🔥 ${c.reason}`)).join('')}
-        ${renderSection('Top keywords', d.keywords?.join(', '))}
-        ${renderSection('Summary', d.summary)}`
+        ${phrases.length ? renderSection('Trending phrases', phrases.map(p => `"${p}"`).join(', ')) : ''}
+        ${d.viralComments?.map(c => renderSection(`"${c.comment ?? c.text}"`, `🔥 ${c.reason}`)).join('') ?? ''}
+        ${d.emergingTrends?.length ? renderSection('Emerging trends', d.emergingTrends.join('<br>• ')) : ''}
+        ${d.keywords?.length ? renderSection('Top keywords', d.keywords.join(', ')) : ''}
+        ${d.insideJokes?.length ? renderSection('In-jokes & references', d.insideJokes.join(', ')) : ''}
+        ${d.communityHealth ? renderSection('Community health', d.communityHealth) : ''}
+        ${d.viralityFactors ? renderSection('Virality factors', d.viralityFactors) : ''}
+        ${d.contentMoments?.length ? renderSection('High-activity moments', d.contentMoments.join('<br>• ')) : ''}
+        ${d.recommendations?.length ? renderSection('Recommendations', d.recommendations.join('<br>• ')) : ''}
+        ${d.summary ? renderSection('Summary', d.summary) : ''}`
     }
 
     const html = `<!DOCTYPE html>
@@ -418,11 +787,11 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
                   <span className="text-white font-semibold text-sm">{ANALYSIS_TYPES.find(t => t.id === resultType)?.label} Report</span>
                   <span className="text-[#555555] text-xs ml-auto">{sampleSize.toLocaleString()} comments</span>
                 </div>
-                {resultType === 'sentiment' && <SentimentResult data={result as Parameters<typeof SentimentResult>[0]['data']} />}
-                {resultType === 'audience' && <AudienceResult data={result as Parameters<typeof AudienceResult>[0]['data']} />}
-                {resultType === 'topics' && <TopicsResult data={result as Parameters<typeof TopicsResult>[0]['data']} />}
-                {resultType === 'feedback' && <FeedbackResult data={result as Parameters<typeof FeedbackResult>[0]['data']} />}
-                {resultType === 'trends' && <TrendsResult data={result as Parameters<typeof TrendsResult>[0]['data']} />}
+                {resultType === 'sentiment' && <SentimentResult data={result as SentimentData} />}
+                {resultType === 'audience' && <AudienceResult data={result as AudienceData} />}
+                {resultType === 'topics' && <TopicsResult data={result as TopicsData} />}
+                {resultType === 'feedback' && <FeedbackResult data={result as FeedbackData} />}
+                {resultType === 'trends' && <TrendsResult data={result as TrendsData} />}
               </div>
 
               {/* Prominent export button */}

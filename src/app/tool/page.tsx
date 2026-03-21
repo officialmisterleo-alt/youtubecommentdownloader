@@ -464,7 +464,9 @@ ${commentRows}
       </div>
 
       {done && comments.length > 0 && (
-        <AnalysisPanel comments={comments} isSignedIn={isSignedIn} />
+        <div className="max-w-4xl mx-auto px-4 pb-10">
+          <AnalysisPanel comments={comments} isSignedIn={isSignedIn} />
+        </div>
       )}
 
       <Footer />
