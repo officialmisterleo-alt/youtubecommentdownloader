@@ -1,7 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sparkles, Lock, RefreshCw, ChevronDown, ChevronUp, Download } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string }
@@ -542,10 +543,33 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
   const [resultType, setResultType] = useState<AnalysisType | null>(null)
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState(true)
+  const [userPlan, setUserPlan] = useState<string | null>(null)
+  const [planLoaded, setPlanLoaded] = useState(false)
 
-  // For now everyone who is signed in gets Pro limits; tier enforcement comes with subscriptions
-  const tier = 'pro'
-  const { comments: limit, label: tierLabel } = TIER_LIMITS[tier]
+  useEffect(() => {
+    if (!isSignedIn) {
+      setPlanLoaded(true)
+      return
+    }
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { setPlanLoaded(true); return }
+      supabase
+        .from('subscriptions')
+        .select('plan, status')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data }) => {
+          setUserPlan(data?.status === 'active' ? data.plan : 'free')
+          setPlanLoaded(true)
+        })
+    })
+  }, [isSignedIn])
+
+  const isLocked = !isSignedIn || !planLoaded || userPlan === 'free' || userPlan === null
+
+  const tier = (!isLocked && userPlan) ? userPlan : 'pro'
+  const { comments: limit, label: tierLabel } = TIER_LIMITS[tier] ?? TIER_LIMITS.pro
   const sampleSize = Math.min(comments.length, limit)
 
   function exportReport() {
@@ -694,139 +718,132 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
     }
   }
 
-  if (!isSignedIn) {
+  // While fetching plan for signed-in user, show a minimal loading state to avoid flash
+  if (isSignedIn && !planLoaded) {
     return (
-      <div className="mt-4 sm:mt-6 relative bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
-        {/* Blurred preview behind the overlay */}
-        <div className="p-4 sm:p-5 select-none pointer-events-none blur-sm opacity-40">
-          <div className="flex items-center gap-3 mb-4">
-            <Sparkles className="w-5 h-5 text-red-400" />
-            <span className="text-white font-bold text-base">AI Comment Analysis</span>
-            <span className="bg-red-600/20 text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-red-600/30">Pro+</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
-            {ANALYSIS_TYPES.map(t => (
-              <div key={t.id} className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-xs font-medium border bg-[#0a0a0a] border-white/[0.07] text-[#888888]">
-                <span className="text-lg leading-none">{t.icon}</span>
-                <span>{t.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className="h-10 bg-red-600/50 rounded-xl w-32" />
-        </div>
-        {/* Locked overlay */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a]/70 backdrop-blur-[2px] p-6 text-center">
-          <div className="bg-[#1a1a1a] border border-white/[0.1] rounded-2xl px-8 py-6 flex flex-col items-center gap-3 max-w-xs">
-            <div className="bg-red-600/20 rounded-full p-3">
-              <Lock className="w-6 h-6 text-red-400" />
-            </div>
-            <div>
-              <div className="text-white font-bold text-base mb-1">AI Analysis — Pro+</div>
-              <p className="text-[#888888] text-xs leading-relaxed">Sign in and upgrade to unlock sentiment, topics, feedback, and trend insights.</p>
-            </div>
-            <Link href="/auth/signup" className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors">
-              <Sparkles className="w-4 h-4" /> Unlock AI Analysis
-            </Link>
-          </div>
-        </div>
+      <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl p-5 flex items-center gap-2 text-[#555555] text-sm">
+        <RefreshCw className="w-4 h-4 animate-spin" />
+        Loading…
       </div>
     )
   }
 
   return (
-    <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
-      {/* Header */}
-      <button
-        onClick={() => setExpanded(e => !e)}
-        className="w-full p-4 sm:p-5 flex items-center justify-between gap-3 text-left"
-      >
-        <div className="flex items-center gap-3">
-          <Sparkles className="w-5 h-5 text-red-400 shrink-0" />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-white font-bold text-base">AI Comment Analysis</span>
-              <span className="bg-red-600/20 text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-red-600/30">{tierLabel}</span>
-            </div>
-            <p className="text-[#888888] text-xs mt-0.5">Analyzing up to {limit.toLocaleString()} comments with GPT-4o mini</p>
-          </div>
-        </div>
-        {expanded ? <ChevronUp className="w-4 h-4 text-[#888888] shrink-0" /> : <ChevronDown className="w-4 h-4 text-[#888888] shrink-0" />}
-      </button>
-
-      {expanded && (
-        <div className="border-t border-white/[0.07] p-4 sm:p-5 space-y-4">
-          {/* Analysis type selector */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {ANALYSIS_TYPES.map(t => (
-              <button
-                key={t.id}
-                onClick={() => { setActiveType(t.id); setResult(null); setError('') }}
-                className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-xs font-medium transition-colors border ${
-                  activeType === t.id
-                    ? 'bg-red-600 border-transparent text-white'
-                    : 'bg-[#0a0a0a] border-white/[0.07] text-[#888888] hover:border-white/[0.15] hover:text-white'
-                }`}
-              >
-                <span className="text-lg leading-none">{t.icon}</span>
-                <span>{t.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Selected type description */}
-          <p className="text-[#888888] text-xs">{ANALYSIS_TYPES.find(t => t.id === activeType)?.description}</p>
-
-          {/* Comment count chip + run button */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <span className="text-[#888888] text-xs bg-[#0a0a0a] border border-white/[0.07] px-3 py-1.5 rounded-full">
-              {sampleSize.toLocaleString()} of {comments.length.toLocaleString()} comments selected
-            </span>
-            <button
-              onClick={runAnalysis}
-              disabled={loading}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors min-h-[40px]"
-            >
-              {loading
-                ? <><RefreshCw className="w-4 h-4 animate-spin" /> Analyzing…</>
-                : <><Sparkles className="w-4 h-4" /> Run Analysis</>
-              }
-            </button>
-          </div>
-
-          {/* Hint — shown when no result yet */}
-          {!result && !loading && (
-            <p className="text-[#555555] text-xs">After running an analysis, you can download a full branded HTML report.</p>
-          )}
-
-          {/* Error */}
-          {error && <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-3 text-red-400 text-sm">{error}</div>}
-
-          {/* Results */}
-          {result && resultType && (
-            <>
-              <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4 sm:p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-lg">{ANALYSIS_TYPES.find(t => t.id === resultType)?.icon}</span>
-                  <span className="text-white font-semibold text-sm">{ANALYSIS_TYPES.find(t => t.id === resultType)?.label} Report</span>
-                  <span className="text-[#555555] text-xs ml-auto">{sampleSize.toLocaleString()} comments</span>
-                </div>
-                {resultType === 'sentiment' && <SentimentResult data={result as SentimentData} />}
-                {resultType === 'audience' && <AudienceResult data={result as AudienceData} />}
-                {resultType === 'topics' && <TopicsResult data={result as TopicsData} />}
-                {resultType === 'feedback' && <FeedbackResult data={result as FeedbackData} />}
-                {resultType === 'trends' && <TrendsResult data={result as TrendsData} />}
+    <div className="mt-4 sm:mt-6 relative bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
+      {/* Panel content — non-interactive when locked */}
+      <div className={isLocked ? 'pointer-events-none opacity-50 select-none' : ''}>
+        {/* Header */}
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="w-full p-4 sm:p-5 flex items-center justify-between gap-3 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-red-400 shrink-0" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-bold text-base">AI Comment Analysis</span>
+                <span className="bg-red-600/20 text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-red-600/30">{tierLabel}</span>
               </div>
+              <p className="text-[#888888] text-xs mt-0.5">Analyzing up to {limit.toLocaleString()} comments with GPT-4o mini</p>
+            </div>
+          </div>
+          {expanded ? <ChevronUp className="w-4 h-4 text-[#888888] shrink-0" /> : <ChevronDown className="w-4 h-4 text-[#888888] shrink-0" />}
+        </button>
 
-              {/* Prominent export button */}
+        {expanded && (
+          <div className="border-t border-white/[0.07] p-4 sm:p-5 space-y-4">
+            {/* Analysis type selector */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {ANALYSIS_TYPES.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => { setActiveType(t.id); setResult(null); setError('') }}
+                  className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-xs font-medium transition-colors border ${
+                    activeType === t.id
+                      ? 'bg-red-600 border-transparent text-white'
+                      : 'bg-[#0a0a0a] border-white/[0.07] text-[#888888] hover:border-white/[0.15] hover:text-white'
+                  }`}
+                >
+                  <span className="text-lg leading-none">{t.icon}</span>
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Selected type description */}
+            <p className="text-[#888888] text-xs">{ANALYSIS_TYPES.find(t => t.id === activeType)?.description}</p>
+
+            {/* Comment count chip + run button */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <span className="text-[#888888] text-xs bg-[#0a0a0a] border border-white/[0.07] px-3 py-1.5 rounded-full">
+                {sampleSize.toLocaleString()} of {comments.length.toLocaleString()} comments selected
+              </span>
               <button
-                onClick={exportReport}
-                className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold text-sm px-5 py-3.5 rounded-xl transition-colors"
+                onClick={runAnalysis}
+                disabled={loading}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors min-h-[40px]"
               >
-                <Download className="w-4 h-4" />
-                ⬇ Download Analysis Report
+                {loading
+                  ? <><RefreshCw className="w-4 h-4 animate-spin" /> Analyzing…</>
+                  : <><Sparkles className="w-4 h-4" /> Run Analysis</>
+                }
               </button>
-            </>
-          )}
+            </div>
+
+            {/* Hint — shown when no result yet */}
+            {!result && !loading && (
+              <p className="text-[#555555] text-xs">After running an analysis, you can download a full branded HTML report.</p>
+            )}
+
+            {/* Error */}
+            {error && <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-3 text-red-400 text-sm">{error}</div>}
+
+            {/* Results */}
+            {result && resultType && (
+              <>
+                <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4 sm:p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-lg">{ANALYSIS_TYPES.find(t => t.id === resultType)?.icon}</span>
+                    <span className="text-white font-semibold text-sm">{ANALYSIS_TYPES.find(t => t.id === resultType)?.label} Report</span>
+                    <span className="text-[#555555] text-xs ml-auto">{sampleSize.toLocaleString()} comments</span>
+                  </div>
+                  {resultType === 'sentiment' && <SentimentResult data={result as SentimentData} />}
+                  {resultType === 'audience' && <AudienceResult data={result as AudienceData} />}
+                  {resultType === 'topics' && <TopicsResult data={result as TopicsData} />}
+                  {resultType === 'feedback' && <FeedbackResult data={result as FeedbackData} />}
+                  {resultType === 'trends' && <TrendsResult data={result as TrendsData} />}
+                </div>
+
+                {/* Prominent export button */}
+                <button
+                  onClick={exportReport}
+                  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold text-sm px-5 py-3.5 rounded-xl transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Analysis Report
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Lock overlay — shown for unauthenticated or free-plan users */}
+      {isLocked && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-gray-900/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 text-center px-8 py-6 max-w-xs">
+            <Lock className="w-10 h-10 text-red-400" />
+            <div>
+              <div className="text-white font-bold text-lg mb-1">AI Analysis — Pro Feature</div>
+              <p className="text-[#aaaaaa] text-sm leading-relaxed">Upgrade to Pro to analyze up to 10,000 comments and generate branded reports.</p>
+            </div>
+            <Link
+              href="/pricing"
+              className="bg-red-600 hover:bg-red-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-colors"
+            >
+              Upgrade to Pro →
+            </Link>
+          </div>
         </div>
       )}
     </div>

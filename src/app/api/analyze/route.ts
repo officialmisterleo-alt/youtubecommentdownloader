@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 
 export type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
 
@@ -145,16 +147,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'AI analysis not configured' }, { status: 503 })
     }
 
-    const { comments, analysisType, tier = 'pro' } = await req.json() as {
+    // Auth check — must be signed in
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Plan check using service role to bypass RLS
+    const serviceClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    )
+    const { data: sub } = await serviceClient
+      .from('subscriptions')
+      .select('plan, status')
+      .eq('user_id', user.id)
+      .single()
+    const plan = sub?.status === 'active' ? sub.plan : 'free'
+    if (!plan || plan === 'free' || (TIER_LIMITS[plan] ?? 0) === 0) {
+      return NextResponse.json({ error: 'AI Analysis requires a Pro plan or higher' }, { status: 403 })
+    }
+
+    const { comments, analysisType } = await req.json() as {
       comments: Array<{ author: string; text: string; likes: number; date: string }>,
       analysisType: AnalysisType,
-      tier?: string,
     }
 
     if (!comments?.length) return NextResponse.json({ error: 'No comments provided' }, { status: 400 })
     if (!PROMPTS[analysisType]) return NextResponse.json({ error: 'Invalid analysis type' }, { status: 400 })
 
-    const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.pro
+    const limit = TIER_LIMITS[plan] ?? TIER_LIMITS.pro
     const sample = comments.slice(0, limit)
 
     // Format comments for the prompt — include likes for weighting
