@@ -7,7 +7,8 @@ import Link from 'next/link'
 import { Plus, Download, RefreshCw, ChevronDown, X, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number }
+type Reply = { id: string; author: string; text: string; likes: number; date: string }
+type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[] }
 type Format = 'CSV' | 'Excel' | 'JSON' | 'HTML' | 'TXT'
 type SortBy = 'top' | 'newest' | 'oldest'
 
@@ -71,7 +72,14 @@ function ToolPageContent() {
     let mimeType = 'text/plain'
     let ext = 'txt'
     if (fmt === 'CSV') {
-      content = 'Author,Comment,Likes,Date,Replies\n' + comments.map(c => `"${c.author}","${c.text.replace(/"/g, '""')}",${c.likes},"${c.date}",${c.replies}`).join('\n')
+      const rows = ['Type,Author,Comment,Likes,Date']
+      for (const c of comments) {
+        rows.push(`comment,"${c.author}","${c.text.replace(/"/g, '""')}",${c.likes},"${c.date}"`)
+        for (const r of c.replyList ?? []) {
+          rows.push(`reply,"${r.author}","${r.text.replace(/"/g, '""')}",${r.likes},"${r.date}"`)
+        }
+      }
+      content = rows.join('\n')
       mimeType = 'text/csv'; ext = 'csv'
     } else if (fmt === 'JSON') {
       content = JSON.stringify(comments, null, 2); mimeType = 'application/json'; ext = 'json'
@@ -85,15 +93,14 @@ function ToolPageContent() {
       const thumbUpSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>`
       const thumbDownSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>`
       const sortSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h6v-2H3v2zm0-5h12v-2H3v2zm0-7v2h18V6H3z"/></svg>`
-      const commentRows = comments.map(c => {
+      const renderComment = (c: { author: string; text: string; likes: number; date: string }, size: 'large' | 'small') => {
         const handle = c.author.startsWith('@') ? c.author : `@${c.author}`
         const initial = c.author.replace('@', '')[0]?.toUpperCase() || '?'
         const color = getAvatarColor(c.author)
-        const repliesHtml = c.replies > 0
-          ? `<button class="replies-btn">${sortSvg} ${c.replies} ${c.replies === 1 ? 'reply' : 'replies'}</button>`
-          : ''
-        return `<div class="comment">
-  <div class="avatar" style="background:${color}">${initial}</div>
+        const avatarSize = size === 'large' ? '40px' : '24px'
+        const avatarFont = size === 'large' ? '15px' : '11px'
+        return `<div class="comment" style="margin-bottom:${size === 'small' ? '16px' : '0'}">
+  <div class="avatar" style="background:${color};width:${avatarSize};height:${avatarSize};font-size:${avatarFont};flex-shrink:0">${initial}</div>
   <div class="comment-body">
     <div class="comment-meta">
       <span class="author-name">${escapeHtml(handle)}</span>
@@ -103,10 +110,24 @@ function ToolPageContent() {
     <div class="comment-actions">
       <button class="action-btn">${thumbUpSvg}<span class="like-count">${c.likes > 0 ? c.likes.toLocaleString() : ''}</span></button>
       <button class="action-btn">${thumbDownSvg}</button>
-      <button class="action-btn reply-btn">Reply</button>
-      ${repliesHtml}
+      ${size === 'large' ? '<button class="action-btn reply-btn">Reply</button>' : ''}
     </div>
   </div>
+</div>`
+      }
+      const commentRows = comments.map(c => {
+        const replyItems = (c.replyList ?? []).map(r => renderComment(r, 'small')).join('\n')
+        const repliesSection = (c.replyList ?? []).length > 0
+          ? `<details class="replies-section">
+  <summary class="replies-toggle">${sortSvg}&nbsp;${c.replyList!.length} ${c.replyList!.length === 1 ? 'reply' : 'replies'}</summary>
+  <div class="replies-list">
+${replyItems}
+  </div>
+</details>`
+          : ''
+        return `<div class="comment-thread">
+${renderComment(c, 'large')}
+${repliesSection}
 </div>`
       }).join('\n')
       content = `<!DOCTYPE html>
@@ -121,21 +142,24 @@ function ToolPageContent() {
   .comments-header { display: flex; align-items: center; gap: 24px; margin-bottom: 24px; }
   .comments-count { font-size: 16px; font-weight: 400; color: #f1f1f1; }
   .sort-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: #f1f1f1; background: none; border: none; padding: 8px 12px; border-radius: 18px; cursor: default; }
-  .sort-chip:hover { background: rgba(255,255,255,0.1); }
-  .comment { display: flex; gap: 16px; margin-bottom: 24px; }
-  .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500; color: #fff; flex-shrink: 0; user-select: none; }
+  .comment-thread { margin-bottom: 24px; }
+  .comment { display: flex; gap: 16px; }
+  .avatar { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 500; color: #fff; user-select: none; }
   .comment-body { flex: 1; min-width: 0; }
   .comment-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
   .author-name { font-size: 13px; font-weight: 500; color: #f1f1f1; }
   .comment-time { font-size: 12px; color: #aaaaaa; }
   .comment-text { font-size: 14px; color: #f1f1f1; line-height: 20px; margin-bottom: 8px; word-break: break-word; white-space: pre-wrap; }
-  .comment-actions { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+  .comment-actions { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin-bottom: 4px; }
   .action-btn { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; color: #aaaaaa; font-size: 13px; cursor: pointer; padding: 6px 8px; border-radius: 18px; font-family: Roboto, Arial, sans-serif; }
   .action-btn:hover { background: rgba(255,255,255,0.1); }
   .like-count { font-size: 13px; color: #aaaaaa; min-width: 4px; }
   .reply-btn { font-weight: 600; font-size: 13px; margin-left: 4px; }
-  .replies-btn { display: inline-flex; align-items: center; gap: 6px; color: #3ea6ff; font-size: 13px; font-weight: 600; background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: 18px; font-family: Roboto, Arial, sans-serif; margin-left: 4px; }
-  .replies-btn:hover { background: rgba(62,166,255,0.1); }
+  .replies-section { margin-left: 56px; margin-top: 8px; }
+  .replies-toggle { display: inline-flex; align-items: center; gap: 6px; color: #3ea6ff; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 10px; border-radius: 18px; list-style: none; }
+  .replies-toggle:hover { background: rgba(62,166,255,0.1); }
+  .replies-toggle::-webkit-details-marker { display: none; }
+  .replies-list { margin-top: 12px; }
   .watermark { text-align: center; margin-top: 48px; padding-top: 20px; border-top: 1px solid #272727; font-size: 12px; color: #555555; }
   .watermark a { color: #3ea6ff; text-decoration: none; }
 </style>
@@ -151,7 +175,13 @@ ${commentRows}
 </html>`
       mimeType = 'text/html'; ext = 'html'
     } else {
-      content = comments.map(c => `${c.author}: ${c.text} (${c.likes} likes, ${c.date})`).join('\n\n')
+      content = comments.map(c => {
+        let block = `${c.author} · ${c.date} · ${c.likes} likes\n${c.text}`
+        for (const r of c.replyList ?? []) {
+          block += `\n\n  ↳ ${r.author} · ${r.date} · ${r.likes} likes\n    ${r.text}`
+        }
+        return block
+      }).join('\n\n' + '─'.repeat(60) + '\n\n')
       ext = 'txt'
     }
     const blob = new Blob([content], { type: mimeType })
@@ -186,11 +216,11 @@ ${commentRows}
       setDone(true)
     } catch {
       setComments([
-        { id: '1', author: '@techreviewer99', text: 'This is exactly what I needed! The tutorial was super clear.', likes: 342, date: '2 days ago', replies: 12 },
-        { id: '2', author: '@marketingpro_sarah', text: 'Great content as always. Would love to see a follow-up.', likes: 187, date: '3 days ago', replies: 5 },
-        { id: '3', author: '@dataanalyst_mike', text: "I've been using this method for 6 months and it works perfectly.", likes: 156, date: '4 days ago', replies: 8 },
-        { id: '4', author: '@creativedirector', text: 'The production quality keeps improving. Keep up the amazing work!', likes: 134, date: '5 days ago', replies: 3 },
-        { id: '5', author: '@researcher_2024', text: 'Perfect for academic research. Downloaded 50k comments in 10 min.', likes: 98, date: '1 week ago', replies: 2 },
+        { id: '1', author: '@techreviewer99', text: 'This is exactly what I needed! The tutorial was super clear.', likes: 342, date: '2 days ago', replies: 2, replyList: [{ id: '1-1', author: '@CreatorChannel', text: 'Thank you! Really glad it helped.', likes: 48, date: '2 days ago' }] },
+        { id: '2', author: '@marketingpro_sarah', text: 'Great content as always. Would love to see a follow-up.', likes: 187, date: '3 days ago', replies: 1, replyList: [{ id: '2-1', author: '@CreatorChannel', text: 'Advanced series coming next month!', likes: 34, date: '3 days ago' }] },
+        { id: '3', author: '@dataanalyst_mike', text: "I've been using this method for 6 months and it works perfectly.", likes: 156, date: '4 days ago', replies: 0, replyList: [] },
+        { id: '4', author: '@creativedirector', text: 'The production quality keeps improving. Keep up the amazing work!', likes: 134, date: '5 days ago', replies: 0, replyList: [] },
+        { id: '5', author: '@researcher_2024', text: 'Perfect for academic research. Downloaded 50k comments in 10 min.', likes: 98, date: '1 week ago', replies: 0, replyList: [] },
       ])
       setDone(true)
     }
