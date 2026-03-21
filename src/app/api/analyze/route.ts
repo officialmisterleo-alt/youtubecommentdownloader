@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 
 export type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
 
@@ -93,6 +95,40 @@ Return ONLY valid JSON (no markdown, no explanation) in this exact shape:
 }`,
 }
 
+function createServiceClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  )
+}
+
+async function incrementAiUsage(userId: string) {
+  const serviceClient = createServiceClient()
+  const month = new Date().toISOString().slice(0, 7) // 'YYYY-MM'
+
+  const { data: existing } = await serviceClient
+    .from('usage')
+    .select('id, ai_analyses_count')
+    .eq('user_id', userId)
+    .eq('month', month)
+    .single()
+
+  if (existing) {
+    await serviceClient
+      .from('usage')
+      .update({
+        ai_analyses_count: (existing.ai_analyses_count ?? 0) + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+  } else {
+    await serviceClient
+      .from('usage')
+      .insert({ user_id: userId, month, ai_analyses_count: 1 })
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.OPENAI_API_KEY
@@ -100,16 +136,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'AI analysis not configured' }, { status: 503 })
     }
 
-    const { comments, analysisType, tier = 'pro' } = await req.json() as {
+    const { comments, analysisType } = await req.json() as {
       comments: Array<{ author: string; text: string; likes: number; date: string }>,
       analysisType: AnalysisType,
-      tier?: string,
     }
 
     if (!comments?.length) return NextResponse.json({ error: 'No comments provided' }, { status: 400 })
     if (!PROMPTS[analysisType]) return NextResponse.json({ error: 'Invalid analysis type' }, { status: 400 })
 
-    const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.pro
+    // Get authenticated user and their real subscription plan
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required for AI analysis' }, { status: 401 })
+    }
+
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('plan, status')
+      .eq('user_id', user.id)
+      .single()
+
+    const plan = (sub?.status === 'active' ? sub?.plan : null) ?? 'free'
+    const limit = TIER_LIMITS[plan] ?? TIER_LIMITS.free
+
+    if (limit === 0) {
+      return NextResponse.json({ error: 'AI analysis requires a Pro plan or higher' }, { status: 403 })
+    }
+
     const sample = comments.slice(0, limit)
 
     // Format comments for the prompt — include likes for weighting
@@ -134,6 +189,8 @@ export async function POST(req: NextRequest) {
     // Strip markdown code fences if model wraps in ```json```
     const cleaned = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
     const result = JSON.parse(cleaned)
+
+    await incrementAiUsage(user.id).catch(() => {})
 
     return NextResponse.json({ result, analysisType, commentCount: sample.length })
   } catch (e: unknown) {
