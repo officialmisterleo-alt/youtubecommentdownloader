@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto flex flex-col gap-8">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-8">
           <div>
-            <div className="text-white font-bold text-sm mb-1">YTCommentDownloader</div>
+            <div className="text-white font-bold text-sm mb-1">YouTubeCommentDownloader</div>
             <div className="text-[#555555] text-xs max-w-xs">
               Bulk YouTube comment extraction for agencies, brands, and researchers.
             </div>

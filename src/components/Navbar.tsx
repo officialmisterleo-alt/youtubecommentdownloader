@@ -61,7 +61,7 @@ export default function Navbar() {
               <div className="bg-red-600 rounded p-1">
                 <Youtube className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-white text-sm">YTCommentDownloader</span>
+              <span className="font-bold text-white text-sm">YouTubeCommentDownloader</span>
             </Link>
 
             {/* Center nav links — desktop */}

@@ -2,8 +2,8 @@ import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Terms of Service — YTCommentDownloader',
-  description: 'Terms of Service for YTCommentDownloader.',
+  title: 'Terms of Service — YouTubeCommentDownloader',
+  description: 'Terms of Service for YouTubeCommentDownloader.',
 }
 
 export default function TermsPage() {
@@ -17,7 +17,7 @@ export default function TermsPage() {
           <p className="text-[#555555] text-sm mb-10">Effective Date: March 2026</p>
 
           <p className="text-[#888888] leading-relaxed mb-8">
-            Please read these Terms of Service (&ldquo;Terms&rdquo;) carefully before using YTCommentDownloader (the &ldquo;Service&rdquo;) operated by YTCommentDownloader (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;). By accessing or using the Service you agree to be bound by these Terms. If you do not agree, do not use the Service.
+            Please read these Terms of Service (&ldquo;Terms&rdquo;) carefully before using YouTubeCommentDownloader (the &ldquo;Service&rdquo;) operated by YouTubeCommentDownloader (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;). By accessing or using the Service you agree to be bound by these Terms. If you do not agree, do not use the Service.
           </p>
 
           <section className="mb-8">
@@ -30,7 +30,7 @@ export default function TermsPage() {
           <section className="mb-8">
             <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">2. Description of Service</h2>
             <p className="text-[#888888] leading-relaxed mb-3">
-              YTCommentDownloader is a web-based tool that allows users to extract, analyse, and export comment data from publicly available YouTube videos, channels, and playlists. The Service uses the YouTube Data API v3 to retrieve comment data and makes that data available for download in various formats including CSV, JSON, Excel, HTML, and plain text.
+              YouTubeCommentDownloader is a web-based tool that allows users to extract, analyse, and export comment data from publicly available YouTube videos, channels, and playlists. The Service uses the YouTube Data API v3 to retrieve comment data and makes that data available for download in various formats including CSV, JSON, Excel, HTML, and plain text.
             </p>
             <p className="text-[#888888] leading-relaxed">
               The Service is subject to the limitations and policies of the YouTube Data API. Features, availability, and export limits may change at any time in response to changes in the YouTube Data API or our infrastructure. We do not guarantee uninterrupted access to any specific feature.
@@ -99,7 +99,7 @@ export default function TermsPage() {
           <section className="mb-8">
             <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">8. Intellectual Property</h2>
             <p className="text-[#888888] leading-relaxed mb-3">
-              The software, design, branding, and underlying technology of YTCommentDownloader are owned by us and protected by copyright and other intellectual property laws. You may not reproduce, distribute, or create derivative works from our software without express written permission.
+              The software, design, branding, and underlying technology of YouTubeCommentDownloader are owned by us and protected by copyright and other intellectual property laws. You may not reproduce, distribute, or create derivative works from our software without express written permission.
             </p>
             <p className="text-[#888888] leading-relaxed">
               You own the data you export. We claim no ownership over comment data you download using the Service. However, you acknowledge that the underlying content (the actual YouTube comments) belongs to the original comment authors and to YouTube, and your use of that content must comply with YouTube&apos;s Terms of Service and applicable law.
