@@ -17,10 +17,10 @@ const ANALYSIS_TYPES: { id: AnalysisType; label: string; description: string; ic
 ]
 
 const TIER_LIMITS: Record<string, { comments: number; label: string }> = {
-  free: { comments: 1000, label: 'Free' },
-  pro: { comments: 5000, label: 'Pro' },
-  business: { comments: 10000, label: 'Business' },
-  enterprise: { comments: 50000, label: 'Enterprise' },
+  free: { comments: 100, label: 'Free' },
+  pro: { comments: 10000, label: 'Pro' },
+  business: { comments: 50000, label: 'Business' },
+  enterprise: { comments: 100000, label: 'Enterprise' },
 }
 
 // ── Result renderers ──────────────────────────────────────────────────────────

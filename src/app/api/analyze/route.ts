@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 export type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
 
 const TIER_LIMITS: Record<string, number> = {
-  free: 1000,
-  pro: 5000,
-  business: 10000,
-  enterprise: 50000,
+  free: 100,
+  pro: 10000,
+  business: 50000,
+  enterprise: 100000,
 }
 
 const PROMPTS: Record<AnalysisType, (comments: string, sampleSize: number) => string> = {
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
 
     const completion = await client.chat.completions.create({
       model: 'gpt-4o-mini',
-      max_tokens: 3000,
+      max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
     })
