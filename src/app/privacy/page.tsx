@@ -1,4 +1,3 @@
-import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 
 export const metadata = {
@@ -8,8 +7,7 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
-      <Navbar />
+    <div className="flex-1">
       <div className="max-w-3xl mx-auto px-4 py-12 sm:py-16">
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 sm:p-10 lg:p-14">
 
@@ -138,19 +136,6 @@ export default function PrivacyPage() {
 
         </div>
       </div>
-
-      <footer className="border-t border-white/[0.07] py-8 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="text-[#888888] text-xs">© 2025–2026 YouTube Comment Downloader</div>
-          <div className="flex flex-wrap gap-4 text-xs text-[#555555]">
-            <Link href="/tool" className="hover:text-white transition-colors">Tool</Link>
-            <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }

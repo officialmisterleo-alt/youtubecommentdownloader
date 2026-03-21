@@ -1,5 +1,3 @@
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Plus, Key, Users, ExternalLink, FileText } from 'lucide-react'
@@ -60,8 +58,7 @@ export default async function DashboardPage() {
   const recentExports = allExports.slice(0, 10)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      <Navbar />
+    <div className="flex-1 flex flex-col">
       <div className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
 
         {/* Header */}
@@ -199,7 +196,6 @@ export default async function DashboardPage() {
         </div>
 
       </div>
-      <Footer />
     </div>
   )
 }
