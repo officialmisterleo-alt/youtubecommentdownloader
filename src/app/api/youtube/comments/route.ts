@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// YouTube's textDisplay is HTML-encoded — decode before storing so all export formats get clean text
+function decodeHtml(str: string): string {
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '') // strip any other HTML tags
+}
+
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList: Reply[] }
 
@@ -78,7 +91,7 @@ export async function POST(req: NextRequest) {
             replyList = (rData.items || []).map((r: { id: string; snippet: { authorDisplayName: string; textDisplay: string; likeCount: number; publishedAt: string } }) => ({
               id: r.id,
               author: r.snippet.authorDisplayName,
-              text: r.snippet.textDisplay,
+              text: decodeHtml(r.snippet.textDisplay),
               likes: r.snippet.likeCount,
               date: new Date(r.snippet.publishedAt).toLocaleDateString(),
             }))
@@ -88,7 +101,7 @@ export async function POST(req: NextRequest) {
         comments.push({
           id: item.id,
           author: s.authorDisplayName,
-          text: s.textDisplay,
+          text: decodeHtml(s.textDisplay),
           likes: s.likeCount,
           date: new Date(s.publishedAt).toLocaleDateString(),
           replies: replyCount,
