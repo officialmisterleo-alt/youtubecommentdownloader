@@ -21,7 +21,7 @@ const plans = [
   {
     name: 'Business', monthlyPrice: 79, annualPrice: 65,
     desc: 'For agencies and growing teams',
-    features: ['1M comments/month', 'All export formats', 'Bulk channel/playlist', 'Scheduled exports', '3 team seats', 'Priority email support', 'CSV/Excel/JSON/HTML/TXT', 'AI Analysis (up to 50,000 comments)'],
+    features: ['1M comments/month', 'All export formats', 'Bulk channel/playlist', 'Scheduled exports', '3 team seats', 'Priority email support', 'AI Analysis (up to 50,000 comments)'],
     notIncluded: ['REST API access', 'SSO / SAML', 'White-label', 'Dedicated API quota'],
     cta: 'Start Business', href: '/auth/signup?plan=business', highlight: true, badge: 'Most Popular', note: null,
   },
