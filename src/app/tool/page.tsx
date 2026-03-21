@@ -14,6 +14,27 @@ type SortBy = 'top' | 'newest' | 'oldest'
 const GATED_FORMATS: Format[] = ['CSV', 'Excel', 'JSON']
 const ALL_FORMATS: Format[] = ['CSV', 'Excel', 'JSON', 'HTML', 'TXT']
 
+const ALL_COMMENT_OPTIONS = [
+  { value: 50, label: '50 comments' },
+  { value: 100, label: '100 comments' },
+  { value: 500, label: '500 comments' },
+  { value: 1000, label: '1,000 comments' },
+  { value: 2000, label: '2,000 comments' },
+  { value: 5000, label: '5,000 comments' },
+  { value: 10000, label: '10,000 comments' },
+  { value: 25000, label: '25,000 comments' },
+  { value: 50000, label: '50,000 comments' },
+  { value: 100000, label: '100,000 comments' },
+  { value: 0, label: 'Unlimited' },
+]
+
+const PLAN_LIMIT: Record<string, number> = {
+  free: 100,
+  pro: 10000,
+  business: 100000,
+  enterprise: 0,
+}
+
 function ToolPageContent() {
   const searchParams = useSearchParams()
   const [urls, setUrls] = useState<string[]>([''])
@@ -28,6 +49,8 @@ function ToolPageContent() {
   const [done, setDone] = useState(false)
   const [showBanner, setShowBanner] = useState(true)
   const [isSignedIn, setIsSignedIn] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userPlan, setUserPlan] = useState<string>('free')
   const [showAuthGate, setShowAuthGate] = useState(false)
 
   // Pre-fill URL from query param
@@ -42,10 +65,39 @@ function ToolPageContent() {
       const supabase = createClient()
       const { data } = await supabase.auth.getUser()
       setIsSignedIn(!!data.user)
-      if (data.user) setFormat('CSV')
+      if (data.user) {
+        setUserId(data.user.id)
+        setFormat('CSV')
+      }
     }
     checkAuth()
   }, [])
+
+  // Fetch subscription plan
+  useEffect(() => {
+    if (!isSignedIn || !userId) return
+    const supabase = createClient()
+    supabase.from('subscriptions').select('plan, status').eq('user_id', userId).single()
+      .then(({ data }) => {
+        if (data?.status === 'active') setUserPlan(data.plan)
+      })
+  }, [isSignedIn, userId])
+
+  // Reset maxComments if it exceeds plan limit
+  useEffect(() => {
+    const limit = isSignedIn ? (PLAN_LIMIT[userPlan] ?? 100) : 50
+    const current = parseInt(maxComments) || 0
+    if (limit !== 0 && (current === 0 || current > limit)) {
+      setMaxComments(String(limit))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userPlan, isSignedIn])
+
+  const effectiveLimit = isSignedIn ? (PLAN_LIMIT[userPlan] ?? 100) : 50
+
+  const availableOptions = effectiveLimit === 0
+    ? ALL_COMMENT_OPTIONS
+    : ALL_COMMENT_OPTIONS.filter(opt => opt.value <= effectiveLimit && opt.value !== 0)
 
   const addUrl = () => { if (urls.length < 5) setUrls([...urls, '']) }
   const updateUrl = (i: number, v: string) => { const u = [...urls]; u[i] = v; setUrls(u) }
@@ -343,14 +395,25 @@ ${commentRows}
             <div className="relative">
               <select value={maxComments} onChange={e => setMaxComments(e.target.value)}
                 className="w-full bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white text-base appearance-none focus:outline-none focus:border-red-600">
-                <option value="100">100 comments</option>
-                <option value="500">500 comments</option>
-                <option value="1000">1,000 comments</option>
-                <option value="5000">5,000 comments</option>
-                <option value="0">Unlimited (Pro+)</option>
+                {availableOptions.map(opt => (
+                  <option key={opt.value} value={String(opt.value)}>{opt.label}</option>
+                ))}
               </select>
               <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-[#888888] pointer-events-none" />
             </div>
+            <p className="mt-1.5 text-xs text-[#666666]">
+              {!isSignedIn ? (
+                <><Link href="/auth/signin" className="text-[#888888] hover:text-white underline">Sign in</Link> to unlock more comments</>
+              ) : userPlan === 'enterprise' ? (
+                'Enterprise plan'
+              ) : userPlan === 'business' ? (
+                'Business plan'
+              ) : userPlan === 'pro' ? (
+                'Pro plan'
+              ) : (
+                <>Free plan · 100 comment max · <Link href="/pricing" className="text-[#888888] hover:text-white underline">Upgrade for more</Link></>
+              )}
+            </p>
           </div>
 
           {/* Export Format */}
