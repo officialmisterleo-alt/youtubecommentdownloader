@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/teams'
 import { Plus, Key, Users, ExternalLink, FileText } from 'lucide-react'
 
 type ExportRecord = {
@@ -38,6 +39,32 @@ export default async function DashboardPage() {
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name
   const firstName = displayName ? displayName.split(' ')[0] : null
 
+  // Fetch subscription plan
+  let planLabel = 'Free Plan'
+  let hasTeam = false
+  try {
+    const serviceClient = createServiceClient()
+    const { data: sub } = await serviceClient
+      .from('subscriptions')
+      .select('plan, status, lifetime')
+      .eq('user_id', user?.id ?? '')
+      .single()
+    if (sub?.lifetime) {
+      planLabel = 'Lifetime'
+    } else if (sub?.status === 'active' && sub.plan !== 'free') {
+      planLabel = sub.plan.charAt(0).toUpperCase() + sub.plan.slice(1) + ' Plan'
+    }
+    // Check team membership
+    if (user) {
+      const { data: membership } = await serviceClient
+        .from('team_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+      hasTeam = !!membership
+    }
+  } catch { /* non-fatal */ }
+
   // Fetch export history — gracefully handle if table doesn't exist yet
   let allExports: ExportRecord[] = []
   try {
@@ -70,7 +97,7 @@ export default async function DashboardPage() {
             <p className="text-[#888888] text-sm mt-1">Here&apos;s your export activity</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="bg-[#171717] border border-white/[0.07] text-[#888888] text-xs px-3 py-1 rounded-full">Free Plan</span>
+            <span className="bg-[#171717] border border-white/[0.07] text-[#888888] text-xs px-3 py-1 rounded-full">{planLabel}</span>
             <Link href="/tool" className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Export
             </Link>
@@ -188,10 +215,16 @@ export default async function DashboardPage() {
                 <div className="text-[#888888] text-xs">Owner</div>
               </div>
             </div>
-            <p className="text-[#888888] text-xs">
-              Team seats available on Business &amp; Enterprise.{' '}
-              <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade</Link>
-            </p>
+            {hasTeam ? (
+              <Link href="/dashboard/team" className="text-red-400 hover:text-red-300 text-xs">
+                Manage team →
+              </Link>
+            ) : (
+              <p className="text-[#888888] text-xs">
+                Team seats available on Business &amp; Enterprise.{' '}
+                <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade</Link>
+              </p>
+            )}
           </div>
         </div>
 

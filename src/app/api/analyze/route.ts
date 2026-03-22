@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createServerClient } from '@supabase/ssr'
+import { getEffectivePlan } from '@/lib/teams'
 
 export type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
 
@@ -154,18 +154,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    // Plan check using service role to bypass RLS
-    const serviceClient = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { cookies: { getAll: () => [], setAll: () => {} } }
-    )
-    const { data: sub } = await serviceClient
-      .from('subscriptions')
-      .select('plan, status')
-      .eq('user_id', user.id)
-      .single()
-    const plan = sub?.status === 'active' ? sub.plan : 'free'
+    // Plan check — also considers team membership for inherited access
+    const plan = await getEffectivePlan(user.id)
     if (!plan || plan === 'free' || (TIER_LIMITS[plan] ?? 0) === 0) {
       return NextResponse.json({ error: 'AI Analysis requires a Pro plan or higher' }, { status: 403 })
     }
