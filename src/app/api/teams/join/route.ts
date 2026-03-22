@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient, countUsedSeats } from '@/lib/teams'
+import { sendMemberJoinedEmail } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
   try {
@@ -83,6 +84,19 @@ export async function POST(req: NextRequest) {
       .from('team_invitations')
       .update({ status: 'accepted' })
       .eq('id', invitation.id)
+
+    // Notify the team owner
+    const { data: ownerData } = await serviceClient.auth.admin.getUserById(
+      (invitation.teams as { owner_id?: string } & typeof team).owner_id ?? ''
+    )
+    const ownerEmail = ownerData?.user?.email
+    if (ownerEmail && ownerEmail !== user.email) {
+      await sendMemberJoinedEmail({
+        toEmail: ownerEmail,
+        teamName: team.name,
+        memberEmail: user.email!,
+      })
+    }
 
     return NextResponse.json({ team: { id: team.id, name: team.name, plan: team.plan } })
   } catch (e) {
