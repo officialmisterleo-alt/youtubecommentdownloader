@@ -50,7 +50,8 @@ const plans: Plan[] = [
 ]
 
 const comparisonFeatures = [
-  { label: 'Comments per video', free: '100', pro: '10k', business: '100k', enterprise: 'Unlimited' },
+  { label: 'Comments per video', free: '100', pro: '10,000', business: '100,000', enterprise: 'Unlimited' },
+  { label: 'Monthly comment quota', free: '1,000', pro: '100,000', business: '1,000,000', enterprise: 'Unlimited' },
   { label: 'Export formats', free: 'All 6', pro: 'All 6', business: 'All 6', enterprise: 'All 6' },
   { label: 'AI Analysis', free: false, pro: '10k comments', business: '50k comments', enterprise: '100k comments' },
   { label: 'Reply threads', free: false, pro: true, business: true, enterprise: true },
