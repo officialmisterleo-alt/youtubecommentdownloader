@@ -3,34 +3,49 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Check, X, Zap } from 'lucide-react'
 
-const plans = [
+type Plan = {
+  name: string
+  monthlyPrice: number
+  annualPrice: number
+  desc: string
+  features: string[]
+  notIncluded: string[]
+  cta: string
+  href: string | null
+  checkoutPlan: string | null
+  highlight: boolean
+  badge: string | null
+  note: string | null
+}
+
+const plans: Plan[] = [
   {
     name: 'Free', monthlyPrice: 0, annualPrice: 0,
     desc: 'Perfect for trying out the tool',
     features: ['100 comments per video', 'No account required', 'Basic sorting'],
     notIncluded: ['AI Analysis', 'Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
-    cta: 'Start Free Trial', href: '/auth/signup?plan=free', highlight: false, badge: null, note: 'No credit card required.',
+    cta: 'Start Free Trial', href: '/auth/signup?plan=free', checkoutPlan: null, highlight: false, badge: null, note: 'No credit card required.',
   },
   {
     name: 'Pro', monthlyPrice: 29, annualPrice: 24,
     desc: 'For individual power users',
     features: ['10,000 comments per video', 'All export formats', 'Reply thread capture', 'Email support', 'Priority processing', 'Basic sorting & filtering', 'AI Analysis (up to 10,000 comments)'],
     notIncluded: ['Bulk channel exports', 'REST API access', 'Team seats', 'Scheduled exports'],
-    cta: 'Start Pro', href: '/auth/signup?plan=pro', highlight: false, badge: null, note: null,
+    cta: 'Start Pro', href: null, checkoutPlan: 'pro', highlight: false, badge: null, note: null,
   },
   {
     name: 'Business', monthlyPrice: 79, annualPrice: 65,
     desc: 'For agencies and growing teams',
     features: ['100,000 comments per video', 'All export formats', 'Bulk channel/playlist', 'Scheduled exports', '3 team seats', 'Priority email support', 'AI Analysis (up to 50,000 comments)'],
     notIncluded: ['REST API access', 'SSO / SAML', 'White-label', 'Dedicated API quota'],
-    cta: 'Start Business', href: '/auth/signup?plan=business', highlight: true, badge: 'Most Popular', note: null,
+    cta: 'Start Business', href: null, checkoutPlan: 'business', highlight: true, badge: 'Most Popular', note: null,
   },
   {
     name: 'Enterprise', monthlyPrice: 299, annualPrice: 249,
     desc: 'For large teams and enterprise use',
     features: ['Unlimited comments', 'Dedicated API quota', '10 team seats', 'SSO / SAML', 'White-label exports', 'Custom data retention', '99.9% SLA', 'Priority phone support', 'Custom onboarding', 'AI Analysis (up to 100,000 comments)'],
     notIncluded: [],
-    cta: 'Contact Sales', href: '/contact', highlight: false, badge: null, note: null,
+    cta: 'Contact Sales', href: '/contact', checkoutPlan: null, highlight: false, badge: null, note: null,
   },
 ]
 
@@ -58,6 +73,34 @@ const faqs = [
 
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false)
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
+
+  async function handleCheckout(plan: string, interval: string) {
+    setLoadingPlan(plan)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, interval }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        console.error('Checkout error:', data.error)
+        setLoadingPlan(null)
+      }
+    } catch {
+      setLoadingPlan(null)
+    }
+  }
+
+  const ctaClass = (highlight: boolean) =>
+    `block w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors mb-2 disabled:opacity-60 disabled:cursor-not-allowed ${
+      highlight
+        ? 'bg-red-600 hover:bg-red-700 text-white'
+        : 'border border-white/[0.07] hover:border-white/20 text-[#888888] hover:text-white'
+    }`
 
   return (
     <div className="flex-1 flex flex-col">
@@ -84,9 +127,21 @@ export default function PricingPage() {
                 {annual && plan.monthlyPrice > 0 && <div className="text-[#555555] text-xs mt-1">Billed annually</div>}
               </div>
               <p className="text-[#888888] text-sm mb-6">{plan.desc}</p>
-              <Link href={plan.href} className={`block text-center py-3 rounded-xl font-semibold text-sm transition-colors mb-2 ${plan.highlight ? 'bg-red-600 hover:bg-red-700 text-white' : 'border border-white/[0.07] hover:border-white/20 text-[#888888] hover:text-white'}`}>
-                {plan.cta}
-              </Link>
+
+              {plan.checkoutPlan ? (
+                <button
+                  onClick={() => handleCheckout(plan.checkoutPlan!, annual ? 'annual' : 'monthly')}
+                  disabled={loadingPlan === plan.checkoutPlan}
+                  className={ctaClass(plan.highlight)}
+                >
+                  {loadingPlan === plan.checkoutPlan ? 'Redirecting...' : plan.cta}
+                </button>
+              ) : (
+                <Link href={plan.href!} className={ctaClass(plan.highlight)}>
+                  {plan.cta}
+                </Link>
+              )}
+
               {plan.note && <p className="text-[#555555] text-xs text-center mb-4">{plan.note}</p>}
               {!plan.note && <div className="mb-4" />}
               <div className="space-y-2.5 flex-1">
@@ -114,9 +169,13 @@ export default function PricingPage() {
             <div className="text-white font-bold text-xl mb-1">Lifetime Deal — $149</div>
             <p className="text-[#888888] text-sm">Everything in Pro, forever. One payment, no recurring fees. 10,000 comments per video, 100,000 comments/month, AI analysis up to 10,000 comments. Perfect for freelancers and indie hackers.</p>
           </div>
-          <Link href="/auth/signup?plan=lifetime" className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap">
-            Get Lifetime Access →
-          </Link>
+          <button
+            onClick={() => handleCheckout('lifetime', 'one_time')}
+            disabled={loadingPlan === 'lifetime'}
+            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap"
+          >
+            {loadingPlan === 'lifetime' ? 'Redirecting...' : 'Get Lifetime Access →'}
+          </button>
         </div>
 
         {/* Comparison table — scrollable on mobile */}

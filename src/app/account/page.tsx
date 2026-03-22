@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
-import { LogOut, User as UserIcon, CreditCard } from 'lucide-react'
+import { LogOut, User as UserIcon, CreditCard, ExternalLink } from 'lucide-react'
 
 type Subscription = { plan: string; status: string; current_period_end: string | null }
 
@@ -12,6 +12,7 @@ export default function AccountPage() {
   const [user, setUser] = useState<User | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
+  const [billingLoading, setBillingLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -31,6 +32,19 @@ export default function AccountPage() {
       setLoading(false)
     })
   }, [router])
+
+  async function handleManageBilling() {
+    setBillingLoading(true)
+    try {
+      const res = await fetch('/api/stripe/portal')
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } finally {
+      setBillingLoading(false)
+    }
+  }
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -99,13 +113,22 @@ export default function AccountPage() {
                 )}
               </div>
             </div>
-            {plan === 'free' && (
+            {plan === 'free' ? (
               <Link
                 href="/pricing"
                 className="inline-flex items-center text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
               >
                 Upgrade
               </Link>
+            ) : (
+              <button
+                onClick={handleManageBilling}
+                disabled={billingLoading}
+                className="inline-flex items-center gap-1.5 text-xs text-[#888888] hover:text-white border border-white/[0.07] hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ExternalLink className="w-3 h-3" />
+                {billingLoading ? 'Loading...' : 'Manage Billing'}
+              </button>
             )}
           </div>
         </div>

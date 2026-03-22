@@ -46,6 +46,7 @@ create table public.subscriptions (
   stripe_subscription_id text,
   plan text default 'free',
   status text default 'active',
+  lifetime boolean default false,
   current_period_end timestamptz,
   created_at timestamptz default now()
 );
