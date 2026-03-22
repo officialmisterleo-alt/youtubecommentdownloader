@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServerClient } from '@supabase/ssr'
+import { getEffectivePlan } from '@/lib/teams'
 
 // YouTube's textDisplay is HTML-encoded — decode before storing so all export formats get clean text
 function decodeHtml(str: string): string {
@@ -109,12 +110,8 @@ export async function POST(req: NextRequest) {
     if (!user) {
       planMaxComments = 50 // unauthenticated limit
     } else {
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('plan, status')
-        .eq('user_id', user.id)
-        .single()
-      const plan = (sub?.status === 'active' ? sub?.plan : null) ?? 'free'
+      // Use effective plan — checks personal subscription and team membership
+      const plan = await getEffectivePlan(user.id)
       planMaxComments = PLAN_LIMITS[plan]?.maxComments ?? PLAN_LIMITS.free.maxComments
     }
 
