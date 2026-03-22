@@ -5,9 +5,11 @@ import AnalysisPanel from '@/components/AnalysisPanel'
 import Link from 'next/link'
 import { Plus, Download, RefreshCw, ChevronDown, X, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { parseYouTubeUrl, isBulkUrl, isVideoUrl } from '@/lib/youtube/url-parser'
 
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
+type VideoListItem = { videoId: string; videoUrl: string; title: string; channelTitle: string }
 type Format = 'CSV' | 'Excel' | 'JSON' | 'HTML' | 'TXT'
 type SortBy = 'top' | 'newest' | 'oldest'
 
@@ -35,6 +37,14 @@ const PLAN_LIMIT: Record<string, number> = {
   enterprise: 0,
 }
 
+// Monthly comment quota per plan (0 = unlimited). Enforced during bulk exports.
+const MONTHLY_LIMITS: Record<string, number> = {
+  free: 100,
+  pro: 100000,
+  business: 1000000,
+  enterprise: 0,
+}
+
 function ToolPageContent() {
   const searchParams = useSearchParams()
   const [urls, setUrls] = useState<string[]>([''])
@@ -52,6 +62,7 @@ function ToolPageContent() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userPlan, setUserPlan] = useState<string>('free')
   const [showAuthGate, setShowAuthGate] = useState(false)
+  const [showBulkUpgradeModal, setShowBulkUpgradeModal] = useState(false)
 
   // Pre-fill URL from query param
   useEffect(() => {
@@ -268,46 +279,169 @@ ${commentRows}
     URL.revokeObjectURL(url)
   }
 
+  const isBusiness = userPlan === 'business' || userPlan === 'enterprise'
+
   const handleExport = async () => {
     const activeUrls = urls.filter(u => u.trim())
     if (!activeUrls.length) return
-    setLoading(true); setDone(false); setProgress(0); setComments([])
 
+    // Parse all URLs upfront
+    const parsedUrls = activeUrls.map(u => ({ url: u, parsed: parseYouTubeUrl(u) }))
+    const hasBulkUrl = parsedUrls.some(({ parsed }) => isBulkUrl(parsed))
+
+    // Gate bulk (channel/playlist) to Business+ users
+    if (hasBulkUrl && !isBusiness) {
+      setShowBulkUpgradeModal(true)
+      return
+    }
+
+    setLoading(true); setDone(false); setProgress(0); setComments([])
     const allComments: Comment[] = []
+    const maxCommentsParsed = parseInt(maxComments) || 100
+
+    // For bulk exports: fetch current month's usage so we can enforce quota
+    let monthlyUsed = 0
+    if (isSignedIn && hasBulkUrl && userId) {
+      try {
+        const supabase = createClient()
+        const month = new Date().toISOString().slice(0, 7)
+        const { data: usage } = await supabase
+          .from('usage')
+          .select('comments_count')
+          .eq('user_id', userId)
+          .eq('month', month)
+          .single()
+        monthlyUsed = usage?.comments_count ?? 0
+      } catch { /* non-fatal */ }
+    }
+    const monthlyLimit = MONTHLY_LIMITS[userPlan] ?? 0 // 0 = unlimited
+
+    let quotaExceeded = false
+    let videosProcessed = 0
+
     try {
-      for (let i = 0; i < activeUrls.length; i++) {
-        const url = activeUrls[i]
-        setStatusMsg(`Fetching comments from video ${i + 1} of ${activeUrls.length}…`)
-        setProgress(Math.round(((i) / activeUrls.length) * 90))
-        const res = await fetch('/api/youtube/comments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, maxComments: parseInt(maxComments) || 100, includeReplies, sortBy }),
-        })
-        const data = await res.json()
-        if (data.comments) {
-          const videoComments: Comment[] = data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
-          allComments.push(...videoComments)
-          // Fire-and-forget export log (signed-in users only)
-          if (isSignedIn && videoComments.length > 0) {
-            const first = videoComments[0]
-            fetch('/api/exports/log', {
+      for (let i = 0; i < parsedUrls.length; i++) {
+        if (quotaExceeded) break
+        const { url, parsed } = parsedUrls[i]
+
+        if (parsed.type === 'channel' || parsed.type === 'playlist') {
+          // ── Bulk: fetch video list then process each video ─────────────────
+          setStatusMsg(`Fetching ${parsed.type} video list…`)
+          setProgress(5)
+
+          const endpoint = parsed.type === 'channel' ? '/api/youtube/channel' : '/api/youtube/playlist'
+          const listRes = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+          })
+          const listData = await listRes.json()
+
+          if (listData.error) {
+            setStatusMsg(`Error: ${listData.error}`)
+            break
+          }
+
+          const videos: VideoListItem[] = listData.videos ?? []
+          const total = videos.length
+
+          for (let j = 0; j < videos.length; j++) {
+            // Check monthly quota before fetching each video
+            if (monthlyLimit > 0) {
+              const remaining = monthlyLimit - monthlyUsed - allComments.length
+              if (remaining <= 0) {
+                quotaExceeded = true
+                break
+              }
+            }
+
+            const video = videos[j]
+            setStatusMsg(`Video ${j + 1} of ${total} — fetching comments…`)
+            setProgress(Math.round(5 + ((j / total) * 85)))
+
+            const res = await fetch('/api/youtube/comments', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                videoUrl: url,
-                videoTitle: first.videoTitle ?? '',
-                channelName: first.channelName ?? '',
-                commentCount: videoComments.length,
-                format,
-              }),
-            }).catch(() => {})
+              body: JSON.stringify({ url: video.videoUrl, maxComments: maxCommentsParsed, includeReplies, sortBy }),
+            })
+            const data = await res.json()
+            if (data.comments) {
+              const videoComments: Comment[] = data.comments
+              allComments.push(...videoComments)
+              videosProcessed++
+              if (isSignedIn && videoComments.length > 0) {
+                fetch('/api/exports/log', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    videoUrl: video.videoUrl,
+                    videoTitle: videoComments[0].videoTitle ?? video.title,
+                    channelName: videoComments[0].channelName ?? video.channelTitle,
+                    commentCount: videoComments.length,
+                    format,
+                  }),
+                }).catch(() => {})
+              }
+            }
+          }
+
+        } else if (isVideoUrl(parsed)) {
+          // ── Individual video ───────────────────────────────────────────────
+          setStatusMsg(`Fetching comments from video ${i + 1} of ${parsedUrls.length}…`)
+          setProgress(Math.round((i / parsedUrls.length) * 90))
+
+          // Use canonical URL so the server-side parser always succeeds
+          const canonicalUrl = `https://www.youtube.com/watch?v=${parsed.id}`
+          const res = await fetch('/api/youtube/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: canonicalUrl, maxComments: maxCommentsParsed, includeReplies, sortBy }),
+          })
+          const data = await res.json()
+          if (data.comments) {
+            const videoComments: Comment[] = data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
+            allComments.push(...videoComments)
+            videosProcessed++
+            if (isSignedIn && videoComments.length > 0) {
+              const first = videoComments[0]
+              fetch('/api/exports/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  videoUrl: url,
+                  videoTitle: first.videoTitle ?? '',
+                  channelName: first.channelName ?? '',
+                  commentCount: videoComments.length,
+                  format,
+                }),
+              }).catch(() => {})
+            }
+          }
+
+        } else {
+          // Unknown URL — fall back to passing the raw URL; the API will return an error
+          setStatusMsg(`Fetching comments from video ${i + 1} of ${parsedUrls.length}…`)
+          setProgress(Math.round((i / parsedUrls.length) * 90))
+          const res = await fetch('/api/youtube/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, maxComments: maxCommentsParsed, includeReplies, sortBy }),
+          })
+          const data = await res.json()
+          if (data.comments) {
+            allComments.push(...data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` })))
+            videosProcessed++
           }
         }
       }
-      setStatusMsg(`Processed ${allComments.length.toLocaleString()} comments`)
+
+      if (quotaExceeded) {
+        setStatusMsg(`Monthly quota reached — ${videosProcessed} video${videosProcessed !== 1 ? 's' : ''} processed, ${allComments.length.toLocaleString()} comments fetched`)
+      } else {
+        setStatusMsg(`Processed ${allComments.length.toLocaleString()} comments`)
+      }
       setComments(allComments)
-      setDone(true)
+      if (allComments.length > 0) setDone(true)
     } catch {
       const mockMeta = { videoTitle: 'Sample YouTube Video — Tutorial & Deep Dive', channelName: 'CreatorChannel', videoUrl: urls[0] }
       setComments([
@@ -344,25 +478,41 @@ ${commentRows}
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
           <label className="text-sm font-medium text-white mb-3 block">YouTube URL(s)</label>
           <div className="space-y-3">
-            {urls.map((u, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input value={u} onChange={e => updateUrl(i, e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  className="flex-1 min-w-0 bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-base w-full" />
-                {i > 0 && (
-                  <button onClick={() => removeUrl(i)} className="text-[#888888] hover:text-red-400 p-1 shrink-0">
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
-            ))}
+            {urls.map((u, i) => {
+              const detected = u.trim() ? parseYouTubeUrl(u) : null
+              const isBulk = detected ? isBulkUrl(detected) : false
+              return (
+                <div key={i} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <input value={u} onChange={e => updateUrl(i, e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=... or /channel/ or /@handle or /playlist?list=..."
+                      className="flex-1 min-w-0 bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 text-base w-full" />
+                    {i > 0 && (
+                      <button onClick={() => removeUrl(i)} className="text-[#888888] hover:text-red-400 p-1 shrink-0">
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                  {isBulk && (
+                    <div className="flex items-center gap-1.5 pl-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isBusiness ? 'bg-red-900/40 text-red-400' : 'bg-yellow-900/40 text-yellow-400'}`}>
+                        {detected!.type === 'channel' ? 'Channel' : 'Playlist'} — {isBusiness ? 'bulk download enabled' : 'Business plan required'}
+                      </span>
+                      {!isBusiness && (
+                        <Link href="/pricing" className="text-xs text-red-400 hover:text-red-300 underline">Upgrade</Link>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
           {urls.length < 5 ? (
             <button onClick={addUrl} className="mt-3 flex items-center gap-2 text-[#888888] hover:text-white text-sm transition-colors min-h-[36px]">
               <Plus className="w-4 h-4" /> Add URL
             </button>
           ) : (
-            <p className="mt-3 text-[#888888] text-xs">Maximum 5 URLs on free plan. <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade for unlimited</Link></p>
+            <p className="mt-3 text-[#888888] text-xs">Maximum 5 URLs. <Link href="/pricing" className="text-red-400 hover:text-red-300">View plans</Link></p>
           )}
         </div>
 
@@ -526,6 +676,32 @@ ${commentRows}
       {done && comments.length > 0 && (
         <div className="max-w-4xl mx-auto px-4 pb-10">
           <AnalysisPanel comments={comments} isSignedIn={isSignedIn} />
+        </div>
+      )}
+
+      {/* Bulk upgrade modal — shown when non-Business users try to use channel/playlist URLs */}
+      {showBulkUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 sm:p-8 max-w-sm w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-600/20 rounded-full p-2">
+                <Lock className="w-5 h-5 text-red-500" />
+              </div>
+              <h3 className="text-white font-bold text-lg">Business plan required</h3>
+            </div>
+            <p className="text-[#888888] text-sm leading-relaxed mb-6">
+              Bulk channel and playlist downloads are available on the{' '}
+              <strong className="text-white">Business plan</strong>. Upgrade to download comments from entire channels and playlists in one go.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Link href="/pricing" className="block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-xl text-center transition-colors">
+                View Business Plan
+              </Link>
+              <button onClick={() => setShowBulkUpgradeModal(false)} className="text-[#888888] hover:text-white text-sm transition-colors mt-1">
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
