@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient, countUsedSeats } from '@/lib/teams'
+import { sendTeamInviteEmail } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,12 +73,12 @@ export async function POST(req: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
     const joinUrl = `${appUrl}/join?token=${invitation.token}`
 
-    // TODO: Install and configure Resend (npm install resend) to send real invite emails.
-    // Add RESEND_API_KEY and RESEND_FROM_EMAIL to .env, then replace this block with:
-    //   const { Resend } = await import('resend')
-    //   const resend = new Resend(process.env.RESEND_API_KEY)
-    //   await resend.emails.send({ from, to: normalizedEmail, subject, html })
-    console.log(`[Team Invite] Invite link for ${normalizedEmail}: ${joinUrl}`)
+    await sendTeamInviteEmail({
+      toEmail: normalizedEmail,
+      teamName: team.name,
+      inviterEmail: user.email!,
+      joinUrl,
+    })
 
     return NextResponse.json({ invitation: { ...invitation, joinUrl } })
   } catch (e) {
