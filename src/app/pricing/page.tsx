@@ -112,7 +112,7 @@ export default function PricingPage() {
           <div>
             <div className="text-red-500 text-xs font-semibold uppercase tracking-widest mb-1">⚡ Limited Time Offer</div>
             <div className="text-white font-bold text-xl mb-1">Lifetime Deal — $149</div>
-            <p className="text-[#888888] text-sm">Everything in Business, forever. One payment, no recurring fees. Perfect for freelancers and indie hackers.</p>
+            <p className="text-[#888888] text-sm">Everything in Pro, forever. One payment, no recurring fees. 10,000 comments per video, 100,000 comments/month, AI analysis up to 10,000 comments. Perfect for freelancers and indie hackers.</p>
           </div>
           <Link href="/auth/signup?plan=lifetime" className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap">
             Get Lifetime Access →
