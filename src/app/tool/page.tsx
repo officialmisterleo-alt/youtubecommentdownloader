@@ -10,6 +10,7 @@ import { parseYouTubeUrl, isBulkUrl, isVideoUrl } from '@/lib/youtube/url-parser
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
 type VideoListItem = { videoId: string; videoUrl: string; title: string; channelTitle: string }
+type SourceMeta = { kind: 'video' | 'channel' | 'playlist'; title: string; channelName?: string; sourceUrl: string; videoCount?: number; thumbnailUrl?: string }
 type Format = 'CSV' | 'Excel' | 'JSON' | 'HTML' | 'TXT'
 type SortBy = 'top' | 'newest' | 'oldest'
 
@@ -64,6 +65,7 @@ function ToolPageContent() {
   const [showAuthGate, setShowAuthGate] = useState(false)
   const [showBulkUpgradeModal, setShowBulkUpgradeModal] = useState(false)
   const [quotaData, setQuotaData] = useState<{ used: number; limit: number; remaining: number; month: string } | null>(null)
+  const [sourceMeta, setSourceMeta] = useState<SourceMeta | null>(null)
 
   // Pre-fill URL from query param
   useEffect(() => {
@@ -219,6 +221,29 @@ ${renderComment(c, 'large')}
 ${repliesSection}
 </div>`
       }).join('\n')
+      const exportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      let exportHeaderHtml = ''
+      if (sourceMeta) {
+        let videoCardHtml = ''
+        if (sourceMeta.title || sourceMeta.thumbnailUrl) {
+          videoCardHtml = `<div class="export-video-card">
+  ${sourceMeta.thumbnailUrl ? `<img src="${sourceMeta.thumbnailUrl}" alt="thumbnail" class="export-video-thumb" onerror="this.onerror=null;this.src=this.src.includes('hqdefault')?this.src.replace('hqdefault','mqdefault'):'';if(!this.src)this.style.display='none'" />` : ''}
+  <div class="export-video-meta">
+    <a href="${escapeHtml(sourceMeta.sourceUrl)}" target="_blank" class="export-video-title">${escapeHtml(sourceMeta.title || 'YouTube Video')}</a>
+    ${sourceMeta.channelName ? `<div class="export-video-channel">${escapeHtml(sourceMeta.channelName)}</div>` : ''}
+    ${sourceMeta.kind !== 'video' && sourceMeta.videoCount ? `<div class="export-video-count">${sourceMeta.videoCount} video${sourceMeta.videoCount !== 1 ? 's' : ''}</div>` : ''}
+  </div>
+</div>`
+        }
+        exportHeaderHtml = `<div class="export-doc-header">
+  <div class="export-branding">
+    <a href="https://youtubecommentdownloader.com" target="_blank" class="brand-name">YouTube Comment Downloader</a>
+    <span class="export-date">Exported ${exportDate}</span>
+  </div>
+  ${videoCardHtml}
+  <div class="export-stats">${comments.length.toLocaleString()} comment${comments.length !== 1 ? 's' : ''}</div>
+</div>`
+      }
       content = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -228,6 +253,19 @@ ${repliesSection}
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0f0f0f; color: #f1f1f1; font-family: Roboto, Arial, sans-serif; padding: 24px 16px 64px; max-width: 860px; margin: 0 auto; }
+  .export-doc-header { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid #272727; }
+  .export-branding { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .brand-name { color: #f1f1f1; font-weight: 700; font-size: 14px; text-decoration: none; letter-spacing: -0.01em; }
+  .brand-name:hover { color: #3ea6ff; }
+  .export-date { font-size: 12px; color: #555555; }
+  .export-video-card { display: flex; gap: 16px; align-items: flex-start; background: #161616; border: 1px solid #272727; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .export-video-thumb { width: 160px; height: 90px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .export-video-meta { flex: 1; min-width: 0; }
+  .export-video-title { font-size: 16px; font-weight: 600; color: #f1f1f1; text-decoration: none; display: block; margin-bottom: 4px; line-height: 1.4; }
+  .export-video-title:hover { color: #3ea6ff; }
+  .export-video-channel { font-size: 13px; color: #aaaaaa; margin-top: 2px; }
+  .export-video-count { font-size: 12px; color: #666666; margin-top: 4px; }
+  .export-stats { font-size: 13px; color: #888888; }
   .comments-header { display: flex; align-items: center; gap: 24px; margin-bottom: 24px; }
   .comments-count { font-size: 16px; font-weight: 400; color: #f1f1f1; }
   .sort-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: #f1f1f1; background: none; border: none; padding: 8px 12px; border-radius: 18px; cursor: default; }
@@ -256,9 +294,14 @@ ${repliesSection}
   .video-channel { font-size: 12px; color: #aaaaaa; }
   .watermark { text-align: center; margin-top: 48px; padding-top: 20px; border-top: 1px solid #272727; font-size: 12px; color: #555555; }
   .watermark a { color: #3ea6ff; text-decoration: none; }
+  @media (max-width: 520px) {
+    .export-video-card { flex-direction: column; }
+    .export-video-thumb { width: 100%; height: auto; aspect-ratio: 16/9; }
+  }
 </style>
 </head>
 <body>
+${exportHeaderHtml}
 <div class="comments-header">
   <span class="comments-count">${comments.length.toLocaleString()} Comments</span>
   <button class="sort-chip">${sortSvg}&nbsp;Sort by top</button>
@@ -311,6 +354,7 @@ ${commentRows}
     setLoading(true); setDone(false); setProgress(0); setComments([])
     const allComments: Comment[] = []
     const maxCommentsParsed = parseInt(maxComments) || 100
+    let pendingMeta: SourceMeta | null = null
 
     // For bulk exports: fetch current month's usage so we can enforce quota
     let monthlyUsed = 0
@@ -357,6 +401,19 @@ ${commentRows}
 
           const videos: VideoListItem[] = listData.videos ?? []
           const total = videos.length
+          if (!pendingMeta) {
+            const firstVideoId = videos[0]?.videoId
+            pendingMeta = {
+              kind: parsed.type as 'channel' | 'playlist',
+              title: parsed.type === 'channel' ? (listData.channelTitle ?? '') : (listData.playlistTitle ?? ''),
+              channelName: parsed.type === 'playlist' ? (videos[0]?.channelTitle ?? undefined) : undefined,
+              sourceUrl: url,
+              videoCount: videos.length,
+              thumbnailUrl: parsed.type === 'playlist' && firstVideoId
+                ? `https://img.youtube.com/vi/${firstVideoId}/hqdefault.jpg`
+                : undefined,
+            }
+          }
 
           for (let j = 0; j < videos.length; j++) {
             // Check monthly quota before fetching each video
@@ -415,6 +472,17 @@ ${commentRows}
             const videoComments: Comment[] = data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
             allComments.push(...videoComments)
             videosProcessed++
+            if (!pendingMeta && videoComments[0]) {
+              const fc = videoComments[0]
+              const videoId = fc.videoUrl?.match(/(?:v=)([a-zA-Z0-9_-]{11})/)?.[1]
+              pendingMeta = {
+                kind: 'video',
+                title: fc.videoTitle ?? '',
+                channelName: fc.channelName ?? undefined,
+                sourceUrl: fc.videoUrl ?? url,
+                thumbnailUrl: videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : undefined,
+              }
+            }
             if (isSignedIn && videoComments.length > 0) {
               const first = videoComments[0]
               fetch('/api/exports/log', {
@@ -458,6 +526,8 @@ ${commentRows}
         setDone(true)
         if (isSignedIn) fetchQuota()
       }
+      setSourceMeta(pendingMeta)
+      if (allComments.length > 0) setDone(true)
     } catch {
       const mockMeta = { videoTitle: 'Sample YouTube Video — Tutorial & Deep Dive', channelName: 'CreatorChannel', videoUrl: urls[0] }
       setComments([
@@ -676,13 +746,49 @@ ${commentRows}
 
         {done && comments.length > 0 && (
           <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
+            {/* Video / channel / playlist header card */}
+            {sourceMeta && (
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-4 sm:p-5 border-b border-white/[0.07] bg-[#111111]">
+                {sourceMeta.thumbnailUrl && (
+                  <img
+                    src={sourceMeta.thumbnailUrl}
+                    alt="thumbnail"
+                    className="w-full sm:w-[140px] sm:h-[79px] rounded-lg object-cover flex-shrink-0 self-start"
+                    onError={(e) => {
+                      const img = e.currentTarget
+                      if (img.src.includes('hqdefault')) {
+                        img.src = img.src.replace('hqdefault', 'mqdefault')
+                      } else {
+                        img.style.display = 'none'
+                      }
+                    }}
+                  />
+                )}
+                {!sourceMeta.thumbnailUrl && sourceMeta.kind === 'channel' && (
+                  <div className="w-[48px] h-[48px] rounded-full bg-[#272727] flex items-center justify-center flex-shrink-0 self-start">
+                    <span className="text-[#888888] text-xl font-bold">{(sourceMeta.title || 'C')[0].toUpperCase()}</span>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-semibold text-sm sm:text-base leading-snug line-clamp-2">
+                    {sourceMeta.title || (sourceMeta.kind === 'channel' ? 'Channel' : sourceMeta.kind === 'playlist' ? 'Playlist' : 'Video')}
+                  </div>
+                  {sourceMeta.channelName && (
+                    <div className="text-[#888888] text-xs mt-1">{sourceMeta.channelName}</div>
+                  )}
+                  {sourceMeta.kind !== 'video' && sourceMeta.videoCount != null && (
+                    <div className="text-[#666666] text-xs mt-0.5">{sourceMeta.videoCount} video{sourceMeta.videoCount !== 1 ? 's' : ''}</div>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="p-4 border-b border-white/[0.07] flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-white font-semibold text-sm">Preview</span>
                 <span className="text-[#888888] text-sm ml-2">({comments.length} comments)</span>
               </div>
               <div className="flex gap-3 flex-wrap">
-                <button onClick={() => { setDone(false); setComments([]); setUrls(['']) }} className="text-[#888888] hover:text-white text-sm transition-colors min-h-[36px]">Export another</button>
+                <button onClick={() => { setDone(false); setComments([]); setUrls(['']); setSourceMeta(null) }} className="text-[#888888] hover:text-white text-sm transition-colors min-h-[36px]">Export another</button>
                 <button onClick={() => downloadComments(comments, format)}
                   className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 min-h-[36px]">
                   <Download className="w-4 h-4" /> Download {format}
