@@ -24,21 +24,21 @@ const plans: Plan[] = [
     desc: 'Perfect for trying out the tool',
     features: ['100 comments per video', 'No account required', 'Basic sorting'],
     notIncluded: ['AI Analysis', 'Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
-    cta: 'Start Free Trial', href: '/auth/signup?plan=free', checkoutPlan: null, highlight: false, badge: null, note: 'No credit card required.',
+    cta: 'Use Now', href: '/auth/signup?plan=free', checkoutPlan: null, highlight: false, badge: null, note: 'No credit card required.',
   },
   {
     name: 'Pro', monthlyPrice: 29, annualPrice: 24,
     desc: 'For individual power users',
     features: ['10,000 comments per video', 'All export formats', 'Reply thread capture', 'Email support', 'Priority processing', 'Basic sorting & filtering', 'AI Analysis (up to 10,000 comments)'],
     notIncluded: ['Bulk channel exports', 'REST API access', 'Team seats', 'Scheduled exports'],
-    cta: 'Start Pro', href: null, checkoutPlan: 'pro', highlight: false, badge: null, note: null,
+    cta: 'Get Started', href: null, checkoutPlan: 'pro', highlight: false, badge: null, note: null,
   },
   {
     name: 'Business', monthlyPrice: 79, annualPrice: 65,
     desc: 'For agencies and growing teams',
     features: ['100,000 comments per video', 'All export formats', 'Bulk channel/playlist', '3 team seats', 'Priority email support', 'AI Analysis (up to 50,000 comments)'],
     notIncluded: ['Scheduled exports', 'REST API access', 'SSO / SAML', 'White-label', 'Dedicated API quota'],
-    cta: 'Start Business', href: null, checkoutPlan: 'business', highlight: true, badge: 'Most Popular', note: null,
+    cta: 'Get Started', href: null, checkoutPlan: 'business', highlight: true, badge: 'Most Popular', note: null,
   },
   {
     name: 'Enterprise', monthlyPrice: 299, annualPrice: 249,
@@ -63,7 +63,6 @@ const comparisonFeatures = [
 ]
 
 const faqs = [
-  { q: 'Is there a free trial for paid plans?', a: 'Yes — Pro and Business plans include a 7-day free trial. No credit card required to start. Cancel anytime.' },
   { q: 'What counts as a "comment"?', a: 'Each unique top-level comment counts as 1 comment. Replies to comments also count individually when you enable the "Include Replies" option.' },
   { q: 'Can I upgrade or downgrade my plan at any time?', a: 'Absolutely. You can change your plan at any time from your dashboard. Upgrades take effect immediately. Downgrades take effect at the end of your billing cycle.' },
   { q: 'Is the YouTube API key required?', a: 'For the free web tool, no — we handle API access on our end. If you use the REST API on Business/Enterprise, you can optionally bring your own YouTube API key for higher quota.' },
