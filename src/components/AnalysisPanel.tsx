@@ -600,7 +600,7 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
       const videoId = extractVideoId(v.videoUrl)
       const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''
       return `<div class="video-card${i > 0 ? ' page-break' : ''}">
-        ${thumbUrl ? `<img src="${thumbUrl}" alt="thumbnail" class="thumb" />` : ''}
+        ${thumbUrl ? `<img src="${thumbUrl}" alt="thumbnail" class="thumb" onerror="this.onerror=null;var mq=this.src.replace('hqdefault','mqdefault');if(this.src!==mq){this.src=mq}else{this.style.display='none'}" />` : ''}
         <div class="video-meta">
           <a href="${v.videoUrl}" class="video-title">${v.videoTitle || 'YouTube Video'}</a>
           ${v.channelName ? `<div class="channel-name">${v.channelName}</div>` : ''}
@@ -686,7 +686,8 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; margin: 0; padding: 40px 24px; }
   .container { max-width: 720px; margin: 0 auto; }
   .header { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #222; }
-  .logo { background: #dc2626; border-radius: 6px; padding: 6px 10px; color: white; font-weight: 800; font-size: 13px; text-decoration: none; }
+  .logo { background: #dc2626; border-radius: 6px; padding: 5px 10px; color: white; font-weight: 800; font-size: 12px; text-decoration: none; white-space: nowrap; }
+  .site-name { font-size: 11px; color: #555; font-weight: 500; margin-bottom: 2px; }
   .title { font-size: 22px; font-weight: 700; color: white; }
   .meta { font-size: 12px; color: #666; margin-top: 2px; }
   .badge { background: rgba(220,38,38,0.15); color: #f87171; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px; border: 1px solid rgba(220,38,38,0.3); }
@@ -707,9 +708,10 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
 <body>
 <div class="container">
   <div class="header">
-    <div class="logo">YT</div>
+    <a href="https://youtubecommentdownloader.com" target="_blank" class="logo">YT</a>
     <div>
-      <div class="title">${typeInfo?.icon} ${typeInfo?.label} Analysis Report</div>
+      <div class="site-name">YouTube Comment Downloader</div>
+      <div class="title">${typeInfo?.icon} ${typeInfo?.label} Analysis</div>
       <div class="meta">Generated ${now} &nbsp;·&nbsp; <span class="badge">AI Analysis</span> &nbsp;·&nbsp; ${sampleSize.toLocaleString()} comments analysed</div>
     </div>
   </div>
