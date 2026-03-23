@@ -63,7 +63,6 @@ const comparisonFeatures = [
 ]
 
 const faqs = [
-  { q: 'Can I try a paid plan before committing?', a: 'Yes — Pro and Business plans include a 7-day trial period. No credit card required to start. Cancel anytime.' },
   { q: 'What counts as a "comment"?', a: 'Each unique top-level comment counts as 1 comment. Replies to comments also count individually when you enable the "Include Replies" option.' },
   { q: 'Can I upgrade or downgrade my plan at any time?', a: 'Absolutely. You can change your plan at any time from your dashboard. Upgrades take effect immediately. Downgrades take effect at the end of your billing cycle.' },
   { q: 'Is the YouTube API key required?', a: 'For the free web tool, no — we handle API access on our end. If you use the REST API on Business/Enterprise, you can optionally bring your own YouTube API key for higher quota.' },
