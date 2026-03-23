@@ -63,12 +63,23 @@ function ToolPageContent() {
   const [userPlan, setUserPlan] = useState<string>('free')
   const [showAuthGate, setShowAuthGate] = useState(false)
   const [showBulkUpgradeModal, setShowBulkUpgradeModal] = useState(false)
+  const [quotaData, setQuotaData] = useState<{ used: number; limit: number; remaining: number; month: string } | null>(null)
 
   // Pre-fill URL from query param
   useEffect(() => {
     const urlParam = searchParams.get('url')
     if (urlParam) setUrls([urlParam])
   }, [searchParams])
+
+  const fetchQuota = async () => {
+    try {
+      const res = await fetch('/api/quota')
+      if (res.ok) {
+        const data = await res.json()
+        if (!data.error) setQuotaData(data)
+      }
+    } catch { /* non-fatal */ }
+  }
 
   // Check auth status
   useEffect(() => {
@@ -79,9 +90,11 @@ function ToolPageContent() {
       if (data.user) {
         setUserId(data.user.id)
         setFormat('CSV')
+        fetchQuota()
       }
     }
     checkAuth()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Fetch subscription plan
@@ -441,7 +454,10 @@ ${commentRows}
         setStatusMsg(`Processed ${allComments.length.toLocaleString()} comments`)
       }
       setComments(allComments)
-      if (allComments.length > 0) setDone(true)
+      if (allComments.length > 0) {
+        setDone(true)
+        if (isSignedIn) fetchQuota()
+      }
     } catch {
       const mockMeta = { videoTitle: 'Sample YouTube Video — Tutorial & Deep Dive', channelName: 'CreatorChannel', videoUrl: urls[0] }
       setComments([
@@ -565,6 +581,34 @@ ${commentRows}
               )}
             </p>
           </div>
+
+          {/* Monthly Quota */}
+          {isSignedIn && quotaData && (
+            <div>
+              <label className="text-sm font-medium text-white block mb-2">Monthly Quota</label>
+              {quotaData.limit === -1 ? (
+                <p className="text-xs text-[#888888]">Unlimited — Enterprise plan</p>
+              ) : (
+                <div>
+                  <div className="w-full bg-white/[0.07] rounded-full h-1.5 mb-1.5">
+                    <div
+                      className={`h-1.5 rounded-full transition-all ${
+                        quotaData.remaining === 0 ? 'bg-red-500' :
+                        quotaData.remaining / quotaData.limit < 0.1 ? 'bg-yellow-500' : 'bg-red-600'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.round((quotaData.used / quotaData.limit) * 100))}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-[#888888]">
+                    {quotaData.used.toLocaleString()} / {quotaData.limit.toLocaleString()} comments used this month
+                    {quotaData.remaining === 0 && (
+                      <> · <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade for more</Link></>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Export Format */}
           <div>

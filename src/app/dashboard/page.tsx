@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/teams'
 import { Plus, Key, Users, ExternalLink, FileText } from 'lucide-react'
+import QuotaBar from '@/components/QuotaBar'
 
 type ExportRecord = {
   id: string
@@ -116,6 +117,11 @@ export default async function DashboardPage() {
               <div className="text-[#888888] text-xs">{s.label}</div>
             </div>
           ))}
+        </div>
+
+        {/* Quota */}
+        <div className="mb-8">
+          <QuotaBar />
         </div>
 
         {/* Recent Exports */}
