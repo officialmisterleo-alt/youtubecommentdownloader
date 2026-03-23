@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
+const PLAN_MONTHLY_LIMITS: Record<string, number> = {
+  free: 100,
+  pro: 100_000,
+  business: 1_000_000,
+  enterprise: -1,
+}
+
 function buildPriceToPlanMap(): Record<string, string> {
   const map: Record<string, string> = {}
   const add = (envVar: string | undefined, plan: string) => {
@@ -103,15 +110,43 @@ export async function POST(req: NextRequest) {
           current_period_end: number
           items: { data: Array<{ price: { id: string } }> }
         }
-        const priceId = sub.items.data[0]?.price?.id
-        const plan = priceToPlan[priceId] || 'pro'
+        const previousAttrs = (event.data.previous_attributes ?? {}) as {
+          items?: { data?: Array<{ price?: { id?: string } }> }
+        }
+        const newPriceId = sub.items.data[0]?.price?.id
+        const oldPriceId = previousAttrs?.items?.data?.[0]?.price?.id
+
+        const newPlan = priceToPlan[newPriceId ?? ''] ?? 'free'
+        const oldPlan = priceToPlan[oldPriceId ?? ''] ?? 'free'
+
         await supabase.from('subscriptions')
           .update({
-            plan,
+            plan: newPlan,
             status: sub.status,
             current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
           })
           .eq('stripe_subscription_id', sub.id)
+
+        // On upgrade: reset monthly usage so the user immediately gets their new quota
+        const newLimit = PLAN_MONTHLY_LIMITS[newPlan] ?? 100
+        const oldLimit = PLAN_MONTHLY_LIMITS[oldPlan] ?? 100
+        if (newLimit > oldLimit || (newLimit === -1 && oldLimit !== -1)) {
+          // Look up user_id from the subscription record
+          const { data: subRow } = await supabase
+            .from('subscriptions')
+            .select('user_id')
+            .eq('stripe_subscription_id', sub.id)
+            .single()
+          if (subRow?.user_id) {
+            const month = new Date().toISOString().slice(0, 7)
+            await supabase
+              .from('monthly_usage')
+              .upsert(
+                { user_id: subRow.user_id, month, comment_count: 0 },
+                { onConflict: 'user_id,month' }
+              )
+          }
+        }
         break
       }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServerClient } from '@supabase/ssr'
 import { getEffectivePlan } from '@/lib/teams'
+import { checkAndIncrementUsage, getMonthlyUsage, MONTHLY_LIMITS } from '@/lib/quota'
 
 // YouTube's textDisplay is HTML-encoded — decode before storing so all export formats get clean text
 function decodeHtml(str: string): string {
@@ -70,7 +71,7 @@ function createServiceClient() {
   )
 }
 
-async function incrementUsage(userId: string, commentsCount: number) {
+async function incrementLegacyUsage(userId: string, commentsCount: number) {
   const serviceClient = createServiceClient()
   const month = new Date().toISOString().slice(0, 7) // 'YYYY-MM'
 
@@ -107,15 +108,32 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     let planMaxComments: number
+    let effectivePlan = 'free'
     if (!user) {
       planMaxComments = 50 // unauthenticated limit
     } else {
       // Use effective plan — checks personal subscription and team membership
-      const plan = await getEffectivePlan(user.id)
-      planMaxComments = PLAN_LIMITS[plan]?.maxComments ?? PLAN_LIMITS.free.maxComments
+      effectivePlan = await getEffectivePlan(user.id)
+      planMaxComments = PLAN_LIMITS[effectivePlan]?.maxComments ?? PLAN_LIMITS.free.maxComments
     }
 
-    // Enforce plan limit — client-requested value cannot exceed plan max
+    // Check monthly quota before any API calls
+    if (user) {
+      const { remaining } = await getMonthlyUsage(user.id, effectivePlan)
+      const planMonthlyMax = MONTHLY_LIMITS[effectivePlan] ?? 100
+      if (planMonthlyMax !== -1 && remaining <= 0) {
+        return NextResponse.json(
+          { error: 'Monthly quota exceeded. Resets on the 1st of next month.' },
+          { status: 429 }
+        )
+      }
+      // Clamp per-download limit to remaining monthly quota
+      if (planMonthlyMax !== -1 && remaining < planMaxComments) {
+        planMaxComments = remaining
+      }
+    }
+
+    // Enforce plan per-download limit — client-requested value cannot exceed plan max
     const effectiveMax = Math.min(maxComments, planMaxComments)
 
     const apiKey = process.env.YOUTUBE_API_KEY
@@ -128,7 +146,10 @@ export async function POST(req: NextRequest) {
         videoUrl: url,
       }))
       const mockResult = mockWithMeta.slice(0, effectiveMax)
-      if (user) await incrementUsage(user.id, mockResult.length).catch(() => {})
+      if (user) {
+        await checkAndIncrementUsage(user.id, effectivePlan, mockResult.length).catch(() => {})
+        await incrementLegacyUsage(user.id, mockResult.length).catch(() => {})
+      }
       return NextResponse.json({ comments: mockResult, total: mockResult.length, mock: true })
     }
 
@@ -196,7 +217,10 @@ export async function POST(req: NextRequest) {
       pageToken = data.nextPageToken
     }
 
-    if (user) await incrementUsage(user.id, comments.length).catch(() => {})
+    if (user) {
+      await checkAndIncrementUsage(user.id, effectivePlan, comments.length).catch(() => {})
+      await incrementLegacyUsage(user.id, comments.length).catch(() => {})
+    }
 
     return NextResponse.json({ comments, total: comments.length, mock: false })
   } catch {
