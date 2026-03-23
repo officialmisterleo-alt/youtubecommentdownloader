@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { parseYouTubeUrl } from '@/lib/youtube/url-parser'
+import { getEffectivePlan } from '@/lib/teams'
+import { getMonthlyUsage, MONTHLY_LIMITS } from '@/lib/quota'
 
 export type PlaylistVideo = {
   videoId: string
@@ -27,16 +29,21 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
 
     // Plan check — must be Business or Enterprise
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('plan, status')
-      .eq('user_id', user.id)
-      .single()
-    const plan = (sub?.status === 'active' ? sub?.plan : null) ?? 'free'
+    const plan = await getEffectivePlan(user.id)
     if (plan !== 'business' && plan !== 'enterprise') {
       return NextResponse.json(
         { error: 'Bulk playlist downloads require a Business or Enterprise plan.' },
         { status: 403 },
+      )
+    }
+
+    // Monthly quota check — fail fast before pagination
+    const { remaining } = await getMonthlyUsage(user.id, plan)
+    const monthlyMax = MONTHLY_LIMITS[plan] ?? 100
+    if (monthlyMax !== -1 && remaining <= 0) {
+      return NextResponse.json(
+        { error: 'Monthly quota exceeded. Resets on the 1st of next month.' },
+        { status: 429 },
       )
     }
 
