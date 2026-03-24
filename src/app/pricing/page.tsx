@@ -1,7 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Check, X, Zap } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 type Plan = {
   name: string
@@ -73,6 +74,18 @@ const faqs = [
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false)
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
+  const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data }) => {
+      setIsSignedIn(!!data.session)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsSignedIn(!!session)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function handleCheckout(plan: string, interval: string) {
     setLoadingPlan(plan)
@@ -128,13 +141,19 @@ export default function PricingPage() {
               <p className="text-[#888888] text-sm mb-6">{plan.desc}</p>
 
               {plan.checkoutPlan ? (
-                <button
-                  onClick={() => handleCheckout(plan.checkoutPlan!, annual ? 'annual' : 'monthly')}
-                  disabled={loadingPlan === plan.checkoutPlan}
-                  className={ctaClass(plan.highlight)}
-                >
-                  {loadingPlan === plan.checkoutPlan ? 'Redirecting...' : plan.cta}
-                </button>
+                isSignedIn ? (
+                  <button
+                    onClick={() => handleCheckout(plan.checkoutPlan!, annual ? 'annual' : 'monthly')}
+                    disabled={loadingPlan === plan.checkoutPlan}
+                    className={ctaClass(plan.highlight)}
+                  >
+                    {loadingPlan === plan.checkoutPlan ? 'Redirecting...' : plan.cta}
+                  </button>
+                ) : (
+                  <Link href="/auth/login?next=/pricing" className={ctaClass(plan.highlight)}>
+                    {isSignedIn === null ? plan.cta : 'Sign In to Get Started'}
+                  </Link>
+                )
               ) : (
                 <Link href={plan.href!} className={ctaClass(plan.highlight)}>
                   {plan.cta}
@@ -168,13 +187,22 @@ export default function PricingPage() {
             <div className="text-white font-bold text-xl mb-1">Lifetime Deal — $149</div>
             <p className="text-[#888888] text-sm">Everything in Pro, forever. One payment, no recurring fees. 10,000 comments per download, 100,000 comments/month, AI analysis up to 10,000 comments. Perfect for freelancers and indie hackers.</p>
           </div>
-          <button
-            onClick={() => handleCheckout('lifetime', 'one_time')}
-            disabled={loadingPlan === 'lifetime'}
-            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap"
-          >
-            {loadingPlan === 'lifetime' ? 'Redirecting...' : 'Get Lifetime Access →'}
-          </button>
+          {isSignedIn ? (
+            <button
+              onClick={() => handleCheckout('lifetime', 'one_time')}
+              disabled={loadingPlan === 'lifetime'}
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap"
+            >
+              {loadingPlan === 'lifetime' ? 'Redirecting...' : 'Get Lifetime Access →'}
+            </button>
+          ) : (
+            <Link
+              href="/auth/login?next=/pricing"
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap"
+            >
+              {isSignedIn === null ? 'Get Lifetime Access →' : 'Sign In to Get Lifetime Access →'}
+            </Link>
+          )}
         </div>
 
         {/* Comparison table — scrollable on mobile */}

@@ -5,12 +5,14 @@ export const dynamic = 'force-dynamic'
 
 function buildPriceMap(): Record<string, string | undefined> {
   return {
-    'pro:monthly': process.env.STRIPE_PRICE_PRO_MONTHLY,
-    'pro:annual': process.env.STRIPE_PRICE_PRO_ANNUAL,
-    'business:monthly': process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
-    'business:annual': process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
-    'enterprise:monthly': process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY,
-    'enterprise:annual': process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL,
+    // Monthly/annual prices — set STRIPE_PRICE_PRO_MONTHLY and STRIPE_PRICE_PRO_ANNUAL in env
+    // or fall back to STRIPE_PRICE_PRO for a single price ID used for both intervals
+    'pro:monthly': process.env.STRIPE_PRICE_PRO_MONTHLY ?? process.env.STRIPE_PRICE_PRO,
+    'pro:annual': process.env.STRIPE_PRICE_PRO_ANNUAL ?? process.env.STRIPE_PRICE_PRO,
+    'business:monthly': process.env.STRIPE_PRICE_BUSINESS_MONTHLY ?? process.env.STRIPE_PRICE_BUSINESS,
+    'business:annual': process.env.STRIPE_PRICE_BUSINESS_ANNUAL ?? process.env.STRIPE_PRICE_BUSINESS,
+    'enterprise:monthly': process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY ?? process.env.STRIPE_PRICE_ENTERPRISE,
+    'enterprise:annual': process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL ?? process.env.STRIPE_PRICE_ENTERPRISE,
     'lifetime': process.env.STRIPE_PRICE_LIFETIME,
   }
 }
