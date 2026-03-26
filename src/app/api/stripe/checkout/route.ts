@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       customer_email: user.email,
       metadata: { user_id: user.id },
       allow_promotion_codes: true,
-      success_url: `${appUrl}/dashboard?upgraded=true`,
+      success_url: `${appUrl}/dashboard?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing`,
     })
 

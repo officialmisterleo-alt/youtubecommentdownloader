@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/teams'
 import { Plus, Key, Users, ExternalLink, FileText } from 'lucide-react'
@@ -34,9 +36,56 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString()
 }
 
-export default async function DashboardPage() {
+async function syncFromCheckoutSession(sessionId: string, userId: string) {
+  try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['subscription', 'line_items']
+    })
+
+    if (session.payment_status !== 'paid' && session.status !== 'complete') return
+    if (session.metadata?.user_id !== userId) return
+
+    const priceId = session.line_items?.data?.[0]?.price?.id
+    const planMap: Record<string, string> = {
+      [process.env.STRIPE_PRICE_PRO_MONTHLY || '']: 'pro',
+      [process.env.STRIPE_PRICE_PRO_ANNUAL || '']: 'pro',
+      [process.env.STRIPE_PRICE_PRO || '']: 'pro',
+      [process.env.STRIPE_PRICE_BUSINESS_MONTHLY || '']: 'business',
+      [process.env.STRIPE_PRICE_BUSINESS_ANNUAL || '']: 'business',
+      [process.env.STRIPE_PRICE_BUSINESS || '']: 'business',
+      [process.env.STRIPE_PRICE_LIFETIME || '']: 'lifetime',
+    }
+    const plan = priceId ? (planMap[priceId] || 'pro') : 'pro'
+    const isLifetime = plan === 'lifetime'
+
+    const supabase = createServiceClient()
+    await supabase.from('subscriptions').upsert({
+      user_id: userId,
+      plan: isLifetime ? 'pro' : plan,
+      status: 'active',
+      lifetime: isLifetime,
+      stripe_customer_id: typeof session.customer === 'string' ? session.customer : session.customer?.id,
+      stripe_subscription_id: typeof session.subscription === 'string' ? session.subscription : (session.subscription as Stripe.Subscription | null)?.id ?? null,
+    }, { onConflict: 'user_id' })
+  } catch (e) {
+    console.error('syncFromCheckoutSession error:', e)
+  }
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { upgraded?: string; session_id?: string }
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  if (searchParams.upgraded === 'true' && searchParams.session_id) {
+    await syncFromCheckoutSession(searchParams.session_id, user.id)
+  }
+
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name
   const firstName = displayName ? displayName.split(' ')[0] : null
 
