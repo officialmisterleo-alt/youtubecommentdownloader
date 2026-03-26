@@ -1,5 +1,5 @@
 'use client'
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -23,11 +23,25 @@ function LoginForm() {
 
   const handleGoogleSignIn = async () => {
     const supabase = createClient()
+    // Store redirect destination in a cookie — more reliable than ?next= query param
+    // which Supabase may strip if not in the allowed redirect URL list
+    document.cookie = `auth_next=${encodeURIComponent(next)}; path=/; max-age=600; SameSite=Lax`
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     })
   }
+
+  // Auto-redirect if already authenticated (handles middleware kick to login page
+  // when client-side session exists but server needs a moment to catch up)
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.href = next
+    })
+  }, [next])
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">

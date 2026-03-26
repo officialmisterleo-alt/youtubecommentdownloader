@@ -4,13 +4,18 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+
+  // Read next destination: cookie (set before OAuth) takes priority over query param
+  const cookieNext = request.cookies.get('auth_next')?.value
+  const next = cookieNext
+    ? decodeURIComponent(cookieNext)
+    : (searchParams.get('next') ?? '/dashboard')
 
   if (code) {
-    // Create the redirect response first, then pass its cookie setter to
-    // the Supabase client so session cookies land on the actual response
-    // the browser receives — not a separate next/headers cookie store.
     const response = NextResponse.redirect(`${origin}${next}`)
+
+    // Clear the auth_next cookie
+    response.cookies.delete('auth_next')
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
