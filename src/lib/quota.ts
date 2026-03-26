@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export const MONTHLY_LIMITS: Record<string, number> = {
   free:       100,
@@ -40,11 +40,12 @@ export async function checkAndIncrementUsage(
     return { allowed: false, used, limit }
   }
 
-  const supabase = await createClient()
+  // Use the service role client so writes bypass RLS — this is server-side only code
+  const serviceClient = createServiceClient()
   const month = getCurrentMonth()
 
-  await supabase.from('monthly_usage').upsert(
-    { user_id: userId, month, comment_count: (used + count) },
+  await serviceClient.from('monthly_usage').upsert(
+    { user_id: userId, month, comment_count: (used + count), updated_at: new Date().toISOString() },
     { onConflict: 'user_id,month' }
   )
 

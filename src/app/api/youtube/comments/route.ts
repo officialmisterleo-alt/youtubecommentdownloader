@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createServerClient } from '@supabase/ssr'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getEffectivePlan } from '@/lib/teams'
 import { checkAndIncrementUsage, getMonthlyUsage, MONTHLY_LIMITS } from '@/lib/quota'
 
@@ -62,14 +61,6 @@ const MOCK_COMMENTS: Comment[] = [
   { id: '9', author: '@agencyfounder', text: "We've replaced 3 separate tools with this. The API integration is seamless.", likes: 54, date: '2 weeks ago', replies: 0, replyList: [] },
   { id: '10', author: '@digitalmarketer', text: 'The bulk channel download is incredible. Downloaded an entire competitor channel overnight.', likes: 43, date: '2 weeks ago', replies: 0, replyList: [] },
 ]
-
-function createServiceClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  )
-}
 
 async function incrementLegacyUsage(userId: string, commentsCount: number) {
   const serviceClient = createServiceClient()
