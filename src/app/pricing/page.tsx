@@ -71,18 +71,52 @@ const faqs = [
   { q: 'Do you offer refunds?', a: 'Refunds are considered only within 48 hours of initial purchase, and only if the tool demonstrably failed to function as described. Usage fees for successfully completed exports are non-refundable. We strongly recommend testing the free tier before upgrading.' },
 ]
 
+const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, business: 2, enterprise: 3 }
+
+function getPlanAction(
+  cardPlan: string,
+  userPlan: string | null,
+  isSignedIn: boolean | null,
+): 'default' | 'current' | 'upgrade' | 'downgrade' | 'lifetime' {
+  if (!isSignedIn) return 'default'
+  const effectivePlan = userPlan ?? 'free'
+  if (effectivePlan === 'lifetime') return 'lifetime'
+  if (cardPlan === effectivePlan) return 'current'
+  const cardRank = PLAN_RANK[cardPlan] ?? -1
+  const userRank = PLAN_RANK[effectivePlan] ?? 0
+  return cardRank < userRank ? 'downgrade' : 'upgrade'
+}
+
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false)
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
   const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null)
+  const [userPlan, setUserPlan] = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data }) => {
-      setIsSignedIn(!!data.session)
-    })
+
+    async function loadSession() {
+      const { data } = await supabase.auth.getSession()
+      if (data.session) {
+        setIsSignedIn(true)
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('plan, status, lifetime')
+          .eq('user_id', data.session.user.id)
+          .single()
+        if (sub?.lifetime) setUserPlan('lifetime')
+        else if (sub?.status === 'active' && sub.plan && sub.plan !== 'free') setUserPlan(sub.plan)
+        else setUserPlan('free')
+      } else {
+        setIsSignedIn(false)
+        setUserPlan(null)
+      }
+    }
+    loadSession()
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsSignedIn(!!session)
+      if (!session) { setIsSignedIn(false); setUserPlan(null) }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -102,6 +136,18 @@ export default function PricingPage() {
         console.error('Checkout error:', data.error)
         setLoadingPlan(null)
       }
+    } catch {
+      setLoadingPlan(null)
+    }
+  }
+
+  async function handlePortal() {
+    setLoadingPlan('portal')
+    try {
+      const res = await fetch('/api/stripe/portal')
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else setLoadingPlan(null)
     } catch {
       setLoadingPlan(null)
     }
@@ -140,25 +186,40 @@ export default function PricingPage() {
               </div>
               <p className="text-[#888888] text-sm mb-6">{plan.desc}</p>
 
-              {plan.checkoutPlan ? (
-                isSignedIn ? (
-                  <button
-                    onClick={() => handleCheckout(plan.checkoutPlan!, annual ? 'annual' : 'monthly')}
-                    disabled={loadingPlan === plan.checkoutPlan}
-                    className={ctaClass(plan.highlight)}
-                  >
-                    {loadingPlan === plan.checkoutPlan ? 'Redirecting...' : plan.cta}
-                  </button>
-                ) : (
-                  <Link href="/auth/login?next=/pricing" className={ctaClass(plan.highlight)}>
-                    {isSignedIn === null ? plan.cta : 'Sign In to Get Started'}
-                  </Link>
-                )
-              ) : (
-                <Link href={plan.href!} className={ctaClass(plan.highlight)}>
-                  {plan.cta}
-                </Link>
-              )}
+              {(() => {
+                const action = getPlanAction(plan.name.toLowerCase(), userPlan, isSignedIn)
+                const disabledClass = 'block w-full text-center py-3 rounded-xl font-semibold text-sm border border-white/20 text-[#555555] cursor-not-allowed opacity-60 mb-2'
+                if (action === 'current') {
+                  return <button disabled className={disabledClass}>Current Plan</button>
+                }
+                if (action === 'lifetime') {
+                  return <button disabled className={disabledClass}>Lifetime Member</button>
+                }
+                if (action === 'downgrade') {
+                  return (
+                    <button onClick={handlePortal} disabled={loadingPlan === 'portal'} className={ctaClass(false)}>
+                      {loadingPlan === 'portal' ? 'Redirecting...' : 'Downgrade'}
+                    </button>
+                  )
+                }
+                // upgrade or default
+                if (plan.checkoutPlan) {
+                  return isSignedIn ? (
+                    <button
+                      onClick={() => handleCheckout(plan.checkoutPlan!, annual ? 'annual' : 'monthly')}
+                      disabled={loadingPlan === plan.checkoutPlan}
+                      className={ctaClass(plan.highlight)}
+                    >
+                      {loadingPlan === plan.checkoutPlan ? 'Redirecting...' : plan.cta}
+                    </button>
+                  ) : (
+                    <Link href="/auth/login?next=/pricing" className={ctaClass(plan.highlight)}>
+                      {isSignedIn === null ? plan.cta : 'Sign In to Get Started'}
+                    </Link>
+                  )
+                }
+                return <Link href={plan.href!} className={ctaClass(plan.highlight)}>{plan.cta}</Link>
+              })()}
 
               {plan.note && <p className="text-[#555555] text-xs text-center mb-4">{plan.note}</p>}
               {!plan.note && <div className="mb-4" />}
@@ -187,7 +248,11 @@ export default function PricingPage() {
             <div className="text-white font-bold text-xl mb-1">Lifetime Deal — $149</div>
             <p className="text-[#888888] text-sm">Everything in Pro, forever. One payment, no recurring fees. 10,000 comments per download, 100,000 comments/month, AI analysis up to 10,000 comments. Perfect for freelancers and indie hackers.</p>
           </div>
-          {isSignedIn ? (
+          {userPlan === 'lifetime' ? (
+            <button disabled className="w-full sm:w-auto border border-white/20 text-[#555555] cursor-not-allowed opacity-60 font-bold px-6 py-3 rounded-xl text-sm text-center whitespace-nowrap">
+              Lifetime Member
+            </button>
+          ) : isSignedIn ? (
             <button
               onClick={() => handleCheckout('lifetime', 'one_time')}
               disabled={loadingPlan === 'lifetime'}
