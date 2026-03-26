@@ -4,6 +4,69 @@ import { createServiceClient } from '@/lib/teams'
 import { Plus, Key, Users, ExternalLink, FileText } from 'lucide-react'
 import QuotaBar from '@/components/QuotaBar'
 
+function buildPriceToPlanMap(): Record<string, string> {
+  const map: Record<string, string> = {}
+  const add = (envVar: string | undefined, plan: string) => {
+    if (envVar && envVar !== 'price_...') map[envVar] = plan
+  }
+  add(process.env.STRIPE_PRICE_PRO_MONTHLY, 'pro')
+  add(process.env.STRIPE_PRICE_PRO_ANNUAL, 'pro')
+  add(process.env.STRIPE_PRICE_BUSINESS_MONTHLY, 'business')
+  add(process.env.STRIPE_PRICE_BUSINESS_ANNUAL, 'business')
+  add(process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY, 'enterprise')
+  add(process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL, 'enterprise')
+  add(process.env.STRIPE_PRICE_PRO, 'pro')
+  add(process.env.STRIPE_PRICE_BUSINESS, 'business')
+  add(process.env.STRIPE_PRICE_ENTERPRISE, 'enterprise')
+  return map
+}
+
+async function syncSubscriptionFromCheckout(sessionId: string, userId: string) {
+  const stripeKey = process.env.STRIPE_SECRET_KEY
+  if (!stripeKey || stripeKey === 'sk_live_...') return
+
+  const Stripe = (await import('stripe')).default
+  const stripe = new Stripe(stripeKey)
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId)
+  if (session.status !== 'complete') return
+  if (session.metadata?.user_id !== userId) return
+
+  const serviceClient = createServiceClient()
+  const priceToPlan = buildPriceToPlanMap()
+
+  if (session.mode === 'payment') {
+    await serviceClient.from('subscriptions').upsert({
+      user_id: userId,
+      stripe_customer_id: session.customer as string,
+      stripe_subscription_id: null,
+      plan: 'pro',
+      status: 'active',
+      lifetime: true,
+      current_period_end: null,
+    }, { onConflict: 'user_id' })
+  } else if (session.mode === 'subscription' && session.subscription) {
+    const sub = await stripe.subscriptions.retrieve(session.subscription as string)
+    const subData = sub as unknown as {
+      id: string
+      status: string
+      current_period_end: number
+      items: { data: Array<{ price: { id: string } }> }
+    }
+    const priceId = subData.items.data[0]?.price?.id
+    const plan = priceToPlan[priceId ?? ''] || 'pro'
+    await serviceClient.from('subscriptions').upsert({
+      user_id: userId,
+      stripe_customer_id: session.customer as string,
+      stripe_subscription_id: subData.id,
+      plan,
+      status: subData.status,
+      lifetime: false,
+      current_period_end: new Date(subData.current_period_end * 1000).toISOString(),
+    }, { onConflict: 'user_id' })
+  }
+}
+
 type ExportRecord = {
   id: string
   video_url: string
@@ -34,11 +97,25 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString()
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ upgraded?: string; session_id?: string }>
+}) {
+  const { upgraded, session_id: sessionId } = await searchParams
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name
   const firstName = displayName ? displayName.split(' ')[0] : null
+
+  // Belt-and-suspenders: if returning from checkout, sync subscription from Stripe
+  // directly before reading from DB, in case the webhook hasn't fired yet.
+  if (upgraded === 'true' && sessionId && user) {
+    try {
+      await syncSubscriptionFromCheckout(sessionId, user.id)
+    } catch { /* non-fatal — webhook will eventually update the record */ }
+  }
 
   // Fetch subscription plan
   let planLabel = 'Free Plan'
