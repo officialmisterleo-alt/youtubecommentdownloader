@@ -58,7 +58,7 @@ function ToolPageContent() {
   const [statusMsg, setStatusMsg] = useState('')
   const [comments, setComments] = useState<Comment[]>([])
   const [done, setDone] = useState(false)
-  const [showBanner, setShowBanner] = useState(true)
+
   const [isSignedIn, setIsSignedIn] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [userPlan, setUserPlan] = useState<string>('free')
@@ -544,15 +544,6 @@ ${commentRows}
 
   return (
     <div className="flex-1 overflow-x-hidden">
-
-      {showBanner && (
-        <div className="bg-red-700 py-1.5 px-4 flex items-center justify-center gap-3 text-sm text-white">
-          <span>🚀 Unlock API access, bulk exports &amp; scheduling →{' '}
-            <Link href="/pricing" className="underline font-semibold">View Enterprise Plans</Link>
-          </span>
-          <button onClick={() => setShowBanner(false)} className="ml-auto text-white/70 hover:text-white text-xl leading-none">&times;</button>
-        </div>
-      )}
 
       <div className="max-w-4xl mx-auto px-4 py-10 sm:py-12">
         <div className="text-center mb-8 sm:mb-10">

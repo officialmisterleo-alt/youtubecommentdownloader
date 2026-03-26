@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       customer_email: user.email,
       metadata: { user_id: user.id },
       allow_promotion_codes: true,
-      success_url: `${appUrl}/pricing?success=true`,
+      success_url: `${appUrl}/dashboard?upgraded=true`,
       cancel_url: `${appUrl}/pricing`,
     })
 

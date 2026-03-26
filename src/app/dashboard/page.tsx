@@ -92,15 +92,17 @@ export default async function DashboardPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">
-              Welcome back{firstName ? `, ${firstName}` : (user?.email ? `, ${user.email.split('@')[0]}` : '')}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-white">
+                Welcome back{firstName ? `, ${firstName}` : (user?.email ? `, ${user.email.split('@')[0]}` : '')}
+              </h1>
+              <span className="bg-[#171717] border border-white/[0.07] text-[#888888] text-xs px-3 py-1 rounded-full">{planLabel}</span>
+            </div>
             <p className="text-[#888888] text-sm mt-1">Here&apos;s your export activity</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="bg-[#171717] border border-white/[0.07] text-[#888888] text-xs px-3 py-1 rounded-full">{planLabel}</span>
             <Link href="/tool" className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
-              <Plus className="w-4 h-4" /> New Export
+              <Plus className="w-4 h-4" /> Download Comments
             </Link>
           </div>
         </div>

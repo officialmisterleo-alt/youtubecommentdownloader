@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { LogOut, User as UserIcon, CreditCard, ExternalLink } from 'lucide-react'
 
-type Subscription = { plan: string; status: string; current_period_end: string | null }
+type Subscription = { plan: string; status: string; current_period_end: string | null; lifetime: boolean | null }
 
 export default function AccountPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -24,7 +24,7 @@ export default function AccountPage() {
         setUser(user)
         const { data } = await supabase
           .from('subscriptions')
-          .select('plan, status, current_period_end')
+          .select('plan, status, current_period_end, lifetime')
           .eq('user_id', user.id)
           .single()
         setSubscription(data)
@@ -68,6 +68,7 @@ export default function AccountPage() {
 
   const plan = subscription?.plan ?? 'free'
   const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1)
+  const isLifetime = subscription?.lifetime === true
   const isPaidActive = subscription && subscription.plan !== 'free' && subscription.status === 'active'
   const periodEnd = isPaidActive && subscription.current_period_end
     ? new Date(subscription.current_period_end).toLocaleDateString()
@@ -120,7 +121,7 @@ export default function AccountPage() {
               >
                 Upgrade
               </Link>
-            ) : (
+            ) : !isLifetime ? (
               <button
                 onClick={handleManageBilling}
                 disabled={billingLoading}
@@ -129,7 +130,7 @@ export default function AccountPage() {
                 <ExternalLink className="w-3 h-3" />
                 {billingLoading ? 'Loading...' : 'Manage Billing'}
               </button>
-            )}
+            ) : null}
           </div>
         </div>
 
