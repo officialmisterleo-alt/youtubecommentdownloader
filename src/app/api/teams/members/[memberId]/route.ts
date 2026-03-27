@@ -95,7 +95,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   }
 }
 
-// DELETE — remove member from team
+// DELETE — remove member from team (admin removing others, or member leaving themselves)
 export async function DELETE(_req: NextRequest, ctx: RouteContext) {
   try {
     const { memberId } = await ctx.params
@@ -103,12 +103,39 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const serviceClient = createServiceClient()
+
+    // Check if memberId belongs to the current user (self-leave)
+    const { data: ownRecord } = await serviceClient
+      .from('team_members')
+      .select('id, user_id, team_id, role, status')
+      .eq('id', memberId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (ownRecord) {
+      // Prevent self-leave if last admin
+      if (ownRecord.role === 'admin') {
+        const adminCount = await countAdmins(ownRecord.team_id, serviceClient)
+        if (adminCount <= 1) {
+          return NextResponse.json(
+            { error: 'Cannot leave — you are the only admin. Assign another admin first.' },
+            { status: 409 }
+          )
+        }
+      }
+      const { error } = await serviceClient.from('team_members').delete().eq('id', memberId)
+      if (error) return NextResponse.json({ error: 'Delete failed' }, { status: 500 })
+      return NextResponse.json({ success: true })
+    }
+
+    // Otherwise: admin removing another member
     const context = await getAdminContext(user.id, memberId)
     if ('error' in context) return NextResponse.json({ error: context.error }, { status: context.status })
 
-    const { callerMembership, targetMember, serviceClient } = context
+    const { callerMembership, targetMember } = context
 
-    // Prevent self-removal if last admin
+    // Prevent self-removal via admin path if last admin
     if (targetMember.user_id === user.id) {
       const adminCount = await countAdmins(callerMembership.team_id, serviceClient)
       if (adminCount <= 1) {

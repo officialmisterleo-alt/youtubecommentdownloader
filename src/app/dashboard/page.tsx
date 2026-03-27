@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/teams'
+import { createServiceClient, getUserTeam } from '@/lib/teams'
 import { Plus, Key, Users, ExternalLink, FileText } from 'lucide-react'
 import QuotaBar from '@/components/QuotaBar'
 
@@ -92,7 +92,7 @@ export default async function DashboardPage({
   // Fetch subscription plan
   let planLabel = 'Free Plan'
   let activePlan = 'free'
-  let hasTeam = false
+  let userTeam: Awaited<ReturnType<typeof getUserTeam>> = null
   try {
     const serviceClient = createServiceClient()
     const { data: sub } = await serviceClient
@@ -109,12 +109,15 @@ export default async function DashboardPage({
     }
     // Check team membership
     if (user) {
-      const { data: membership } = await serviceClient
-        .from('team_members')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
-      hasTeam = !!membership
+      userTeam = await getUserTeam(user.id)
+      // If own plan is free/pro but team has a higher plan, inherit it
+      if (userTeam && (activePlan === 'free' || activePlan === 'pro')) {
+        const teamPlan = String(userTeam.team?.plan ?? 'free')
+        if (teamPlan === 'business' || teamPlan === 'enterprise') {
+          activePlan = teamPlan
+          planLabel = teamPlan.charAt(0).toUpperCase() + teamPlan.slice(1) + ' Plan'
+        }
+      }
     }
   } catch { /* non-fatal */ }
 
@@ -272,12 +275,17 @@ export default async function DashboardPage({
               </div>
               <div>
                 <div className="text-white text-sm">{displayName || user?.email || 'Your Account'}</div>
-                <div className="text-[#888888] text-xs">Owner</div>
+                <div className="text-[#888888] text-xs">{userTeam?.role === 'member' ? 'Member' : 'Owner'}</div>
               </div>
             </div>
-            {(activePlan === 'business' || activePlan === 'enterprise') ? (
+            {userTeam?.role === 'member' ? (
+              <div>
+                <p className="text-[#888888] text-xs mb-2">You&apos;re a member of {String(userTeam.team?.name ?? 'a team')}</p>
+                <Link href="/dashboard/team" className="text-red-400 hover:text-red-300 text-xs">View team →</Link>
+              </div>
+            ) : (activePlan === 'business' || activePlan === 'enterprise') ? (
               <Link href="/dashboard/team" className="text-red-400 hover:text-red-300 text-xs">
-                {hasTeam ? 'Manage team →' : 'Set up your team →'}
+                {userTeam ? 'Manage team →' : 'Set up your team →'}
               </Link>
             ) : (
               <p className="text-[#888888] text-xs">

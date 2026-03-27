@@ -4,15 +4,20 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
-import { LogOut, User as UserIcon, CreditCard, ExternalLink, Mail, Lock } from 'lucide-react'
+import { LogOut, User as UserIcon, CreditCard, ExternalLink, Mail, Lock, Users } from 'lucide-react'
 
 type Subscription = { plan: string; status: string; current_period_end: string | null; lifetime: boolean | null }
+type TeamMembership = { memberId: string; teamName: string | null; role: string; ownerName: string | null }
+type AccountMe = { effectivePlan: string; teamMembership: TeamMembership | null }
 
 export default function AccountPage() {
   const [user, setUser] = useState<User | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const [accountMe, setAccountMe] = useState<AccountMe | null>(null)
   const [loading, setLoading] = useState(true)
   const [billingLoading, setBillingLoading] = useState(false)
+  const [leaveLoading, setLeaveLoading] = useState(false)
+  const [leaveConfirm, setLeaveConfirm] = useState(false)
 
   // Change email
   const [newEmail, setNewEmail] = useState('')
@@ -34,12 +39,19 @@ export default function AccountPage() {
         router.push('/auth/login')
       } else {
         setUser(user)
-        const { data } = await supabase
-          .from('subscriptions')
-          .select('plan, status, current_period_end, lifetime')
-          .eq('user_id', user.id)
-          .single()
-        setSubscription(data)
+        const [{ data: sub }, meRes] = await Promise.all([
+          supabase
+            .from('subscriptions')
+            .select('plan, status, current_period_end, lifetime')
+            .eq('user_id', user.id)
+            .single(),
+          fetch('/api/account/me'),
+        ])
+        setSubscription(sub)
+        if (meRes.ok) {
+          const me = await meRes.json() as AccountMe
+          setAccountMe(me)
+        }
       }
       setLoading(false)
     })
@@ -55,6 +67,24 @@ export default function AccountPage() {
       }
     } finally {
       setBillingLoading(false)
+    }
+  }
+
+  async function handleLeaveTeam() {
+    const memberId = accountMe?.teamMembership?.memberId
+    if (!memberId) return
+    setLeaveLoading(true)
+    try {
+      const res = await fetch(`/api/teams/members/${memberId}`, { method: 'DELETE' })
+      if (res.ok) {
+        window.location.reload()
+      } else {
+        const data = await res.json() as { error?: string }
+        alert(data.error ?? 'Failed to leave team')
+      }
+    } finally {
+      setLeaveLoading(false)
+      setLeaveConfirm(false)
     }
   }
 
@@ -118,9 +148,23 @@ export default function AccountPage() {
   const initials = displayName ? displayName[0].toUpperCase() : (user.email?.[0]?.toUpperCase() ?? 'U')
   const isGoogleUser = user.app_metadata?.provider === 'google'
 
-  const plan = subscription?.plan ?? 'free'
-  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1)
+  const ownPlan = subscription?.plan ?? 'free'
+  const effectivePlan = accountMe?.effectivePlan ?? ownPlan
+  const teamMembership = accountMe?.teamMembership ?? null
+  const isTeamMember = teamMembership !== null && teamMembership.role === 'member'
   const isLifetime = subscription?.lifetime === true
+
+  // Plan label: if inheriting from team, show "Business (via Acme Team)"
+  let planLabel: string
+  if (isLifetime) {
+    planLabel = 'Pro (Lifetime)'
+  } else if (isTeamMember && effectivePlan !== ownPlan) {
+    const ep = effectivePlan.charAt(0).toUpperCase() + effectivePlan.slice(1)
+    planLabel = `${ep} (via ${teamMembership.teamName ?? 'team'})`
+  } else {
+    planLabel = effectivePlan.charAt(0).toUpperCase() + effectivePlan.slice(1)
+  }
+
   const isPaidActive = subscription && subscription.plan !== 'free' && subscription.status === 'active'
   const periodEnd = isPaidActive && subscription.current_period_end
     ? new Date(subscription.current_period_end).toLocaleDateString()
@@ -169,14 +213,14 @@ export default function AccountPage() {
                 )}
               </div>
             </div>
-            {plan === 'free' ? (
+            {effectivePlan === 'free' && !isTeamMember ? (
               <Link
                 href="/pricing"
                 className="inline-flex items-center text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
               >
                 Upgrade
               </Link>
-            ) : !isLifetime ? (
+            ) : !isLifetime && !isTeamMember ? (
               <button
                 onClick={handleManageBilling}
                 disabled={billingLoading}
@@ -256,6 +300,62 @@ export default function AccountPage() {
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* Team card */}
+        {teamMembership && (
+          <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
+            <div className="p-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Users className="w-4 h-4 text-[#555555] shrink-0" />
+                <div>
+                  <div className="text-xs text-[#555555] mb-0.5">Team</div>
+                  {isTeamMember ? (
+                    <div className="text-white text-sm">
+                      {teamMembership.teamName ?? 'Your Team'}
+                      <span className="text-[#555555] ml-2 text-xs capitalize">{teamMembership.role}</span>
+                    </div>
+                  ) : (
+                    <div className="text-white text-sm">{teamMembership.teamName ?? 'Your Team'}</div>
+                  )}
+                </div>
+              </div>
+              {isTeamMember ? (
+                leaveConfirm ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[#888888]">Are you sure?</span>
+                    <button
+                      onClick={handleLeaveTeam}
+                      disabled={leaveLoading}
+                      className="text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {leaveLoading ? 'Leaving...' : 'Yes, leave'}
+                    </button>
+                    <button
+                      onClick={() => setLeaveConfirm(false)}
+                      className="text-xs text-[#888888] hover:text-white border border-white/[0.07] px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setLeaveConfirm(true)}
+                    className="text-xs text-[#888888] hover:text-red-400 border border-white/[0.07] hover:border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Leave Team
+                  </button>
+                )
+              ) : (
+                <Link
+                  href="/dashboard/team"
+                  className="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Manage Team →
+                </Link>
+              )}
+            </div>
           </div>
         )}
 
