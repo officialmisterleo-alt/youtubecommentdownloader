@@ -44,8 +44,8 @@ export default function YouTubeCommentsSEO() {
         <div className="flex flex-col sm:flex-row items-stretch gap-4 min-w-[320px]">
           {/* Pathway 1 */}
           <div className="flex-1 flex flex-col gap-3">
-            <div className="rounded-lg border border-blue-500/25 bg-blue-500/5 px-4 py-3 text-center">
-              <p className="text-xs text-blue-400 font-semibold uppercase tracking-wider mb-0.5">Engagement Pathway</p>
+            <div className="rounded-lg border border-red-600/30 bg-red-600/10 px-4 py-3 text-center">
+              <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-0.5">Engagement Pathway</p>
               <p className="text-xs text-[#888]">Comments → engagement score</p>
             </div>
             <div className="flex items-center justify-center text-[#444] text-lg">↓</div>
@@ -53,7 +53,7 @@ export default function YouTubeCommentsSEO() {
               <p className="text-xs text-[#999]">YouTube treats high comment volume as a satisfaction signal alongside watch time, likes, and shares</p>
             </div>
             <div className="flex items-center justify-center text-[#444] text-lg">↓</div>
-            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-center">
+            <div className="rounded-lg border border-red-600/20 bg-red-600/5 px-4 py-3 text-center">
               <p className="text-xs text-[#bbb]">Higher relevance score in YouTube Search &amp; recommendations</p>
             </div>
           </div>
@@ -63,8 +63,8 @@ export default function YouTubeCommentsSEO() {
 
           {/* Pathway 2 */}
           <div className="flex-1 flex flex-col gap-3">
-            <div className="rounded-lg border border-purple-500/25 bg-purple-500/5 px-4 py-3 text-center">
-              <p className="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-0.5">Semantic Pathway</p>
+            <div className="rounded-lg border border-white/20 bg-white/[0.07] px-4 py-3 text-center">
+              <p className="text-xs text-white/70 font-semibold uppercase tracking-wider mb-0.5">Semantic Pathway</p>
               <p className="text-xs text-[#888]">Comment text → topic signals</p>
             </div>
             <div className="flex items-center justify-center text-[#444] text-lg">↓</div>
@@ -72,7 +72,7 @@ export default function YouTubeCommentsSEO() {
               <p className="text-xs text-[#999]">Natural language, entity names, and search-like phrases fill gaps in your title/description metadata</p>
             </div>
             <div className="flex items-center justify-center text-[#444] text-lg">↓</div>
-            <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 px-4 py-3 text-center">
+            <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-center">
               <p className="text-xs text-[#bbb]">Better topic inference → more relevant queries &amp; audience matching</p>
             </div>
           </div>
@@ -106,25 +106,21 @@ export default function YouTubeCommentsSEO() {
           value="57.8%"
           label="Comments-only accuracy"
           sub="Videos with 10+ comments"
-          accent="purple"
         />
         <StatCard
           value="35.6%"
           label="Comments-only accuracy"
           sub="Videos with 1+ comment"
-          accent="blue"
         />
         <StatCard
           value="+6.3 pts"
           label="Gain from adding comments"
           sub="High-comment-volume videos"
-          accent="green"
         />
         <StatCard
           value="+2.2 pts"
           label="Gain from adding comments"
           sub="Low-comment-volume videos"
-          accent="red"
         />
       </SectionGrid>
 
@@ -133,9 +129,9 @@ export default function YouTubeCommentsSEO() {
       </p>
 
       <SectionGrid cols={3}>
-        <StatCard value="+63.5" label="Bollywood" sub="Accuracy gain with comments" accent="purple" />
-        <StatCard value="+62.5" label="Arabic Music" sub="Accuracy gain with comments" accent="blue" />
-        <StatCard value="+22.2" label="Bodybuilding" sub="Accuracy gain with comments" accent="green" />
+        <StatCard value="+63.5" label="Bollywood" sub="Accuracy gain with comments" />
+        <StatCard value="+62.5" label="Arabic Music" sub="Accuracy gain with comments" />
+        <StatCard value="+22.2" label="Bodybuilding" sub="Accuracy gain with comments" />
       </SectionGrid>
 
       <KeyTakeaway>
@@ -220,31 +216,31 @@ export default function YouTubeCommentsSEO() {
             <tr className="hover:bg-white/[0.02] transition-colors">
               <td className="px-4 py-4 text-white font-medium">Ask a specific, open question at the end</td>
               <td className="px-4 py-4 text-[#888]">Authentic comment volume + semantic specificity</td>
-              <td className="px-4 py-4"><span className="text-emerald-400 font-semibold">High</span></td>
+              <td className="px-4 py-4"><span className="text-white/80 font-semibold">High</span></td>
               <td className="px-4 py-4 text-[#666]">Low</td>
             </tr>
             <tr className="hover:bg-white/[0.02] transition-colors">
               <td className="px-4 py-4 text-white font-medium">Pin a &quot;clarifier&quot; comment with entity terms</td>
               <td className="px-4 py-4 text-[#888]">Improves thread semantic cohesion; anchors topic terms</td>
-              <td className="px-4 py-4"><span className="text-emerald-400 font-semibold">High</span></td>
+              <td className="px-4 py-4"><span className="text-white/80 font-semibold">High</span></td>
               <td className="px-4 py-4 text-[#666]">Low–Medium</td>
             </tr>
             <tr className="hover:bg-white/[0.02] transition-colors">
               <td className="px-4 py-4 text-white font-medium">Reply to early comments within 24–72h</td>
               <td className="px-4 py-4 text-[#888]">Bootstraps thread depth; sustains activity signals</td>
-              <td className="px-4 py-4"><span className="text-emerald-400 font-semibold">High</span></td>
+              <td className="px-4 py-4"><span className="text-white/80 font-semibold">High</span></td>
               <td className="px-4 py-4 text-[#666]">Low</td>
             </tr>
             <tr className="hover:bg-white/[0.02] transition-colors">
               <td className="px-4 py-4 text-white font-medium">Mine comment language for metadata updates</td>
               <td className="px-4 py-4 text-[#888]">Moves crowd-sourced terms into creator-controlled fields</td>
-              <td className="px-4 py-4"><span className="text-emerald-400 font-semibold">High</span></td>
+              <td className="px-4 py-4"><span className="text-white/80 font-semibold">High</span></td>
               <td className="px-4 py-4 text-[#666]">Low</td>
             </tr>
             <tr className="hover:bg-white/[0.02] transition-colors">
               <td className="px-4 py-4 text-white font-medium">Build a content roadmap from comment FAQs</td>
               <td className="px-4 py-4 text-[#888]">Topical coverage + exact search-intent language</td>
-              <td className="px-4 py-4"><span className="text-amber-400 font-semibold">Medium–High</span></td>
+              <td className="px-4 py-4"><span className="text-white/60 font-semibold">Medium–High</span></td>
               <td className="px-4 py-4 text-[#666]">Low</td>
             </tr>
             <tr className="hover:bg-white/[0.02] transition-colors bg-red-950/10">
