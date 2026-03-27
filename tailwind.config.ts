@@ -14,10 +14,7 @@ const config: Config = {
           'accent-hover': '#ef4444',
         },
       },
-      fontFamily: {
-        jakarta: ['var(--font-jakarta)', 'sans-serif'],
-        sans: ['var(--font-inter)', 'sans-serif'],
-      },
+      fontFamily: { sans: ['Inter', 'sans-serif'] },
     },
   },
   plugins: [],
