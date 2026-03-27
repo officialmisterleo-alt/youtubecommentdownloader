@@ -13,6 +13,15 @@ export type BlogPost = {
 // Registry of all posts — sorted by date desc
 const posts: Omit<BlogPost, 'Content'>[] = [
   {
+    slug: 'youtube-comments-middle-funnel-use-cases',
+    title: 'What to Do With Downloaded YouTube Comments',
+    description:
+      'Most people download YouTube comments and stop there. Here are five research-backed ways to turn that data into better landing pages, sharper positioning, and content your audience actually wants.',
+    date: '2025-02-10',
+    readTime: '7 min read',
+    tags: ['YouTube Strategy', 'Content Marketing', 'Audience Research'],
+  },
+  {
     slug: 'youtube-comments-seo-value',
     title: 'The Hidden SEO Value of YouTube Comments',
     description:
