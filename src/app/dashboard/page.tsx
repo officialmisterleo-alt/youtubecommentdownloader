@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient, getUserTeam } from '@/lib/teams'
 import { Plus, Key, Users, ExternalLink, FileText, ShieldCheck } from 'lucide-react'
 import QuotaBar from '@/components/QuotaBar'
+import AdminStatsWidget from '@/components/AdminStatsWidget'
 import { getApiKeys } from '@/lib/youtube-api'
 import { getErrorLog } from '@/lib/alerts'
 
@@ -296,9 +297,12 @@ export default async function DashboardPage({
           )}
         </div>
 
-        {/* Admin: API Health */}
+        {/* Admin: Stats + API Health */}
         {user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL && (
-          <AdminApiHealthWidget />
+          <>
+            <AdminStatsWidget />
+            <AdminApiHealthWidget />
+          </>
         )}
 
         {/* API Key + Team */}
