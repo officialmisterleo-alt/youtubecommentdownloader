@@ -1,13 +1,14 @@
 'use client'
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
-import { Youtube, Wrench, CreditCard, LayoutDashboard, LogOut, User } from 'lucide-react'
+import { Youtube, Wrench, CreditCard, LayoutDashboard, LogOut, User, BookOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const navLinks = [
   { href: '/tool',      label: 'Tool',      icon: Wrench },
   { href: '/pricing',   label: 'Pricing',   icon: CreditCard },
+  { href: '/blog',      label: 'Blog',      icon: BookOpen },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ]
 
