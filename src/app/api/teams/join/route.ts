@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     // Look up the invitation by token
     const { data: invitation } = await serviceClient
       .from('team_invitations')
-      .select('*, teams(id, name, plan, max_seats)')
+      .select('*, teams(id, name, plan, max_seats, owner_id)')
       .eq('token', token.trim())
       .single()
 
