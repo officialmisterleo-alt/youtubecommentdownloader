@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
-import { LogOut, User as UserIcon, CreditCard, ExternalLink } from 'lucide-react'
+import { LogOut, User as UserIcon, CreditCard, ExternalLink, Mail, Lock } from 'lucide-react'
 
 type Subscription = { plan: string; status: string; current_period_end: string | null; lifetime: boolean | null }
 
@@ -13,6 +13,18 @@ export default function AccountPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
   const [billingLoading, setBillingLoading] = useState(false)
+
+  // Change email
+  const [newEmail, setNewEmail] = useState('')
+  const [emailMsg, setEmailMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [emailLoading, setEmailLoading] = useState(false)
+
+  // Change password
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [passwordLoading, setPasswordLoading] = useState(false)
+
   const router = useRouter()
 
   useEffect(() => {
@@ -52,6 +64,46 @@ export default function AccountPage() {
     router.push('/')
   }
 
+  async function handleChangeEmail(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newEmail.trim()) return
+    setEmailLoading(true)
+    setEmailMsg(null)
+    const supabase = createClient()
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
+    if (error) {
+      setEmailMsg({ type: 'error', text: error.message })
+    } else {
+      setEmailMsg({ type: 'success', text: 'Check both inboxes for confirmation links — your email will update once confirmed.' })
+      setNewEmail('')
+    }
+    setEmailLoading(false)
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg({ type: 'error', text: 'Passwords do not match.' })
+      return
+    }
+    if (newPassword.length < 8) {
+      setPasswordMsg({ type: 'error', text: 'Password must be at least 8 characters.' })
+      return
+    }
+    setPasswordLoading(true)
+    setPasswordMsg(null)
+    const supabase = createClient()
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) {
+      setPasswordMsg({ type: 'error', text: error.message })
+    } else {
+      setPasswordMsg({ type: 'success', text: 'Password updated successfully.' })
+      setNewPassword('')
+      setConfirmPassword('')
+    }
+    setPasswordLoading(false)
+  }
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -73,6 +125,9 @@ export default function AccountPage() {
   const periodEnd = isPaidActive && subscription.current_period_end
     ? new Date(subscription.current_period_end).toLocaleDateString()
     : null
+
+  const inputClass = 'w-full bg-[#111111] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white placeholder-[#444] focus:outline-none focus:border-red-600/50 text-sm'
+  const btnPrimary = 'bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors disabled:cursor-not-allowed'
 
   return (
     <div className="flex-1 flex flex-col">
@@ -133,6 +188,76 @@ export default function AccountPage() {
             ) : null}
           </div>
         </div>
+
+        {/* Security card — email/password users only */}
+        {!isGoogleUser && (
+          <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
+            <div className="p-6 border-b border-white/[0.07]">
+              <h2 className="text-sm font-semibold text-white">Security</h2>
+              <p className="text-[#555555] text-xs mt-1">Update your email address or password.</p>
+            </div>
+
+            {/* Change email */}
+            <form onSubmit={handleChangeEmail} className="p-6 border-b border-white/[0.07]">
+              <div className="flex items-center gap-2 mb-4">
+                <Mail className="w-4 h-4 text-[#555555]" />
+                <span className="text-sm font-medium text-white">Change Email</span>
+              </div>
+              <div className="space-y-3">
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  placeholder="New email address"
+                  required
+                  className={inputClass}
+                />
+                {emailMsg && (
+                  <p className={`text-xs ${emailMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                    {emailMsg.text}
+                  </p>
+                )}
+                <button type="submit" disabled={emailLoading} className={btnPrimary}>
+                  {emailLoading ? 'Sending...' : 'Update Email'}
+                </button>
+              </div>
+            </form>
+
+            {/* Change password */}
+            <form onSubmit={handleChangePassword} className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Lock className="w-4 h-4 text-[#555555]" />
+                <span className="text-sm font-medium text-white">Change Password</span>
+              </div>
+              <div className="space-y-3">
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="New password"
+                  required
+                  className={inputClass}
+                />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  required
+                  className={inputClass}
+                />
+                {passwordMsg && (
+                  <p className={`text-xs ${passwordMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                    {passwordMsg.text}
+                  </p>
+                )}
+                <button type="submit" disabled={passwordLoading} className={btnPrimary}>
+                  {passwordLoading ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Sign out */}
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
