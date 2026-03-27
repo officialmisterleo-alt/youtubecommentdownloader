@@ -91,6 +91,7 @@ export default async function DashboardPage({
 
   // Fetch subscription plan
   let planLabel = 'Free Plan'
+  let activePlan = 'free'
   let hasTeam = false
   try {
     const serviceClient = createServiceClient()
@@ -101,8 +102,10 @@ export default async function DashboardPage({
       .single()
     if (sub?.lifetime) {
       planLabel = 'Lifetime'
+      activePlan = sub.plan || 'pro'
     } else if (sub?.status === 'active' && sub.plan !== 'free') {
       planLabel = sub.plan.charAt(0).toUpperCase() + sub.plan.slice(1) + ' Plan'
+      activePlan = sub.plan
     }
     // Check team membership
     if (user) {
@@ -253,7 +256,7 @@ export default async function DashboardPage({
               <code className="text-[#888888] text-xs flex-1">••••••••••••••••••••••••••••••</code>
             </div>
             <p className="text-[#888888] text-xs">
-              Available on Business &amp; Enterprise plans.{' '}
+              Available on Enterprise plans.{' '}
               <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade</Link>
             </p>
           </div>
@@ -272,9 +275,9 @@ export default async function DashboardPage({
                 <div className="text-[#888888] text-xs">Owner</div>
               </div>
             </div>
-            {hasTeam ? (
+            {(activePlan === 'business' || activePlan === 'enterprise') ? (
               <Link href="/dashboard/team" className="text-red-400 hover:text-red-300 text-xs">
-                Manage team →
+                {hasTeam ? 'Manage team →' : 'Set up your team →'}
               </Link>
             ) : (
               <p className="text-[#888888] text-xs">
