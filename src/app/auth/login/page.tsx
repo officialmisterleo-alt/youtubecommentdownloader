@@ -88,7 +88,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex-1 flex items-center justify-center"><div className="text-[#888888]">Loading...</div></div>}>
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-red-600 rounded-full animate-spin" /></div>}>
       <LoginForm />
     </Suspense>
   )

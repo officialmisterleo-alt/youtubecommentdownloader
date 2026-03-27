@@ -137,7 +137,7 @@ export default function AccountPage() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-white/10 border-t-red-600 rounded-full animate-spin" />
       </div>
     )
   }
@@ -170,8 +170,8 @@ export default function AccountPage() {
     ? new Date(subscription.current_period_end).toLocaleDateString()
     : null
 
-  const inputClass = 'w-full bg-[#111111] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white placeholder-[#444] focus:outline-none focus:border-red-600/50 text-sm'
-  const btnPrimary = 'bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors disabled:cursor-not-allowed'
+  const inputClass = 'w-full bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white placeholder-[#555555] focus:outline-none focus:border-red-600/50 text-sm'
+  const btnPrimary = 'bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors disabled:cursor-not-allowed'
 
   return (
     <div className="flex-1 flex flex-col">

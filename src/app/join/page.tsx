@@ -108,7 +108,7 @@ function JoinPageInner() {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-full border-2 border-red-600 border-t-transparent animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-2 border-white/10 border-t-red-600 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[#888888] text-sm">
             {state === 'joining' ? 'Accepting your invitation…' : 'Loading…'}
           </p>

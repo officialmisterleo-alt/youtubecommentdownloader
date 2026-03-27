@@ -106,7 +106,7 @@ function InviteModal({ onClose, onInvited }: { onClose: () => void; onInvited: (
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="colleague@company.com"
-            className="w-full bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#555555] outline-none focus:border-white/20 mb-4"
+            className="w-full bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#555555] outline-none focus:border-red-600/50 mb-4"
             autoFocus
             required
           />
