@@ -13,6 +13,21 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'YouTube Comment Downloader - Export Comments at Scale',
   description: 'Download and export YouTube comments to CSV, Excel, JSON and more. Built for agencies, brands, and researchers.',
+  alternates: { canonical: 'https://youtubecommentdownloader.com' },
+  openGraph: {
+    type: 'website',
+    url: 'https://youtubecommentdownloader.com',
+    title: 'YouTube Comment Downloader — Export Comments at Scale',
+    description: 'Download and export YouTube comments to CSV, Excel, JSON and more. Built for agencies, brands, and researchers.',
+    siteName: 'YouTube Comment Downloader',
+    images: [{ url: '/opengraph-image.jpg', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'YouTube Comment Downloader — Export Comments at Scale',
+    description: 'Download and export YouTube comments to CSV, Excel, JSON and more.',
+    images: ['/opengraph-image.jpg'],
+  },
 }
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

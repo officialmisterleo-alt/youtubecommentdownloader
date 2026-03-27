@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Blog — YouTube Comment Downloader',
   description:
     'Insights on YouTube SEO, content strategy, and getting more from your comments.',
+  alternates: { canonical: 'https://youtubecommentdownloader.com/blog' },
   openGraph: {
     title: 'Blog — YouTube Comment Downloader',
     description:

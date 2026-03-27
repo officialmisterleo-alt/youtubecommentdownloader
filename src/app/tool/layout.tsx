@@ -11,6 +11,29 @@ export const metadata: Metadata = {
   },
 }
 
+const webAppJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'YouTube Comment Downloader',
+  description: 'Download and export YouTube comments to CSV, JSON, Excel, TXT, or HTML.',
+  url: 'https://youtubecommentdownloader.com/tool',
+  applicationCategory: 'UtilitiesApplication',
+  operatingSystem: 'Web',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+}
+
 export default function ToolLayout({ children }: { children: React.ReactNode }) {
-  return children
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }}
+      />
+      {children}
+    </>
+  )
 }

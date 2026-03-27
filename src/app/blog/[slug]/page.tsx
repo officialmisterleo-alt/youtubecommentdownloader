@@ -21,6 +21,7 @@ export async function generateMetadata({
   return {
     title: `${post.title} — YouTube Comment Downloader Blog`,
     description: post.description,
+    alternates: { canonical: `https://youtubecommentdownloader.com/blog/${slug}` },
     openGraph: {
       title: post.title,
       description: post.description,
@@ -32,6 +33,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: post.title,
       description: post.description,
+      images: [`https://youtubecommentdownloader.com/opengraph-image.jpg`],
     },
   }
 }
@@ -55,6 +57,23 @@ export default async function BlogPostPage({
     description: post.description,
     datePublished: post.date,
     keywords: post.tags.join(', '),
+    author: {
+      '@type': 'Organization',
+      name: 'YouTube Comment Downloader',
+      url: 'https://youtubecommentdownloader.com',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'YouTube Comment Downloader',
+      url: 'https://youtubecommentdownloader.com',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://youtubecommentdownloader.com/opengraph-image.jpg',
+      },
+    },
+    image: 'https://youtubecommentdownloader.com/opengraph-image.jpg',
+    url: `https://youtubecommentdownloader.com/blog/${slug}`,
+    mainEntityOfPage: `https://youtubecommentdownloader.com/blog/${slug}`,
   }
 
   return (

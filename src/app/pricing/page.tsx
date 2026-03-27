@@ -159,7 +159,22 @@ export default function PricingPage() {
         : 'border border-white/[0.07] hover:border-white/20 text-[#888888] hover:text-white'
     }`
 
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.q,
+      acceptedAnswer: { '@type': 'Answer', text: faq.a },
+    })),
+  }
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
     <div className="flex-1 flex flex-col">
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-16">
         <div className="text-center mb-14">
@@ -316,5 +331,6 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
