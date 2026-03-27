@@ -30,7 +30,7 @@ export default function Home() {
           YouTube Comment Downloader
         </span>
 
-        <h1 className="text-5xl md:text-7xl font-bold text-white leading-[1.05] tracking-tight max-w-4xl mb-6">
+        <h1 className="font-jakarta text-5xl md:text-7xl font-bold text-[#e5e2e1] leading-[1.05] tracking-tight max-w-4xl mb-6">
           Extract any YouTube<br />comment thread
         </h1>
 
@@ -54,7 +54,7 @@ export default function Home() {
       <section className="py-16 px-6 border-t border-white/[0.07]">
         <div className="max-w-6xl mx-auto">
           <div className="mb-10">
-            <h2 className="text-2xl font-bold text-white mb-2">
+            <h2 className="font-jakarta text-2xl font-bold text-[#e5e2e1] mb-2">
               Everything your team needs
             </h2>
             <p className="text-sm text-[#555555] max-w-lg">
@@ -67,7 +67,7 @@ export default function Home() {
                 <div className="w-9 h-9 bg-white/[0.05] rounded-lg flex items-center justify-center mb-4">
                   <Icon size={18} className="text-white/60" />
                 </div>
-                <h3 className="text-sm font-semibold text-white mb-1">{title}</h3>
+                <h3 className="font-jakarta text-sm font-semibold text-[#e5e2e1] mb-1">{title}</h3>
                 <p className="text-xs text-[#555555] leading-relaxed">{desc}</p>
               </div>
             ))}
@@ -110,7 +110,7 @@ export default function Home() {
       {/* ── HOW IT WORKS ── */}
       <section className="py-16 px-6 border-t border-white/[0.07]">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-10">How it works</h2>
+          <h2 className="font-jakarta text-2xl font-bold text-[#e5e2e1] mb-10">How it works</h2>
           <div className="space-y-8">
             {[
               { n: '1', title: 'Paste any YouTube URL',  desc: 'Drop in a video, channel, or playlist URL. Works with any public YouTube content.' },
@@ -122,7 +122,7 @@ export default function Home() {
                   {step.n}
                 </span>
                 <div className="pt-1">
-                  <h3 className="text-white font-semibold text-base mb-1">{step.title}</h3>
+                  <h3 className="font-jakarta text-[#e5e2e1] font-semibold text-base mb-1">{step.title}</h3>
                   <p className="text-[#555555] text-sm leading-relaxed">{step.desc}</p>
                 </div>
               </div>
@@ -134,7 +134,7 @@ export default function Home() {
       {/* ── WHO USES IT ── */}
       <section className="py-16 px-6 border-t border-white/[0.07]">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-10">Who uses it</h2>
+          <h2 className="font-jakarta text-2xl font-bold text-[#e5e2e1] mb-10">Who uses it</h2>
           <div>
             {[
               {
@@ -168,7 +168,7 @@ export default function Home() {
       <section className="py-16 px-6 border-t border-white/[0.07]">
         <div className="max-w-2xl mx-auto">
           <div className={`${bevel} rounded-2xl p-10 text-center`}>
-            <h2 className="text-2xl font-bold text-white mb-3">
+            <h2 className="font-jakarta text-2xl font-bold text-[#e5e2e1] mb-3">
               Start extracting comments in 30 seconds
             </h2>
             <p className="text-sm text-[#555555] mb-8">
@@ -177,13 +177,13 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 href="/tool"
-                className="w-full sm:w-auto bg-red-600 hover:bg-red-500 text-white font-semibold px-8 py-2.5 rounded-lg text-sm text-center transition-colors"
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-500 text-[#e5e2e1] font-semibold px-8 py-2.5 rounded-lg text-sm text-center transition-colors"
               >
                 Try Free
               </Link>
               <Link
                 href="/pricing"
-                className="w-full sm:w-auto border border-white/[0.12] hover:border-white/25 text-[#888888] hover:text-white font-medium px-8 py-2.5 rounded-lg text-sm text-center transition-colors"
+                className="w-full sm:w-auto border border-white/[0.12] hover:border-white/25 text-[#888888] hover:text-[#e5e2e1] font-medium px-8 py-2.5 rounded-lg text-sm text-center transition-colors"
               >
                 View Pricing
               </Link>
