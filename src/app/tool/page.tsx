@@ -6,11 +6,13 @@ import Link from 'next/link'
 import { Plus, Download, RefreshCw, ChevronDown, X, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { parseYouTubeUrl, isBulkUrl, isVideoUrl } from '@/lib/youtube/url-parser'
+import * as XLSX from 'xlsx'
 
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
 type VideoListItem = { videoId: string; videoUrl: string; title: string; channelTitle: string }
 type SourceMeta = { kind: 'video' | 'channel' | 'playlist'; title: string; channelName?: string; sourceUrl: string; videoCount?: number; thumbnailUrl?: string }
+type VideoMeta = { videoId: string; title: string; url: string; thumbnailUrl: string }
 type Format = 'CSV' | 'Excel' | 'JSON' | 'HTML' | 'TXT'
 type SortBy = 'top' | 'newest' | 'oldest'
 
@@ -66,6 +68,7 @@ function ToolPageContent() {
   const [showBulkUpgradeModal, setShowBulkUpgradeModal] = useState(false)
   const [quotaData, setQuotaData] = useState<{ used: number; limit: number; remaining: number; month: string; plan: string } | null>(null)
   const [sourceMeta, setSourceMeta] = useState<SourceMeta | null>(null)
+  const [videosMeta, setVideosMeta] = useState<VideoMeta[]>([])
 
   // Pre-fill URL from query param
   useEffect(() => {
@@ -138,26 +141,109 @@ function ToolPageContent() {
       setShowAuthGate(true)
       return
     }
+
+    // Detect multi-video: are there multiple distinct video URLs?
+    const uniqueVideoUrls = Array.from(new Set(comments.map(c => c.videoUrl ?? c.videoTitle ?? '').filter(Boolean)))
+    const isMultiVideo = uniqueVideoUrls.length > 1
+
+    // Group comments by video (preserving order)
+    const videoGroups: { url: string; title: string; channelName: string; comments: Comment[] }[] = []
+    for (const c of comments) {
+      const key = c.videoUrl ?? c.videoTitle ?? ''
+      const existing = videoGroups.find(g => g.url === key)
+      if (existing) {
+        existing.comments.push(c)
+      } else {
+        videoGroups.push({ url: c.videoUrl ?? '', title: c.videoTitle ?? '', channelName: c.channelName ?? '', comments: [c] })
+      }
+    }
+
+    // Excel: handle separately (binary output)
+    if (fmt === 'Excel') {
+      const wb = XLSX.utils.book_new()
+      const colHeaders = ['Type', 'VideoTitle', 'VideoURL', 'Channel', 'Author', 'Comment', 'Likes', 'Date']
+      if (isMultiVideo) {
+        // Separate sheet per video
+        for (const vg of videoGroups) {
+          const rows: (string | number)[][] = [colHeaders]
+          for (const c of vg.comments) {
+            rows.push(['comment', vg.title, vg.url, vg.channelName, c.author, c.text, c.likes, c.date])
+            for (const r of c.replyList ?? []) {
+              rows.push(['reply', vg.title, vg.url, vg.channelName, r.author, r.text, r.likes, r.date])
+            }
+          }
+          const ws = XLSX.utils.aoa_to_sheet(rows)
+          const sheetName = (vg.title || vg.url).slice(0, 31).replace(/[\\/*?[\]:]/g, '_')
+          XLSX.utils.book_append_sheet(wb, ws, sheetName || `Video${videoGroups.indexOf(vg) + 1}`)
+        }
+      } else {
+        const rows: (string | number)[][] = [colHeaders]
+        for (const c of comments) {
+          const vt = c.videoTitle ?? ''; const vu = c.videoUrl ?? ''; const ch = c.channelName ?? ''
+          rows.push(['comment', vt, vu, ch, c.author, c.text, c.likes, c.date])
+          for (const r of c.replyList ?? []) {
+            rows.push(['reply', vt, vu, ch, r.author, r.text, r.likes, r.date])
+          }
+        }
+        const ws = XLSX.utils.aoa_to_sheet(rows)
+        XLSX.utils.book_append_sheet(wb, ws, 'Comments')
+      }
+      const xlsxBuf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
+      const blob = new Blob([xlsxBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const dlUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = dlUrl; a.download = 'youtube-comments.xlsx'; a.click()
+      URL.revokeObjectURL(dlUrl)
+      return
+    }
+
     let content = ''
     let mimeType = 'text/plain'
     let ext = 'txt'
     if (fmt === 'CSV') {
-      const rows = ['Type,VideoTitle,Channel,Author,Comment,Likes,Date']
-      let lastVideoTitle = ''
-      for (const c of comments) {
-        const vt = c.videoTitle ?? ''; const ch = c.channelName ?? ''
-        if (vt && vt !== lastVideoTitle) {
-          rows.push(`video,"${vt.replace(/"/g, '""')}","${ch.replace(/"/g, '""')}","","","",""`); lastVideoTitle = vt
+      if (isMultiVideo) {
+        const colHeaders = 'Type,VideoTitle,VideoURL,Channel,Author,Comment,Likes,Date'
+        const sections: string[] = []
+        for (const vg of videoGroups) {
+          const q = (s: string) => `"${s.replace(/"/g, '""')}"`
+          const rows: string[] = [
+            `VIDEO: ${q(vg.title)} (${q(vg.url)})`,
+            colHeaders,
+          ]
+          for (const c of vg.comments) {
+            rows.push(`comment,${q(vg.title)},${q(vg.url)},${q(vg.channelName)},${q(c.author)},${q(c.text)},${c.likes},${q(c.date)}`)
+            for (const r of c.replyList ?? []) {
+              rows.push(`reply,${q(vg.title)},${q(vg.url)},${q(vg.channelName)},${q(r.author)},${q(r.text)},${r.likes},${q(r.date)}`)
+            }
+          }
+          sections.push(rows.join('\n'))
         }
-        rows.push(`comment,"${vt.replace(/"/g, '""')}","${ch.replace(/"/g, '""')}","${c.author}","${c.text.replace(/"/g, '""')}",${c.likes},"${c.date}"`)
-        for (const r of c.replyList ?? []) {
-          rows.push(`reply,"${vt.replace(/"/g, '""')}","${ch.replace(/"/g, '""')}","${r.author}","${r.text.replace(/"/g, '""')}",${r.likes},"${r.date}"`)
+        content = sections.join('\n\n')
+      } else {
+        const rows = ['Type,VideoTitle,Channel,Author,Comment,Likes,Date']
+        for (const c of comments) {
+          const vt = c.videoTitle ?? ''; const ch = c.channelName ?? ''
+          rows.push(`comment,"${vt.replace(/"/g, '""')}","${ch.replace(/"/g, '""')}","${c.author}","${c.text.replace(/"/g, '""')}",${c.likes},"${c.date}"`)
+          for (const r of c.replyList ?? []) {
+            rows.push(`reply,"${vt.replace(/"/g, '""')}","${ch.replace(/"/g, '""')}","${r.author}","${r.text.replace(/"/g, '""')}",${r.likes},"${r.date}"`)
+          }
         }
+        content = rows.join('\n')
       }
-      content = rows.join('\n')
       mimeType = 'text/csv'; ext = 'csv'
     } else if (fmt === 'JSON') {
-      content = JSON.stringify(comments, null, 2); mimeType = 'application/json'; ext = 'json'
+      if (isMultiVideo) {
+        const structured = videoGroups.map(vg => {
+          const videoId = vg.url.match(/(?:v=)([a-zA-Z0-9_-]{11})/)?.[1] ?? ''
+          return {
+            video: { title: vg.title, url: vg.url, videoId, channelName: vg.channelName },
+            comments: vg.comments,
+          }
+        })
+        content = JSON.stringify(structured, null, 2)
+      } else {
+        content = JSON.stringify(comments, null, 2)
+      }
+      mimeType = 'application/json'; ext = 'json'
     } else if (fmt === 'HTML') {
       const avatarColors = ['#1565C0','#2E7D32','#6A1B9A','#AD1457','#E65100','#00695C','#4527A0','#283593','#00838F','#558B2F']
       const getAvatarColor = (name: string) => {
@@ -190,16 +276,7 @@ function ToolPageContent() {
   </div>
 </div>`
       }
-      let lastVideoTitle = ''
-      const commentRows = comments.map(c => {
-        let videoHeader = ''
-        if (c.videoTitle && c.videoTitle !== lastVideoTitle) {
-          lastVideoTitle = c.videoTitle
-          videoHeader = `<div class="video-header">
-  <div class="video-title"><a href="${c.videoUrl ?? '#'}" target="_blank">${escapeHtml(c.videoTitle)}</a></div>
-  <div class="video-channel">${escapeHtml(c.channelName ?? '')}</div>
-</div>`
-        }
+      const renderCommentThread = (c: Comment) => {
         const replyItems = (c.replyList ?? []).map(r => renderComment(r, 'small')).join('\n')
         const repliesSection = (c.replyList ?? []).length > 0
           ? `<details class="replies-section">
@@ -209,11 +286,33 @@ ${replyItems}
   </div>
 </details>`
           : ''
-        return `${videoHeader}<div class="comment-thread">
+        return `<div class="comment-thread">
 ${renderComment(c, 'large')}
 ${repliesSection}
 </div>`
-      }).join('\n')
+      }
+
+      let commentRows: string
+      if (isMultiVideo) {
+        commentRows = videoGroups.map(vg => {
+          const videoId = vg.url.match(/(?:v=)([a-zA-Z0-9_-]{11})/)?.[1] ?? ''
+          const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : ''
+          const threads = vg.comments.map(renderCommentThread).join('\n')
+          return `<div class="video-section">
+<div class="video-section-header">
+  ${thumbUrl ? `<img src="${thumbUrl}" alt="thumbnail" class="video-section-thumb" />` : ''}
+  <div class="video-section-meta">
+    <h2 class="video-section-title"><a href="${escapeHtml(vg.url)}" target="_blank">${escapeHtml(vg.title)}</a></h2>
+    ${vg.channelName ? `<div class="video-section-channel">${escapeHtml(vg.channelName)}</div>` : ''}
+    <a href="${escapeHtml(vg.url)}" target="_blank" class="video-section-url">${escapeHtml(vg.url)}</a>
+  </div>
+</div>
+${threads}
+</div>`
+        }).join('\n<hr class="video-divider" />\n')
+      } else {
+        commentRows = comments.map(renderCommentThread).join('\n')
+      }
       const exportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       let exportHeaderHtml = ''
       if (sourceMeta) {
@@ -285,11 +384,24 @@ ${repliesSection}
   .video-title a { color: #f1f1f1; text-decoration: none; }
   .video-title a:hover { color: #3ea6ff; }
   .video-channel { font-size: 12px; color: #aaaaaa; }
+  .video-section { margin-bottom: 40px; }
+  .video-section-header { display: flex; gap: 16px; align-items: flex-start; background: #161616; border: 1px solid #272727; border-radius: 12px; padding: 16px; margin-bottom: 24px; }
+  .video-section-thumb { width: 160px; height: 90px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .video-section-meta { flex: 1; min-width: 0; }
+  .video-section-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; line-height: 1.4; }
+  .video-section-title a { color: #f1f1f1; text-decoration: none; }
+  .video-section-title a:hover { color: #3ea6ff; }
+  .video-section-channel { font-size: 13px; color: #aaaaaa; margin-bottom: 4px; }
+  .video-section-url { font-size: 12px; color: #555555; text-decoration: none; word-break: break-all; }
+  .video-section-url:hover { color: #3ea6ff; }
+  .video-divider { border: none; border-top: 2px solid #272727; margin: 40px 0; }
   .watermark { text-align: center; margin-top: 48px; padding-top: 20px; border-top: 1px solid #272727; font-size: 12px; color: #555555; }
   .watermark a { color: #3ea6ff; text-decoration: none; }
   @media (max-width: 520px) {
     .export-video-card { flex-direction: column; }
     .export-video-thumb { width: 100%; height: auto; aspect-ratio: 16/9; }
+    .video-section-header { flex-direction: column; }
+    .video-section-thumb { width: 100%; height: auto; aspect-ratio: 16/9; }
   }
 </style>
 </head>
@@ -305,21 +417,26 @@ ${commentRows}
 </html>`
       mimeType = 'text/html'; ext = 'html'
     } else {
-      const blocks: string[] = []
-      let lastVideoTitle = ''
-      for (const c of comments) {
-        if (c.videoTitle && c.videoTitle !== lastVideoTitle) {
-          const sep = '═'.repeat(60)
-          blocks.push(`${sep}\n📹  ${c.videoTitle}\n    ${c.channelName ?? ''}\n    ${c.videoUrl ?? ''}\n${sep}`)
-          lastVideoTitle = c.videoTitle
-        }
+      const sep = '═'.repeat(40)
+      const buildCommentBlock = (c: Comment) => {
         let block = `${c.author} · ${c.date} · ${c.likes} likes\n${c.text}`
         for (const r of c.replyList ?? []) {
           block += `\n\n  ↳ ${r.author} · ${r.date} · ${r.likes} likes\n    ${r.text}`
         }
-        blocks.push(block)
+        return block
       }
-      content = blocks.join('\n\n' + '─'.repeat(60) + '\n\n')
+      if (isMultiVideo) {
+        const sections: string[] = []
+        for (const vg of videoGroups) {
+          const header = `${sep}\nVIDEO: ${vg.title}\nURL: ${vg.url}\n${sep}`
+          const commentBlocks = vg.comments.map(buildCommentBlock).join('\n\n' + '─'.repeat(40) + '\n\n')
+          sections.push(`${header}\n\n${commentBlocks}`)
+        }
+        content = sections.join('\n\n')
+      } else {
+        const blocks = comments.map(buildCommentBlock)
+        content = blocks.join('\n\n' + '─'.repeat(40) + '\n\n')
+      }
       ext = 'txt'
     }
     const blob = new Blob([content], { type: mimeType })
@@ -344,8 +461,9 @@ ${commentRows}
       return
     }
 
-    setLoading(true); setDone(false); setProgress(0); setComments([])
+    setLoading(true); setDone(false); setProgress(0); setComments([]); setVideosMeta([])
     const allComments: Comment[] = []
+    const collectedVideosMeta: VideoMeta[] = []
     const maxCommentsParsed = parseInt(maxComments) || 100
     let pendingMeta: SourceMeta | null = null
 
@@ -465,15 +583,23 @@ ${commentRows}
             const videoComments: Comment[] = data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
             allComments.push(...videoComments)
             videosProcessed++
-            if (!pendingMeta && videoComments[0]) {
+            if (videoComments[0]) {
               const fc = videoComments[0]
-              const videoId = fc.videoUrl?.match(/(?:v=)([a-zA-Z0-9_-]{11})/)?.[1]
-              pendingMeta = {
-                kind: 'video',
+              const videoId = fc.videoUrl?.match(/(?:v=)([a-zA-Z0-9_-]{11})/)?.[1] ?? parsed.id ?? ''
+              collectedVideosMeta.push({
+                videoId,
                 title: fc.videoTitle ?? '',
-                channelName: fc.channelName ?? undefined,
-                sourceUrl: fc.videoUrl ?? url,
-                thumbnailUrl: videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : undefined,
+                url: fc.videoUrl ?? url,
+                thumbnailUrl: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+              })
+              if (!pendingMeta) {
+                pendingMeta = {
+                  kind: 'video',
+                  title: fc.videoTitle ?? '',
+                  channelName: fc.channelName ?? undefined,
+                  sourceUrl: fc.videoUrl ?? url,
+                  thumbnailUrl: videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : undefined,
+                }
               }
             }
             if (isSignedIn && videoComments.length > 0) {
@@ -520,6 +646,7 @@ ${commentRows}
         if (isSignedIn) fetchQuota()
       }
       setSourceMeta(pendingMeta)
+      setVideosMeta(collectedVideosMeta)
       if (allComments.length > 0) setDone(true)
     } catch {
       const mockMeta = { videoTitle: 'Sample YouTube Video — Tutorial & Deep Dive', channelName: 'CreatorChannel', videoUrl: urls[0] }
@@ -730,8 +857,43 @@ ${commentRows}
 
         {done && comments.length > 0 && (
           <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
-            {/* Video / channel / playlist header card */}
-            {sourceMeta && (
+            {/* Video tile grid — shown for individual video exports (single or multi) */}
+            {videosMeta.length > 0 && (
+              <div className="p-4 sm:p-5 border-b border-white/[0.07] bg-[#111111]">
+                <div className={`grid gap-3 ${videosMeta.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+                  {videosMeta.map((vm) => (
+                    <div key={vm.videoId} className="bg-[#171717] border border-white/[0.07] rounded-xl overflow-hidden relative group">
+                      <div className="relative">
+                        <img
+                          src={vm.thumbnailUrl}
+                          alt={vm.title}
+                          className="w-full aspect-video object-cover"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                        />
+                        <button
+                          onClick={() => {
+                            const idx = urls.findIndex(u => {
+                              const p = parseYouTubeUrl(u)
+                              return ('id' in p && p.id === vm.videoId) || u.includes(vm.videoId)
+                            })
+                            if (idx >= 0) removeUrl(idx)
+                          }}
+                          className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Remove from batch"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                      <div className="p-2.5">
+                        <div className="text-white text-xs font-medium line-clamp-2 leading-snug">{vm.title || 'YouTube Video'}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Channel / playlist header card — shown only for bulk exports */}
+            {sourceMeta && sourceMeta.kind !== 'video' && videosMeta.length === 0 && (
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-4 sm:p-5 border-b border-white/[0.07] bg-[#111111]">
                 {sourceMeta.thumbnailUrl && (
                   <img
@@ -755,12 +917,12 @@ ${commentRows}
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="text-white font-semibold text-sm sm:text-base leading-snug line-clamp-2">
-                    {sourceMeta.title || (sourceMeta.kind === 'channel' ? 'Channel' : sourceMeta.kind === 'playlist' ? 'Playlist' : 'Video')}
+                    {sourceMeta.title || (sourceMeta.kind === 'channel' ? 'Channel' : 'Playlist')}
                   </div>
                   {sourceMeta.channelName && (
                     <div className="text-[#888888] text-xs mt-1">{sourceMeta.channelName}</div>
                   )}
-                  {sourceMeta.kind !== 'video' && sourceMeta.videoCount != null && (
+                  {sourceMeta.videoCount != null && (
                     <div className="text-[#666666] text-xs mt-0.5">{sourceMeta.videoCount} video{sourceMeta.videoCount !== 1 ? 's' : ''}</div>
                   )}
                 </div>
@@ -772,7 +934,7 @@ ${commentRows}
                 <span className="text-[#888888] text-sm ml-2">({comments.length} comments)</span>
               </div>
               <div className="flex gap-3 flex-wrap">
-                <button onClick={() => { setDone(false); setComments([]); setUrls(['']); setSourceMeta(null) }} className="text-[#888888] hover:text-white text-sm transition-colors min-h-[36px]">Export another</button>
+                <button onClick={() => { setDone(false); setComments([]); setUrls(['']); setSourceMeta(null); setVideosMeta([]) }} className="text-[#888888] hover:text-white text-sm transition-colors min-h-[36px]">Export another</button>
                 <button onClick={() => downloadComments(comments, format)}
                   className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 min-h-[36px]">
                   <Download className="w-4 h-4" /> Download {format}
