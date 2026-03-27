@@ -158,24 +158,35 @@ export default async function DashboardPage({
     }
   } catch { /* non-fatal */ }
 
-  // Fetch export history — gracefully handle if table doesn't exist yet
-  let allExports: ExportRecord[] = []
+  // Fetch recent exports for display (capped for UI)
+  let recentExports: ExportRecord[] = []
   try {
     const { data } = await supabase
       .from('exports')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(100)
-    allExports = (data as ExportRecord[]) ?? []
+      .limit(10)
+    recentExports = (data as ExportRecord[]) ?? []
   } catch { /* table may not exist yet */ }
 
-  // Stats
+  // Stats — use aggregate queries so counts are never capped
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const thisMonth = allExports.filter(e => e.created_at >= startOfMonth)
-  const exportsThisMonth = thisMonth.length
-  const commentsThisMonth = thisMonth.reduce((s, e) => s + (e.comment_count ?? 0), 0)
-  const recentExports = allExports.slice(0, 10)
+
+  let exportsThisMonth = 0
+  let commentsThisMonth = 0
+  let totalExports = 0
+
+  try {
+    const [countAllRes, countMonthRes, sumMonthRes] = await Promise.all([
+      supabase.from('exports').select('*', { count: 'exact', head: true }),
+      supabase.from('exports').select('*', { count: 'exact', head: true }).gte('created_at', startOfMonth),
+      supabase.from('exports').select('comment_count').gte('created_at', startOfMonth),
+    ])
+    totalExports = countAllRes.count ?? 0
+    exportsThisMonth = countMonthRes.count ?? 0
+    commentsThisMonth = (sumMonthRes.data ?? []).reduce((s, e) => s + (e.comment_count ?? 0), 0)
+  } catch { /* non-fatal */ }
 
   return (
     <div className="flex-1 flex flex-col">
@@ -204,7 +215,7 @@ export default async function DashboardPage({
           {[
             { label: 'Exports This Month', value: exportsThisMonth.toLocaleString() },
             { label: 'Comments Downloaded', value: commentsThisMonth.toLocaleString() },
-            { label: 'Total Exports', value: allExports.length.toLocaleString() },
+            { label: 'Total Exports', value: totalExports.toLocaleString() },
           ].map(s => (
             <div key={s.label} className="bg-[#171717] border border-white/[0.07] rounded-xl p-5">
               <div className="text-2xl font-bold text-white mb-1">{s.value}</div>
@@ -222,8 +233,8 @@ export default async function DashboardPage({
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-8">
           <div className="p-5 border-b border-white/[0.07] flex items-center justify-between">
             <h2 className="font-semibold text-white">Recent Exports</h2>
-            {allExports.length > 10 && (
-              <span className="text-[#888888] text-xs">{allExports.length} total</span>
+            {totalExports > 10 && (
+              <span className="text-[#888888] text-xs">{totalExports.toLocaleString()} total</span>
             )}
           </div>
 
