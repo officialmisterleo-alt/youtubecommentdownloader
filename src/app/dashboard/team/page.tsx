@@ -252,6 +252,7 @@ export default function TeamPage() {
                 const d = await res.json()
                 if (!res.ok) { showToast(d.error ?? 'Failed to create team', false); return }
                 showToast('Team created!')
+                setTimeout(() => window.location.reload(), 1500)
                 await fetchTeam()
               }}
               className="bg-red-600 hover:bg-red-700 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition-colors"
