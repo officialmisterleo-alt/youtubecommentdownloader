@@ -3,8 +3,45 @@ import { redirect } from 'next/navigation'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient, getUserTeam } from '@/lib/teams'
-import { Plus, Key, Users, ExternalLink, FileText } from 'lucide-react'
+import { Plus, Key, Users, ExternalLink, FileText, ShieldCheck } from 'lucide-react'
 import QuotaBar from '@/components/QuotaBar'
+import { getApiKeys } from '@/lib/youtube-api'
+import { getErrorLog } from '@/lib/alerts'
+
+function AdminApiHealthWidget() {
+  const configuredKeys = getApiKeys()
+  const recentErrors = getErrorLog()
+  const lastError = recentErrors[recentErrors.length - 1]
+
+  return (
+    <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 mb-8">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-[#888888]" />
+          <h2 className="font-semibold text-white text-sm">API Health</h2>
+          <span className="text-xs text-[#555555]">admin</span>
+        </div>
+        <Link href="/api/admin/api-health" target="_blank" className="text-red-400 hover:text-red-300 text-xs">
+          Raw JSON →
+        </Link>
+      </div>
+      <div className="flex items-center gap-4">
+        <div>
+          <span className="text-white font-semibold">{configuredKeys.length}</span>
+          <span className="text-[#888888] text-xs ml-1">/ 5 keys configured</span>
+        </div>
+        {lastError && (
+          <div className="text-xs text-yellow-500/80 truncate max-w-xs">
+            Last alert: {lastError.event} — {lastError.timestamp.slice(0, 16).replace('T', ' ')}
+          </div>
+        )}
+        {!lastError && (
+          <div className="text-xs text-green-500/70">No errors logged this session</div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 type ExportRecord = {
   id: string
@@ -247,6 +284,11 @@ export default async function DashboardPage({
             </div>
           )}
         </div>
+
+        {/* Admin: API Health */}
+        {user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL && (
+          <AdminApiHealthWidget />
+        )}
 
         {/* API Key + Team */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
