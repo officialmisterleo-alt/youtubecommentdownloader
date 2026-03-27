@@ -316,8 +316,10 @@ ${threads}
       const exportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       let exportHeaderHtml = ''
       if (sourceMeta) {
+        // Only show the top video card for single-video or bulk (channel/playlist) exports.
+        // Multi-video exports already show per-video headers in each section block.
         let videoCardHtml = ''
-        if (sourceMeta.title || sourceMeta.thumbnailUrl) {
+        if (!isMultiVideo && (sourceMeta.title || sourceMeta.thumbnailUrl)) {
           videoCardHtml = `<div class="export-video-card">
   ${sourceMeta.thumbnailUrl ? `<img src="${sourceMeta.thumbnailUrl}" alt="thumbnail" class="export-video-thumb" onerror="this.onerror=null;this.src=this.src.includes('hqdefault')?this.src.replace('hqdefault','mqdefault'):'';if(!this.src)this.style.display='none'" />` : ''}
   <div class="export-video-meta">
