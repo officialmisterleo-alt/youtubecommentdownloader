@@ -1,185 +1,198 @@
-'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import type { User } from '@supabase/supabase-js'
-import { LogOut, User as UserIcon, CreditCard, ExternalLink, Mail, Lock, Users } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/teams'
+import { User as UserIcon, CreditCard, Users } from 'lucide-react'
+import { SignOutButton } from '@/components/account/SignOutButton'
+import { ManageBillingButton } from '@/components/account/ManageBillingButton'
+import { SecuritySection } from '@/components/account/SecuritySection'
+import { LeaveTeamSection } from '@/components/account/LeaveTeamSection'
+import { CardSkeleton } from '@/components/skeletons/CardSkeleton'
 
-type Subscription = { plan: string; status: string; current_period_end: string | null; lifetime: boolean | null }
-type TeamMembership = { memberId: string; teamName: string | null; role: string; ownerName: string | null }
-type AccountMe = { effectivePlan: string; teamMembership: TeamMembership | null }
+// ── Async data sub-components ──────────────────────────────────────────────
 
-export default function AccountPage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [subscription, setSubscription] = useState<Subscription | null>(null)
-  const [accountMe, setAccountMe] = useState<AccountMe | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [billingLoading, setBillingLoading] = useState(false)
-  const [leaveLoading, setLeaveLoading] = useState(false)
-  const [leaveConfirm, setLeaveConfirm] = useState(false)
+async function AccountPlanCard({ userId }: { userId: string }) {
+  let planLabel = 'Free'
+  let effectivePlan = 'free'
+  let isLifetime = false
+  let isPaidActive = false
+  let periodEnd: string | null = null
+  let isTeamMember = false
 
-  // Change email
-  const [newEmail, setNewEmail] = useState('')
-  const [emailMsg, setEmailMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [emailLoading, setEmailLoading] = useState(false)
+  try {
+    const serviceClient = createServiceClient()
 
-  // Change password
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [passwordLoading, setPasswordLoading] = useState(false)
+    // Get own subscription
+    const { data: sub } = await serviceClient
+      .from('subscriptions')
+      .select('plan, status, current_period_end, lifetime')
+      .eq('user_id', userId)
+      .single()
 
-  const router = useRouter()
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) {
-        router.push('/auth/login')
-      } else {
-        setUser(user)
-        const [{ data: sub }, meRes] = await Promise.all([
-          supabase
-            .from('subscriptions')
-            .select('plan, status, current_period_end, lifetime')
-            .eq('user_id', user.id)
-            .single(),
-          fetch('/api/account/me'),
-        ])
-        setSubscription(sub)
-        if (meRes.ok) {
-          const me = await meRes.json() as AccountMe
-          setAccountMe(me)
-        }
-      }
-      setLoading(false)
-    })
-  }, [router])
-
-  async function handleManageBilling() {
-    setBillingLoading(true)
-    try {
-      const res = await fetch('/api/stripe/portal')
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
-      }
-    } finally {
-      setBillingLoading(false)
+    isLifetime = sub?.lifetime === true
+    const ownPlan = (sub?.status === 'active' ? sub.plan : 'free') ?? 'free'
+    effectivePlan = ownPlan
+    isPaidActive = !!(sub && sub.plan !== 'free' && sub.status === 'active')
+    if (isPaidActive && sub?.current_period_end) {
+      periodEnd = new Date(sub.current_period_end).toLocaleDateString()
     }
-  }
 
-  async function handleLeaveTeam() {
-    const memberId = accountMe?.teamMembership?.memberId
-    if (!memberId) return
-    setLeaveLoading(true)
-    try {
-      const res = await fetch(`/api/teams/members/${memberId}`, { method: 'DELETE' })
-      if (res.ok) {
-        window.location.reload()
-      } else {
-        const data = await res.json() as { error?: string }
-        alert(data.error ?? 'Failed to leave team')
+    // Check team membership for effective plan
+    const { data: membership } = await serviceClient
+      .from('team_members')
+      .select('id, role, status, teams(id, name, plan, owner_id)')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single()
+
+    if (membership) {
+      const team = membership.teams as unknown as { id: string; name: string; plan: string } | null
+      const teamPlan = team?.plan ?? 'free'
+      isTeamMember = membership.role === 'member'
+      if ((effectivePlan === 'free' || effectivePlan === 'pro') && (teamPlan === 'business' || teamPlan === 'enterprise')) {
+        effectivePlan = teamPlan
       }
-    } finally {
-      setLeaveLoading(false)
-      setLeaveConfirm(false)
     }
-  }
 
-  async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/')
-  }
-
-  async function handleChangeEmail(e: React.FormEvent) {
-    e.preventDefault()
-    if (!newEmail.trim()) return
-    setEmailLoading(true)
-    setEmailMsg(null)
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
-    if (error) {
-      setEmailMsg({ type: 'error', text: error.message })
+    // Build plan label
+    if (isLifetime) {
+      planLabel = 'Pro (Lifetime)'
+    } else if (isTeamMember && effectivePlan !== ownPlan) {
+      const ep = effectivePlan.charAt(0).toUpperCase() + effectivePlan.slice(1)
+      const team = (await serviceClient
+        .from('team_members')
+        .select('teams(name)')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single()).data
+      const teamName = (team?.teams as unknown as { name?: string } | null)?.name ?? 'team'
+      planLabel = `${ep} (via ${teamName})`
     } else {
-      setEmailMsg({ type: 'success', text: 'Check both inboxes for confirmation links — your email will update once confirmed.' })
-      setNewEmail('')
+      planLabel = effectivePlan.charAt(0).toUpperCase() + effectivePlan.slice(1)
     }
-    setEmailLoading(false)
-  }
+  } catch { /* non-fatal */ }
 
-  async function handleChangePassword(e: React.FormEvent) {
-    e.preventDefault()
-    if (newPassword !== confirmPassword) {
-      setPasswordMsg({ type: 'error', text: 'Passwords do not match.' })
-      return
-    }
-    if (newPassword.length < 8) {
-      setPasswordMsg({ type: 'error', text: 'Password must be at least 8 characters.' })
-      return
-    }
-    setPasswordLoading(true)
-    setPasswordMsg(null)
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
-    if (error) {
-      setPasswordMsg({ type: 'error', text: error.message })
-    } else {
-      setPasswordMsg({ type: 'success', text: 'Password updated successfully.' })
-      setNewPassword('')
-      setConfirmPassword('')
-    }
-    setPasswordLoading(false)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/10 border-t-red-600 rounded-full animate-spin" />
+  return (
+    <div className="px-6 py-4 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <CreditCard className="w-4 h-4 text-[#555555] shrink-0" />
+        <div>
+          <div className="text-xs text-[#555555] mb-0.5">Current Plan</div>
+          <div className="text-white text-sm">{planLabel}</div>
+          {isPaidActive && (
+            <div className="text-xs text-[#555555] mt-0.5">
+              Status: active{periodEnd ? ` · Renews ${periodEnd}` : ''}
+            </div>
+          )}
+        </div>
       </div>
-    )
-  }
+      {effectivePlan === 'free' && !isTeamMember ? (
+        <Link
+          href="/pricing"
+          className="inline-flex items-center text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
+        >
+          Upgrade
+        </Link>
+      ) : !isLifetime && !isTeamMember ? (
+        <ManageBillingButton />
+      ) : null}
+    </div>
+  )
+}
 
-  if (!user) return null
+async function AccountTeamCard({ userId }: { userId: string }) {
+  let memberId: string | null = null
+  let teamName: string | null = null
+  let role: string | null = null
+
+  try {
+    const serviceClient = createServiceClient()
+    const { data: membership } = await serviceClient
+      .from('team_members')
+      .select('id, role, status, teams(id, name, plan, owner_id)')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single()
+
+    if (membership) {
+      memberId = membership.id as string
+      role = membership.role as string
+      const team = membership.teams as unknown as { name?: string } | null
+      teamName = team?.name ?? null
+    }
+  } catch { /* non-fatal */ }
+
+  if (!memberId) return null
+
+  const isTeamMember = role === 'member'
+
+  return (
+    <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
+      <div className="p-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Users className="w-4 h-4 text-[#555555] shrink-0" />
+          <div>
+            <div className="text-xs text-[#555555] mb-0.5">Team</div>
+            {isTeamMember ? (
+              <div className="text-white text-sm">
+                {teamName ?? 'Your Team'}
+                <span className="text-[#555555] ml-2 text-xs capitalize">{role}</span>
+              </div>
+            ) : (
+              <div className="text-white text-sm">{teamName ?? 'Your Team'}</div>
+            )}
+          </div>
+        </div>
+        {isTeamMember ? (
+          <LeaveTeamSection memberId={memberId} />
+        ) : (
+          <Link
+            href="/dashboard/team"
+            className="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Manage Team →
+          </Link>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PlanRowSkeleton() {
+  return (
+    <div className="px-6 py-4 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <div className="w-4 h-4 bg-white/5 animate-pulse rounded" />
+        <div>
+          <div className="h-3 w-20 bg-white/5 animate-pulse rounded mb-1" />
+          <div className="h-4 w-24 bg-white/5 animate-pulse rounded" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────
+
+export default async function AccountPage() {
+  // Auth check — must complete before any streaming starts
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
 
   const displayName = user.user_metadata?.full_name || user.user_metadata?.name || null
   const initials = displayName ? displayName[0].toUpperCase() : (user.email?.[0]?.toUpperCase() ?? 'U')
   const isGoogleUser = user.app_metadata?.provider === 'google'
-
-  const ownPlan = subscription?.plan ?? 'free'
-  const effectivePlan = accountMe?.effectivePlan ?? ownPlan
-  const teamMembership = accountMe?.teamMembership ?? null
-  const isTeamMember = teamMembership !== null && teamMembership.role === 'member'
-  const isLifetime = subscription?.lifetime === true
-
-  // Plan label: if inheriting from team, show "Business (via Acme Team)"
-  let planLabel: string
-  if (isLifetime) {
-    planLabel = 'Pro (Lifetime)'
-  } else if (isTeamMember && effectivePlan !== ownPlan) {
-    const ep = effectivePlan.charAt(0).toUpperCase() + effectivePlan.slice(1)
-    planLabel = `${ep} (via ${teamMembership.teamName ?? 'team'})`
-  } else {
-    planLabel = effectivePlan.charAt(0).toUpperCase() + effectivePlan.slice(1)
-  }
-
-  const isPaidActive = subscription && subscription.plan !== 'free' && subscription.status === 'active'
-  const periodEnd = isPaidActive && subscription.current_period_end
-    ? new Date(subscription.current_period_end).toLocaleDateString()
-    : null
-
-  const inputClass = 'w-full bg-[#0a0a0a] border border-white/[0.07] rounded-xl px-4 py-2.5 text-white placeholder-[#555555] focus:outline-none focus:border-red-600/50 text-sm'
-  const btnPrimary = 'bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors disabled:cursor-not-allowed'
 
   return (
     <div className="flex-1 flex flex-col">
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 py-10">
         <h1 className="text-2xl font-bold text-white mb-8">Account</h1>
 
-        {/* Profile card */}
+        {/* Profile + Plan card — profile renders immediately, plan row streams in */}
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
+          {/* Profile header — renders immediately */}
           <div className="p-6 border-b border-white/[0.07] flex items-center gap-4">
             <div className="w-14 h-14 bg-red-900 rounded-full flex items-center justify-center text-red-200 text-xl font-bold shrink-0">
               {initials}
@@ -190,7 +203,7 @@ export default function AccountPage() {
             </div>
           </div>
 
-          {/* Email row */}
+          {/* Email row — renders immediately */}
           <div className="px-6 py-4 flex items-center gap-3 border-b border-white/[0.07]">
             <UserIcon className="w-4 h-4 text-[#555555] shrink-0" />
             <div>
@@ -199,177 +212,25 @@ export default function AccountPage() {
             </div>
           </div>
 
-          {/* Plan row */}
-          <div className="px-6 py-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <CreditCard className="w-4 h-4 text-[#555555] shrink-0" />
-              <div>
-                <div className="text-xs text-[#555555] mb-0.5">Current Plan</div>
-                <div className="text-white text-sm">{planLabel}</div>
-                {isPaidActive && (
-                  <div className="text-xs text-[#555555] mt-0.5">
-                    Status: {subscription.status}{periodEnd ? ` · Renews ${periodEnd}` : ''}
-                  </div>
-                )}
-              </div>
-            </div>
-            {effectivePlan === 'free' && !isTeamMember ? (
-              <Link
-                href="/pricing"
-                className="inline-flex items-center text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                Upgrade
-              </Link>
-            ) : !isLifetime && !isTeamMember ? (
-              <button
-                onClick={handleManageBilling}
-                disabled={billingLoading}
-                className="inline-flex items-center gap-1.5 text-xs text-[#888888] hover:text-white border border-white/[0.07] hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ExternalLink className="w-3 h-3" />
-                {billingLoading ? 'Loading...' : 'Manage Billing'}
-              </button>
-            ) : null}
-          </div>
+          {/* Plan row — streams in */}
+          <Suspense fallback={<PlanRowSkeleton />}>
+            <AccountPlanCard userId={user.id} />
+          </Suspense>
         </div>
 
-        {/* Security card — email/password users only */}
-        {!isGoogleUser && (
-          <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
-            <div className="p-6 border-b border-white/[0.07]">
-              <h2 className="text-sm font-semibold text-white">Security</h2>
-              <p className="text-[#555555] text-xs mt-1">Update your email address or password.</p>
-            </div>
+        {/* Security card — no data fetch needed, renders immediately (email/password users only) */}
+        {!isGoogleUser && <SecuritySection />}
 
-            {/* Change email */}
-            <form onSubmit={handleChangeEmail} className="p-6 border-b border-white/[0.07]">
-              <div className="flex items-center gap-2 mb-4">
-                <Mail className="w-4 h-4 text-[#555555]" />
-                <span className="text-sm font-medium text-white">Change Email</span>
-              </div>
-              <div className="space-y-3">
-                <input
-                  type="email"
-                  value={newEmail}
-                  onChange={e => setNewEmail(e.target.value)}
-                  placeholder="New email address"
-                  required
-                  className={inputClass}
-                />
-                {emailMsg && (
-                  <p className={`text-xs ${emailMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-                    {emailMsg.text}
-                  </p>
-                )}
-                <button type="submit" disabled={emailLoading} className={btnPrimary}>
-                  {emailLoading ? 'Sending...' : 'Update Email'}
-                </button>
-              </div>
-            </form>
-
-            {/* Change password */}
-            <form onSubmit={handleChangePassword} className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Lock className="w-4 h-4 text-[#555555]" />
-                <span className="text-sm font-medium text-white">Change Password</span>
-              </div>
-              <div className="space-y-3">
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  placeholder="New password"
-                  required
-                  className={inputClass}
-                />
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                  required
-                  className={inputClass}
-                />
-                {passwordMsg && (
-                  <p className={`text-xs ${passwordMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-                    {passwordMsg.text}
-                  </p>
-                )}
-                <button type="submit" disabled={passwordLoading} className={btnPrimary}>
-                  {passwordLoading ? 'Updating...' : 'Update Password'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Team card */}
-        {teamMembership && (
-          <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
-            <div className="p-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Users className="w-4 h-4 text-[#555555] shrink-0" />
-                <div>
-                  <div className="text-xs text-[#555555] mb-0.5">Team</div>
-                  {isTeamMember ? (
-                    <div className="text-white text-sm">
-                      {teamMembership.teamName ?? 'Your Team'}
-                      <span className="text-[#555555] ml-2 text-xs capitalize">{teamMembership.role}</span>
-                    </div>
-                  ) : (
-                    <div className="text-white text-sm">{teamMembership.teamName ?? 'Your Team'}</div>
-                  )}
-                </div>
-              </div>
-              {isTeamMember ? (
-                leaveConfirm ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#888888]">Are you sure?</span>
-                    <button
-                      onClick={handleLeaveTeam}
-                      disabled={leaveLoading}
-                      className="text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      {leaveLoading ? 'Leaving...' : 'Yes, leave'}
-                    </button>
-                    <button
-                      onClick={() => setLeaveConfirm(false)}
-                      className="text-xs text-[#888888] hover:text-white border border-white/[0.07] px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setLeaveConfirm(true)}
-                    className="text-xs text-[#888888] hover:text-red-400 border border-white/[0.07] hover:border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    Leave Team
-                  </button>
-                )
-              ) : (
-                <Link
-                  href="/dashboard/team"
-                  className="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 border border-red-900/50 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  Manage Team →
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Team card — streams in (only shown if user is a team member) */}
+        <Suspense fallback={null}>
+          <AccountTeamCard userId={user.id} />
+        </Suspense>
 
         {/* Sign out */}
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
           <h2 className="text-sm font-semibold text-white mb-1">Sign Out</h2>
           <p className="text-[#555555] text-xs mb-4">You&apos;ll be redirected to the home page.</p>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 bg-[#1a0a0a] hover:bg-red-950 border border-red-900/50 text-red-400 hover:text-red-300 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
+          <SignOutButton />
         </div>
       </div>
     </div>
