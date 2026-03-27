@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sparkles, Lock, RefreshCw, ChevronDown, ChevronUp, Download } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
@@ -551,19 +550,13 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
       setPlanLoaded(true)
       return
     }
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { setPlanLoaded(true); return }
-      supabase
-        .from('subscriptions')
-        .select('plan, status')
-        .eq('user_id', user.id)
-        .single()
-        .then(({ data }) => {
-          setUserPlan(data?.status === 'active' ? data.plan : 'free')
-          setPlanLoaded(true)
-        })
-    })
+    fetch('/api/quota')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        setUserPlan(data?.plan ?? 'free')
+        setPlanLoaded(true)
+      })
+      .catch(() => { setUserPlan('free'); setPlanLoaded(true) })
   }, [isSignedIn])
 
   const isLocked = !isSignedIn || !planLoaded || userPlan === 'free' || userPlan === null

@@ -64,7 +64,7 @@ function ToolPageContent() {
   const [userPlan, setUserPlan] = useState<string>('free')
   const [showAuthGate, setShowAuthGate] = useState(false)
   const [showBulkUpgradeModal, setShowBulkUpgradeModal] = useState(false)
-  const [quotaData, setQuotaData] = useState<{ used: number; limit: number; remaining: number; month: string } | null>(null)
+  const [quotaData, setQuotaData] = useState<{ used: number; limit: number; remaining: number; month: string; plan: string } | null>(null)
   const [sourceMeta, setSourceMeta] = useState<SourceMeta | null>(null)
 
   // Pre-fill URL from query param
@@ -78,7 +78,10 @@ function ToolPageContent() {
       const res = await fetch('/api/quota')
       if (res.ok) {
         const data = await res.json()
-        if (!data.error) setQuotaData(data)
+        if (!data.error) {
+          setQuotaData(data)
+          if (data.plan) setUserPlan(data.plan)
+        }
       }
     } catch { /* non-fatal */ }
   }
@@ -98,16 +101,6 @@ function ToolPageContent() {
     checkAuth()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // Fetch subscription plan
-  useEffect(() => {
-    if (!isSignedIn || !userId) return
-    const supabase = createClient()
-    supabase.from('subscriptions').select('plan, status').eq('user_id', userId).single()
-      .then(({ data }) => {
-        if (data?.status === 'active') setUserPlan(data.plan)
-      })
-  }, [isSignedIn, userId])
 
   // Reset maxComments if it exceeds plan limit
   useEffect(() => {

@@ -100,14 +100,13 @@ export default function PricingPage() {
       const { data } = await supabase.auth.getSession()
       if (data.session) {
         setIsSignedIn(true)
-        const { data: sub } = await supabase
-          .from('subscriptions')
-          .select('plan, status, lifetime')
-          .eq('user_id', data.session.user.id)
-          .single()
-        if (sub?.lifetime) setUserPlan('lifetime')
-        else if (sub?.status === 'active' && sub.plan && sub.plan !== 'free') setUserPlan(sub.plan)
-        else setUserPlan('free')
+        const res = await fetch('/api/quota')
+        if (res.ok) {
+          const quota = await res.json()
+          setUserPlan(quota.plan ?? 'free')
+        } else {
+          setUserPlan('free')
+        }
       } else {
         setIsSignedIn(false)
         setUserPlan(null)
