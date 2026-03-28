@@ -31,6 +31,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 })
   }
 
+  if (!webhookSecret || webhookSecret === 'whsec_...' || webhookSecret.startsWith('whsec_test')) {
+    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 503 })
+  }
+
   const Stripe = (await import('stripe')).default
   const stripe = new Stripe(stripeKey)
 
