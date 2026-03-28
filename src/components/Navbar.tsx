@@ -61,7 +61,7 @@ export default function Navbar() {
               <div className="bg-red-600 rounded p-1">
                 <Youtube className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-white text-sm">YouTubeCommentDownloader</span>
+              <span className="font-bold text-[#e5e2e1] text-sm">YouTubeCommentDownloader</span>
             </Link>
 
             {/* Center nav links — desktop */}
@@ -131,7 +131,7 @@ export default function Navbar() {
                   </Link>
                   <Link
                     href="/auth/signup"
-                    className="bg-red-600 hover:bg-red-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
+                    className="bg-red-600 hover:bg-red-500 text-[#e5e2e1] text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
                   >
                     Get Started
                   </Link>
@@ -203,7 +203,7 @@ export default function Navbar() {
                   <Link
                     href="/auth/signup"
                     onClick={() => setOpen(false)}
-                    className="block bg-red-600 hover:bg-red-500 text-white font-medium px-4 py-3 rounded-lg text-center transition-colors text-sm"
+                    className="block bg-red-600 hover:bg-red-500 text-[#e5e2e1] font-medium px-4 py-3 rounded-lg text-center transition-colors text-sm"
                   >
                     Get Started
                   </Link>

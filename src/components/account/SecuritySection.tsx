@@ -59,7 +59,7 @@ export function SecuritySection() {
   return (
     <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
       <div className="p-6 border-b border-white/[0.07]">
-        <h2 className="text-sm font-semibold text-white">Security</h2>
+        <h2 className="text-sm font-semibold font-jakarta text-[#e5e2e1]">Security</h2>
         <p className="text-[#555555] text-xs mt-1">Update your email address or password.</p>
       </div>
 

@@ -94,7 +94,7 @@ function InviteModal({ onClose, onInvited }: { onClose: () => void; onInvited: (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 w-full max-w-md">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-white font-semibold">Invite Team Member</h2>
+          <h2 className="text-[#e5e2e1] font-semibold font-jakarta">Invite Team Member</h2>
           <button onClick={onClose} className="text-[#888888] hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -237,7 +237,7 @@ export default function TeamPage() {
           <div className="w-14 h-14 bg-[#0a0a0a] border border-white/[0.07] rounded-2xl flex items-center justify-center mx-auto mb-5">
             <Users className="w-7 h-7 text-[#888888]" />
           </div>
-          <h2 className="text-white font-semibold text-lg mb-2">No team yet</h2>
+          <h2 className="text-[#e5e2e1] font-semibold font-jakarta text-lg mb-2">No team yet</h2>
           <p className="text-[#888888] text-sm mb-6 max-w-sm mx-auto">
             Business and Enterprise plan owners can create a team and invite members to share access.
           </p>
@@ -305,7 +305,7 @@ export default function TeamPage() {
             <ChevronRight className="w-3 h-3" />
             <span>Team</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white">{team.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold font-jakarta text-[#e5e2e1]">{team.name}</h1>
           <p className="text-[#888888] text-sm mt-1">
             <span className="text-white font-medium">{usedSeats}</span> of{' '}
             <span className="text-white font-medium">{team.max_seats}</span> seats used
@@ -351,7 +351,7 @@ export default function TeamPage() {
       {/* Members list */}
       <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-white/[0.07]">
-          <h2 className="text-white font-semibold">Members</h2>
+          <h2 className="text-[#e5e2e1] font-semibold font-jakarta">Members</h2>
         </div>
         <div className="divide-y divide-white/[0.05]">
           {members.map(member => {
@@ -447,7 +447,7 @@ export default function TeamPage() {
       {isAdmin && invitations.length > 0 && (
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-white/[0.07]">
-            <h2 className="text-white font-semibold">Pending Invitations</h2>
+            <h2 className="text-[#e5e2e1] font-semibold font-jakarta">Pending Invitations</h2>
           </div>
           <div className="divide-y divide-white/[0.05]">
             {invitations.map(inv => (

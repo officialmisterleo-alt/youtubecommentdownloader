@@ -33,7 +33,7 @@ export default function YouTubeCommentsSEO() {
       </p>
 
       {/* Two Ways */}
-      <h2 id="two-ways">Two Ways Comments Shape Discoverability</h2>
+      <h2 className="font-jakarta" id="two-ways">Two Ways Comments Shape Discoverability</h2>
       <p>
         Comments influence your video&apos;s reach through two separate pathways — and most creators are only vaguely aware of either.
       </p>
@@ -84,7 +84,7 @@ export default function YouTubeCommentsSEO() {
       </p>
 
       {/* Semantic signal */}
-      <h2 id="semantic-signal">Comments as Semantic Signals: What the Research Shows</h2>
+      <h2 className="font-jakarta" id="semantic-signal">Comments as Semantic Signals: What the Research Shows</h2>
       <p>
         Research by Google engineers — studying how well different text fields help YouTube classify videos into the correct category — found something striking: comment text carries real topic-discriminative signal, separate from anything in your title or description.
       </p>
@@ -96,7 +96,7 @@ export default function YouTubeCommentsSEO() {
         Think of comments the way SEOs think about anchor text in backlinks. Just as the words people use when linking to a page signal what that page is about, the words viewers use when commenting signal what your video is about — in natural, search-like language.
       </Callout>
 
-      <h3>The accuracy numbers</h3>
+      <h3 className="font-jakarta">The accuracy numbers</h3>
       <p>
         When researchers tested video categorization using different combinations of text fields (title, description, user tags, comments), they found that adding comments — especially at higher volumes — produced measurable gains in classification accuracy:
       </p>
@@ -139,7 +139,7 @@ export default function YouTubeCommentsSEO() {
       </KeyTakeaway>
 
       {/* Engagement signal */}
-      <h2 id="engagement-signal">Comments as Engagement Signals: What Industry Data Shows</h2>
+      <h2 className="font-jakarta" id="engagement-signal">Comments as Engagement Signals: What Industry Data Shows</h2>
       <p>
         Beyond topic inference, comment volume functions as a proxy for viewer satisfaction — and YouTube explicitly uses engagement signals to determine relevance in search.
       </p>
@@ -160,25 +160,25 @@ export default function YouTubeCommentsSEO() {
       </KeyTakeaway>
 
       {/* Mechanisms */}
-      <h2 id="mechanisms">How It Actually Works: Three Pathways</h2>
+      <h2 className="font-jakarta" id="mechanisms">How It Actually Works: Three Pathways</h2>
 
-      <h3>1. The engagement and satisfaction pathway</h3>
+      <h3 className="font-jakarta">1. The engagement and satisfaction pathway</h3>
       <p>
         YouTube evaluates engagement when assessing how relevant a video is to a query. Comments are one of the most effortful engagement actions available — they require the viewer to stop, think, and type. High comment velocity in the first 24–72 hours after publish is particularly strong, signaling that your video is generating real conversation.
       </p>
 
-      <h3>2. The semantic and keyword pathway</h3>
+      <h3 className="font-jakarta">2. The semantic and keyword pathway</h3>
       <p>
         Your viewers write comments using the same language they&apos;d use to search. Phrases like &quot;does this work with X?&quot;, &quot;is this the same as Y?&quot;, or &quot;what&apos;s the name of the song at 2:14?&quot; — these are search queries in disguise. When many commenters independently use similar terms, those terms function as distributed labels that help YouTube understand your video&apos;s topic at a more granular level than your metadata alone.
       </p>
 
-      <h3>3. The freshness pathway</h3>
+      <h3 className="font-jakarta">3. The freshness pathway</h3>
       <p>
         Comment activity is timestamped. A video getting fresh comments months after publishing signals continued relevance — which can factor into ranking for evergreen queries. Replying to comments, pinning a follow-up question, or getting featured in community spaces can all extend a video&apos;s comment lifespan.
       </p>
 
       {/* Google Search */}
-      <h2 id="google-search">What About Google Search?</h2>
+      <h2 className="font-jakarta" id="google-search">What About Google Search?</h2>
       <p>
         It&apos;s tempting to think YouTube comment text might also help your video rank in Google Search. The evidence here is more cautious.
       </p>
@@ -196,7 +196,7 @@ export default function YouTubeCommentsSEO() {
       </KeyTakeaway>
 
       {/* Tactics */}
-      <h2 id="tactics">Tactics That Actually Help</h2>
+      <h2 className="font-jakarta" id="tactics">Tactics That Actually Help</h2>
       <p>
         Now for the practical side. The core principle is simple: treat your comment section as a discoverability flywheel. Authentic, substantive comments improve both pathways — engagement signals and semantic richness. Here&apos;s how to accelerate that flywheel without crossing into manipulation.
       </p>
@@ -258,7 +258,7 @@ export default function YouTubeCommentsSEO() {
       </Callout>
 
       {/* What to do next */}
-      <h2 id="what-next">What to Do Next</h2>
+      <h2 className="font-jakarta" id="what-next">What to Do Next</h2>
       <p>
         You don&apos;t need to overhaul your content strategy. Start with these three actions on your next upload:
       </p>

@@ -37,7 +37,7 @@ export default function YouTubeCommentsMiddleFunnel() {
       </p>
 
       {/* Why comments are different */}
-      <h2 id="why-comments-are-different">Why Comments Are Different From Other Feedback</h2>
+      <h2 className="font-jakarta" id="why-comments-are-different">Why Comments Are Different From Other Feedback</h2>
       <p>
         Most audience research suffers from a fundamental problem: people say what they think you want to hear, or what they think sounds smart, or what came to mind in the 30 seconds they spent filling out your survey. Comments don&apos;t have that problem.
       </p>
@@ -68,7 +68,7 @@ export default function YouTubeCommentsMiddleFunnel() {
       </Callout>
 
       {/* Use case 1 */}
-      <h2 id="faq-mining">1. Objection &amp; FAQ Mining → Landing Pages and Sales Decks</h2>
+      <h2 className="font-jakarta" id="faq-mining">1. Objection &amp; FAQ Mining → Landing Pages and Sales Decks</h2>
       <p>
         Your comment section is a live log of every doubt, hesitation, and question your audience has. That&apos;s precisely what landing pages and sales conversations need to address.
       </p>
@@ -98,7 +98,7 @@ export default function YouTubeCommentsMiddleFunnel() {
       </KeyTakeaway>
 
       {/* Use case 2 */}
-      <h2 id="intent-segmentation">2. Audience Intent Segmentation → Smarter Nurture Emails</h2>
+      <h2 className="font-jakarta" id="intent-segmentation">2. Audience Intent Segmentation → Smarter Nurture Emails</h2>
       <p>
         Not everyone who watches your videos is in the same place. Some are just learning. Some are actively evaluating. Some are stuck mid-implementation. Comments are one of the few places where people voluntarily reveal which stage they&apos;re in — and that&apos;s gold for email segmentation.
       </p>
@@ -125,7 +125,7 @@ export default function YouTubeCommentsMiddleFunnel() {
       </KeyTakeaway>
 
       {/* Use case 3 */}
-      <h2 id="product-feedback">3. Product Feedback Loop → Fix Messaging Before It Costs You</h2>
+      <h2 className="font-jakarta" id="product-feedback">3. Product Feedback Loop → Fix Messaging Before It Costs You</h2>
       <p>
         Comments often surface product or messaging problems before they show up in support tickets, refund requests, or churn. The difference is timing — and catching friction early is worth far more than diagnosing it after the damage is done.
       </p>
@@ -156,7 +156,7 @@ export default function YouTubeCommentsMiddleFunnel() {
       </KeyTakeaway>
 
       {/* Use case 4 */}
-      <h2 id="competitive-positioning">4. Competitive Positioning → What Customers Wish Your Competitors Did</h2>
+      <h2 className="font-jakarta" id="competitive-positioning">4. Competitive Positioning → What Customers Wish Your Competitors Did</h2>
       <p>
         Your audience watches multiple creators in your space. They compare, evaluate, and — if you&apos;ve built any trust — tell you exactly what they&apos;re thinking about the competition in your comment section.
       </p>
@@ -186,7 +186,7 @@ export default function YouTubeCommentsMiddleFunnel() {
       </KeyTakeaway>
 
       {/* Use case 5 */}
-      <h2 id="content-offer-alignment">5. Content-to-Offer Alignment → Webinars, Lead Magnets, and Email Sequences From Comment Clusters</h2>
+      <h2 className="font-jakarta" id="content-offer-alignment">5. Content-to-Offer Alignment → Webinars, Lead Magnets, and Email Sequences From Comment Clusters</h2>
       <p>
         The hardest part of creating a lead magnet, webinar, or email course isn&apos;t the content — it&apos;s knowing what your audience actually wants badly enough to trade their email address for it. Comments solve this.
       </p>
@@ -229,7 +229,7 @@ export default function YouTubeCommentsMiddleFunnel() {
       </KeyTakeaway>
 
       {/* Ethics */}
-      <h2 id="ethics">A Note on Doing This Ethically</h2>
+      <h2 className="font-jakarta" id="ethics">A Note on Doing This Ethically</h2>
 
       <Callout variant="warning" title="Use aggregate insight, not individual surveillance">
         This approach works — and stays ethical — when you treat comments as population-level signal, not individual data. You&apos;re looking for patterns across hundreds of comments, not building profiles on specific people. Use your own channel&apos;s comments, don&apos;t store personal information beyond what you need for analysis, and never target individuals based on what they&apos;ve written. The goal is to understand your audience as a whole, not to track specific viewers.
@@ -243,7 +243,7 @@ export default function YouTubeCommentsMiddleFunnel() {
       </p>
 
       {/* Where to start */}
-      <h2 id="where-to-start">Where to Start</h2>
+      <h2 className="font-jakarta" id="where-to-start">Where to Start</h2>
       <p>
         If you&apos;re new to this, don&apos;t try to do all five at once. Pick the use case with the fastest return on the work you&apos;re already doing.
       </p>

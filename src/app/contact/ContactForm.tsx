@@ -44,7 +44,7 @@ export default function ContactForm() {
       {status === 'success' ? (
         <div className="text-center py-8">
           <div className="text-green-400 text-4xl mb-4">✓</div>
-          <h2 className="text-white font-semibold text-lg mb-2">Message sent!</h2>
+          <h2 className="text-[#e5e2e1] font-semibold font-jakarta text-lg mb-2">Message sent!</h2>
           <p className="text-[#888888] text-sm">
             Thanks! We&apos;ll get back to you within 1 business day.
           </p>

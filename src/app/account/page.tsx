@@ -188,7 +188,7 @@ export default async function AccountPage() {
   return (
     <div className="flex-1 flex flex-col">
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 py-10">
-        <h1 className="text-2xl font-bold text-white mb-8">Account</h1>
+        <h1 className="text-2xl font-bold font-jakarta text-[#e5e2e1] mb-8">Account</h1>
 
         {/* Profile + Plan card — profile renders immediately, plan row streams in */}
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">
@@ -228,7 +228,7 @@ export default async function AccountPage() {
 
         {/* Sign out */}
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
-          <h2 className="text-sm font-semibold text-white mb-1">Sign Out</h2>
+          <h2 className="text-sm font-semibold font-jakarta text-[#e5e2e1] mb-1">Sign Out</h2>
           <p className="text-[#555555] text-xs mb-4">You&apos;ll be redirected to the home page.</p>
           <SignOutButton />
         </div>

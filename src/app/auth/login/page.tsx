@@ -46,7 +46,7 @@ function LoginForm() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
       <div className="border border-white/[0.07] rounded-2xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-white mb-2">Welcome back</h1>
+        <h1 className="text-2xl font-bold font-jakarta text-[#e5e2e1] mb-2">Welcome back</h1>
         <p className="text-[#888888] text-sm mb-6">Sign in to your account</p>
 
         <button onClick={handleGoogleSignIn} className="w-full flex items-center justify-center gap-3 bg-white text-black font-medium py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors mb-4">

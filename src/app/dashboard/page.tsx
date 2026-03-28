@@ -23,7 +23,7 @@ function AdminApiHealthWidget() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-[#888888]" />
-          <h2 className="font-semibold text-white text-sm">API Health</h2>
+          <h2 className="font-semibold font-jakarta text-[#e5e2e1] text-sm">API Health</h2>
           <span className="text-xs text-[#555555]">admin</span>
         </div>
         <Link href="/api/admin/api-health" target="_blank" className="text-red-400 hover:text-red-300 text-xs">
@@ -203,7 +203,7 @@ async function DashboardExports({ userId }: { userId: string }) {
   return (
     <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-8">
       <div className="p-5 border-b border-white/[0.07] flex items-center justify-between">
-        <h2 className="font-semibold text-white">Recent Exports</h2>
+        <h2 className="font-semibold font-jakarta text-[#e5e2e1]">Recent Exports</h2>
         {totalExports > 10 && (
           <span className="text-[#888888] text-xs">{totalExports.toLocaleString()} total</span>
         )}
@@ -306,7 +306,7 @@ async function DashboardTeamSection({
       <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Key className="w-5 h-5 text-[#888888]" />
-          <h2 className="font-semibold text-white">API Key</h2>
+          <h2 className="font-semibold font-jakarta text-[#e5e2e1]">API Key</h2>
         </div>
         <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3 flex items-center gap-3 mb-3">
           <code className="text-[#888888] text-xs flex-1">••••••••••••••••••••••••••••••</code>
@@ -320,7 +320,7 @@ async function DashboardTeamSection({
       <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Users className="w-5 h-5 text-[#888888]" />
-          <h2 className="font-semibold text-white">Team Members</h2>
+          <h2 className="font-semibold font-jakarta text-[#e5e2e1]">Team Members</h2>
         </div>
         <div className="flex items-center gap-3 bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3 mb-3">
           <div className="w-8 h-8 bg-red-900 rounded-full flex items-center justify-center text-red-200 text-xs font-bold">
@@ -425,7 +425,7 @@ export default async function DashboardPage({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-white">
+              <h1 className="text-xl sm:text-2xl font-bold font-jakarta text-[#e5e2e1]">
                 Welcome back{firstName ? `, ${firstName}` : (user?.email ? `, ${user.email.split('@')[0]}` : '')}
               </h1>
               <Suspense fallback={<span className="h-6 w-20 bg-white/5 animate-pulse rounded-full inline-block" />}>

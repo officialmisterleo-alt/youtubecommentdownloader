@@ -155,7 +155,7 @@ export default function PricingPage() {
   const ctaClass = (highlight: boolean) =>
     `block w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors mb-2 disabled:opacity-60 disabled:cursor-not-allowed ${
       highlight
-        ? 'bg-red-600 hover:bg-red-700 text-white'
+        ? 'bg-red-600 hover:bg-red-700 text-[#e5e2e1]'
         : 'border border-white/[0.07] hover:border-white/20 text-[#888888] hover:text-white'
     }`
 
@@ -178,11 +178,11 @@ export default function PricingPage() {
     <div className="flex-1 flex flex-col">
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-16">
         <div className="text-center mb-14">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4">Simple, transparent pricing</h1>
+          <h1 className="text-4xl sm:text-5xl font-extrabold font-jakarta text-[#e5e2e1] mb-4">Simple, transparent pricing</h1>
           <p className="text-[#888888] text-lg mb-8">Start free. Scale as you grow. No hidden fees.</p>
           <div className="inline-flex items-center gap-1 bg-[#171717] border border-white/[0.07] rounded-xl p-1">
-            <button onClick={() => setAnnual(false)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${!annual ? 'bg-red-600 text-white' : 'text-[#888888] hover:text-white'}`}>Monthly</button>
-            <button onClick={() => setAnnual(true)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${annual ? 'bg-red-600 text-white' : 'text-[#888888] hover:text-white'}`}>
+            <button onClick={() => setAnnual(false)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${!annual ? 'bg-red-600 text-[#e5e2e1]' : 'text-[#888888] hover:text-white'}`}>Monthly</button>
+            <button onClick={() => setAnnual(true)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${annual ? 'bg-red-600 text-[#e5e2e1]' : 'text-[#888888] hover:text-white'}`}>
               Annual <span className={`text-xs px-2 py-0.5 rounded-full ${annual ? 'bg-red-900 text-red-200' : 'bg-white/[0.07] text-[#888888]'}`}>Save 2 months</span>
             </button>
           </div>
@@ -192,9 +192,9 @@ export default function PricingPage() {
           {plans.map(plan => (
             <div key={plan.name} className={`rounded-2xl p-6 border flex flex-col ${plan.highlight ? 'bg-red-950/20 border-red-700 ring-1 ring-red-700' : 'bg-[#171717] border-white/[0.07]'}`}>
               {plan.badge && <div className="inline-flex items-center gap-1 text-red-400 text-xs font-semibold uppercase tracking-widest mb-3"><Zap className="w-3 h-3" /> {plan.badge}</div>}
-              <div className="font-bold text-white text-xl mb-1">{plan.name}</div>
+              <div className="font-bold text-[#e5e2e1] text-xl mb-1">{plan.name}</div>
               <div className="mb-4">
-                <span className="text-4xl font-extrabold text-white">${annual ? plan.annualPrice : plan.monthlyPrice}</span>
+                <span className="text-4xl font-extrabold text-[#e5e2e1]">${annual ? plan.annualPrice : plan.monthlyPrice}</span>
                 {plan.monthlyPrice > 0 && <span className="text-[#555555] text-sm">/mo</span>}
                 {annual && plan.monthlyPrice > 0 && <div className="text-[#555555] text-xs mt-1">Billed annually</div>}
               </div>
@@ -259,7 +259,7 @@ export default function PricingPage() {
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 mb-16 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="text-red-500 text-xs font-semibold uppercase tracking-widest mb-1">⚡ Limited Time Offer</div>
-            <div className="text-white font-bold text-xl mb-1">Lifetime Deal — $149</div>
+            <div className="text-[#e5e2e1] font-bold text-xl mb-1">Lifetime Deal — $149</div>
             <p className="text-[#888888] text-sm">Everything in Pro, forever. One payment, no recurring fees. 10,000 comments per download, 100,000 comments/month, AI analysis up to 10,000 comments. Perfect for freelancers and indie hackers.</p>
           </div>
           {userPlan === 'lifetime' ? (
@@ -270,14 +270,14 @@ export default function PricingPage() {
             <button
               onClick={() => handleCheckout('lifetime', 'one_time')}
               disabled={loadingPlan === 'lifetime'}
-              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap"
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-[#e5e2e1] font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap"
             >
               {loadingPlan === 'lifetime' ? 'Redirecting...' : 'Get Lifetime Access →'}
             </button>
           ) : (
             <Link
               href="/auth/login?next=/pricing"
-              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap"
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-[#e5e2e1] font-bold px-6 py-3 rounded-xl text-sm transition-colors text-center whitespace-nowrap"
             >
               {isSignedIn === null ? 'Get Lifetime Access →' : 'Sign In to Get Lifetime Access →'}
             </Link>
@@ -286,14 +286,14 @@ export default function PricingPage() {
 
         {/* Comparison table — scrollable on mobile */}
         <div className="mb-16">
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">Full Feature Comparison</h2>
+          <h2 className="text-2xl font-bold font-jakarta text-[#e5e2e1] mb-6 text-center">Full Feature Comparison</h2>
           <div className="overflow-x-auto rounded-2xl border border-white/[0.07]">
             <table className="w-full text-sm min-w-[560px]">
               <thead>
                 <tr className="border-b border-white/[0.07] bg-[#171717]">
                   <th className="text-left px-6 py-4 text-[#888888] font-medium w-2/5">Feature</th>
                   {['Free', 'Pro', 'Business', 'Enterprise'].map(p => (
-                    <th key={p} className="px-4 py-4 text-center text-white font-semibold">{p}</th>
+                    <th key={p} className="px-4 py-4 text-center text-[#e5e2e1] font-semibold">{p}</th>
                   ))}
                 </tr>
               </thead>
@@ -319,11 +319,11 @@ export default function PricingPage() {
 
         {/* FAQ */}
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-8 text-center">Frequently Asked Questions</h2>
+          <h2 className="text-2xl font-bold font-jakarta text-[#e5e2e1] mb-8 text-center">Frequently Asked Questions</h2>
           <div className="space-y-4">
             {faqs.map(faq => (
               <div key={faq.q} className="bg-[#171717] border border-white/[0.07] rounded-xl p-6">
-                <div className="font-semibold text-white mb-2">{faq.q}</div>
+                <div className="font-semibold text-[#e5e2e1] mb-2">{faq.q}</div>
                 <p className="text-[#888888] text-sm leading-relaxed">{faq.a}</p>
               </div>
             ))}

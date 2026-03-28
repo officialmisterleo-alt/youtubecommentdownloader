@@ -13,7 +13,7 @@ export default function ContactPage() {
       <div className="flex-1 flex items-center justify-center px-4 py-16">
         <div className="w-full max-w-lg">
           <div className="text-center mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">Contact Us</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold font-jakarta text-[#e5e2e1] mb-3">Contact Us</h1>
             <p className="text-[#888888] text-sm">
               We typically respond within 1 business day.
             </p>

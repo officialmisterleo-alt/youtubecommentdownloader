@@ -669,7 +669,7 @@ ${commentRows}
 
       <div className="max-w-4xl mx-auto px-4 py-10 sm:py-12">
         <div className="text-center mb-8 sm:mb-10">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">YouTube Comment Downloader</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold font-jakarta text-[#e5e2e1] mb-2">YouTube Comment Downloader</h1>
           <p className="text-[#888888] text-sm sm:text-base">Paste a YouTube URL to extract and export all comments instantly.</p>
         </div>
 
@@ -985,7 +985,7 @@ ${commentRows}
               <div className="bg-red-600/20 rounded-full p-2">
                 <Lock className="w-5 h-5 text-red-500" />
               </div>
-              <h3 className="text-white font-bold text-lg">Business plan required</h3>
+              <h3 className="text-[#e5e2e1] font-bold font-jakarta text-lg">Business plan required</h3>
             </div>
             <p className="text-[#888888] text-sm leading-relaxed mb-6">
               Bulk channel and playlist downloads are available on the{' '}
@@ -1011,7 +1011,7 @@ ${commentRows}
               <div className="bg-red-600/20 rounded-full p-2">
                 <Lock className="w-5 h-5 text-red-500" />
               </div>
-              <h3 className="text-white font-bold text-lg">Sign in to export</h3>
+              <h3 className="text-[#e5e2e1] font-bold font-jakarta text-lg">Sign in to export</h3>
             </div>
             <p className="text-[#888888] text-sm leading-relaxed mb-6">
               Create a free account to download in <strong className="text-white">CSV, JSON, and Excel</strong> formats. Plain text is always free — no sign-in needed.

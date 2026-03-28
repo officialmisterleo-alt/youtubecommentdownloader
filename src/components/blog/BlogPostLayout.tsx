@@ -49,7 +49,7 @@ export default function BlogPostLayout({
           ))}
         </div>
 
-        <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">
+        <h1 className="text-3xl sm:text-4xl font-bold font-jakarta text-[#e5e2e1] leading-tight mb-4">
           {title}
         </h1>
         <p className="text-lg text-[#888] leading-relaxed mb-6">{description}</p>
@@ -71,7 +71,7 @@ export default function BlogPostLayout({
 
       {/* CTA footer */}
       <div className="max-w-3xl mx-auto mt-16 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-8 text-center">
-        <h3 className="text-xl font-bold text-white mb-2">
+        <h3 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-2">
           Ready to analyze your comments?
         </h3>
         <p className="text-sm text-[#888] mb-6">

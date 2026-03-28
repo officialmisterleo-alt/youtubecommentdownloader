@@ -36,7 +36,7 @@ export default function SignupPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="border border-white/[0.07] rounded-2xl p-8 w-full max-w-md text-center">
           <div className="text-4xl mb-4">✉️</div>
-          <h2 className="text-xl font-bold text-white mb-2">Check your email</h2>
+          <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-2">Check your email</h2>
           <p className="text-[#888888] text-sm">We sent a confirmation link to <strong className="text-white">{email}</strong>. Click it to activate your account.</p>
         </div>
       </div>
@@ -46,7 +46,7 @@ export default function SignupPage() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
       <div className="border border-white/[0.07] rounded-2xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-white mb-2">Create your account</h1>
+        <h1 className="text-2xl font-bold font-jakarta text-[#e5e2e1] mb-2">Create your account</h1>
         <p className="text-[#888888] text-sm mb-6">Start with 500 free comment exports</p>
 
         <button onClick={handleGoogleSignIn} className="w-full flex items-center justify-center gap-3 bg-white text-black font-medium py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors mb-4">

@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <div className="max-w-3xl mx-auto px-4 py-12 sm:py-16">
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 sm:p-10 lg:p-14">
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Privacy Policy</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold font-jakarta text-[#e5e2e1] mb-2">Privacy Policy</h1>
           <p className="text-[#555555] text-sm mb-10">Effective Date: March 2026</p>
 
           <p className="text-[#888888] leading-relaxed mb-8">
@@ -19,7 +19,7 @@ export default function PrivacyPage() {
           </p>
 
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">1. Information We Collect</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">1. Information We Collect</h2>
             <p className="text-[#888888] leading-relaxed mb-3">
               We collect the following categories of information:
             </p>
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">2. How We Use Your Information</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">2. How We Use Your Information</h2>
             <p className="text-[#888888] leading-relaxed mb-3">We use the information we collect to:</p>
             <ul className="list-disc list-inside text-[#888888] leading-relaxed space-y-2">
               <li>Provide, operate, and improve the Service.</li>
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">3. Data Retention</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">3. Data Retention</h2>
             <p className="text-[#888888] leading-relaxed mb-3">
               We retain your account information and export history for as long as your account is active. If you delete your account we will delete your personal data within 30 days, except where we are required to retain it for legal, tax, or accounting purposes (typically up to 7 years for billing records).
             </p>
@@ -56,7 +56,7 @@ export default function PrivacyPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">4. Third-Party Services</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">4. Third-Party Services</h2>
             <p className="text-[#888888] leading-relaxed mb-3">We rely on the following trusted third-party services to operate:</p>
             <ul className="list-disc list-inside text-[#888888] leading-relaxed space-y-2">
               <li><strong>Supabase</strong> — authentication and database hosting. Your account data and export history are stored in Supabase-managed infrastructure. Supabase is SOC 2 Type II certified.</li>
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">5. Cookies</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">5. Cookies</h2>
             <p className="text-[#888888] leading-relaxed mb-3">
               We use session cookies to maintain your authenticated state. These cookies are essential to the operation of the Service and are set only after you log in. They expire when your session ends or after 7 days of inactivity.
             </p>
@@ -80,7 +80,7 @@ export default function PrivacyPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">6. Your Rights</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">6. Your Rights</h2>
             <p className="text-[#888888] leading-relaxed mb-3">
               Depending on your jurisdiction you may have the following rights with respect to your personal data:
             </p>
@@ -97,14 +97,14 @@ export default function PrivacyPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">7. Security</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">7. Security</h2>
             <p className="text-[#888888] leading-relaxed">
               We implement industry-standard security measures including HTTPS encryption for all data in transit, secure storage of credentials via Supabase (bcrypt hashing for passwords), and access controls limiting who within our team can access production data. No method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">8. GDPR and CCPA</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">8. GDPR and CCPA</h2>
             <p className="text-[#888888] leading-relaxed mb-3">
               <strong>GDPR (EU/EEA users):</strong> Our lawful bases for processing are performance of a contract (to provide the Service you signed up for), compliance with legal obligations, and our legitimate interests (security monitoring and abuse prevention). You have the right to lodge a complaint with your local data protection authority.
             </p>
@@ -114,21 +114,21 @@ export default function PrivacyPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">9. Children&apos;s Privacy</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">9. Children&apos;s Privacy</h2>
             <p className="text-[#888888] leading-relaxed">
               The Service is not directed to children under 18. We do not knowingly collect personal data from minors. If you believe a minor has provided us with personal data, please contact us and we will delete it promptly.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">10. Changes to This Policy</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">10. Changes to This Policy</h2>
             <p className="text-[#888888] leading-relaxed">
               We may update this Privacy Policy from time to time. When we do, we will revise the effective date at the top of this page and, where required by law, notify you by email. Your continued use of the Service after any update constitutes acceptance of the revised policy.
             </p>
           </section>
 
           <section className="mb-2">
-            <h2 className="text-xl font-bold text-white mb-3 pb-2 border-b border-white/[0.07]">11. Contact</h2>
+            <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">11. Contact</h2>
             <p className="text-[#888888] leading-relaxed">
               For privacy-related questions or requests, <Link href="/contact" className="text-red-600 hover:underline">contact us</Link>.
             </p>

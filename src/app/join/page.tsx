@@ -125,7 +125,7 @@ function JoinPageInner() {
           <div className="w-14 h-14 bg-red-900/20 border border-red-900/40 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <Users className="w-7 h-7 text-red-400" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">You&apos;ve been invited</h1>
+          <h1 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-2">You&apos;ve been invited</h1>
           <p className="text-[#888888] text-sm mb-6">
             Sign in to accept your team invitation and unlock Business plan features.
           </p>
@@ -155,7 +155,7 @@ function JoinPageInner() {
           <div className="w-14 h-14 bg-green-900/20 border border-green-900/40 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <CheckCircle className="w-7 h-7 text-green-400" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">You&apos;re in!</h1>
+          <h1 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-2">You&apos;re in!</h1>
           <p className="text-[#888888] text-sm mb-1">
             You&apos;ve joined <strong className="text-white">{result.team.name}</strong>
           </p>

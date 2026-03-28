@@ -23,7 +23,7 @@ export default function BlogIndexPage() {
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-14">
-          <h1 className="text-4xl font-bold text-white mb-3">Blog</h1>
+          <h1 className="text-4xl font-bold font-jakarta text-[#e5e2e1] mb-3">Blog</h1>
           <p className="text-[#888] text-lg">
             Insights on YouTube SEO, content strategy, and the hidden value of
             your comments.
@@ -49,7 +49,7 @@ export default function BlogIndexPage() {
                 ))}
               </div>
 
-              <h2 className="text-xl font-semibold text-white mb-2 group-hover:text-red-300 transition-colors leading-snug">
+              <h2 className="text-xl font-semibold font-jakarta text-[#e5e2e1] mb-2 group-hover:text-red-300 transition-colors leading-snug">
                 {post.title}
               </h2>
               <p className="text-[#777] text-sm leading-relaxed mb-4">

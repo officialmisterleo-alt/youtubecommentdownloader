@@ -64,7 +64,7 @@ export default function AdminStatsWidget() {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-[#888888]" />
-          <h2 className="font-semibold text-white text-sm">Platform Stats</h2>
+          <h2 className="font-semibold font-jakarta text-[#e5e2e1] text-sm">Platform Stats</h2>
           <span className="text-xs text-[#555555]">admin</span>
         </div>
         <Link href="/api/admin/stats" target="_blank" className="text-red-400 hover:text-red-300 text-xs">
