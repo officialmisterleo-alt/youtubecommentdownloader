@@ -21,12 +21,12 @@ export default function HeroInput() {
           type="text"
           value={url}
           onChange={e => setUrl(e.target.value)}
-          placeholder="Paste a YouTube URL..."
-          className="flex-1 min-w-0 h-12 bg-[#171717] border border-white/10 rounded-lg px-4 text-white text-base placeholder:text-[#555555] focus:outline-none focus:border-white/20 transition-colors"
+          placeholder="Paste YouTube video URL here..."
+          className="flex-1 min-w-0 h-14 bg-[#171717] border border-white/10 rounded-xl px-5 text-white text-base placeholder:text-[#555555] focus:outline-none focus:border-white/20 transition-colors"
         />
         <button
           type="submit"
-          className="h-12 bg-red-600 hover:bg-red-500 text-white font-semibold px-6 rounded-lg text-sm whitespace-nowrap transition-colors w-full sm:w-auto"
+          className="h-14 bg-red-600 hover:bg-red-500 text-white font-semibold px-6 rounded-xl text-sm whitespace-nowrap transition-colors w-full sm:w-auto"
         >
           Download Comments
         </button>

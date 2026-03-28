@@ -1,5 +1,9 @@
+'use client'
+
 import Link from 'next/link'
 import HeroInput from '@/components/HeroInput'
+import HowItWorksSection from '@/components/HowItWorksSection'
+import { motion } from 'framer-motion'
 import { Download, FileSpreadsheet, Zap, Users, Key, Shield } from 'lucide-react'
 
 // Bevel card class — reused across all cards
@@ -24,24 +28,62 @@ const surfaces = ['Video Comments', 'Playlist Comments', 'Channel Comments', 'Yo
 export default function Home() {
   return (
     <div className="flex-1 overflow-x-hidden">
-      {/* ── HERO — centered, no split ── */}
-      <section className="flex flex-col items-center text-center px-6 pt-16 sm:pt-28 pb-24">
-        <span className="text-xs font-semibold tracking-widest text-red-500 uppercase mb-6">
-          YouTube Comment Downloader
-        </span>
+      {/* ── HERO ── */}
+      <section className="relative flex flex-col items-center text-center px-6 pt-16 sm:pt-28 pb-24 overflow-hidden">
+        {/* Background blobs */}
+        <motion.div
+          className="absolute -top-20 -left-20 w-96 h-96 bg-red-600/10 blur-[120px] rounded-full pointer-events-none z-0"
+          animate={{ x: [0, 30, 0], y: [0, 20, 0] }}
+          transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+        />
+        <motion.div
+          className="absolute bottom-0 -right-20 w-80 h-80 bg-red-800/[0.08] blur-[120px] rounded-full pointer-events-none z-0"
+          animate={{ x: [0, -30, 0], y: [0, -20, 0] }}
+          transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+        />
 
-        <h1 className="font-jakarta text-5xl md:text-7xl font-bold text-[#e5e2e1] leading-[1.05] tracking-tight max-w-4xl mb-6">
-          Extract any YouTube<br />comment thread
-        </h1>
+        {/* Badge */}
+        <motion.span
+          className="relative z-10 text-[#e5e2e1]/60 border border-white/10 rounded-full px-3 py-1 text-sm mb-6 inline-block"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 0 }}
+        >
+          New: AI Sentiment Analysis
+        </motion.span>
 
-        <p className="text-[#888888] text-lg md:text-xl max-w-xl mb-10 leading-relaxed">
-          Bulk export comments from any video, playlist, or channel.
-          CSV, JSON, Excel — built for agencies and researchers.
-        </p>
+        {/* Headline */}
+        <motion.h1
+          className="relative z-10 font-jakarta text-5xl md:text-7xl font-bold text-[#e5e2e1] leading-[1.05] tracking-tight max-w-4xl mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
+        >
+          Download YouTube<br />
+          <span className="text-white/90">Comments in Seconds.</span>
+        </motion.h1>
 
-        <HeroInput />
+        {/* Subheadline */}
+        <motion.p
+          className="relative z-10 text-[#e5e2e1]/70 text-lg md:text-xl max-w-xl mb-10 leading-relaxed"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.2 }}
+        >
+          The ultimate tool for creators, researchers, and marketers. Extract insights, export data, and understand your audience better than ever.
+        </motion.p>
 
-        <div className="flex items-center gap-6 mt-10 text-sm text-[#555555]">
+        {/* CTA input */}
+        <motion.div
+          className="relative z-10 w-full max-w-2xl"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.3 }}
+        >
+          <HeroInput />
+        </motion.div>
+
+        <div className="relative z-10 flex items-center gap-6 mt-10 text-sm text-[#555555]">
           <span>45k+ users</span>
           <span className="text-[#333]">·</span>
           <span>6 export formats</span>
@@ -107,29 +149,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
-      <section className="py-16 px-6 border-t border-white/[0.07]">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="font-jakarta text-2xl font-bold text-[#e5e2e1] mb-10">How it works</h2>
-          <div className="space-y-8">
-            {[
-              { n: '1', title: 'Paste any YouTube URL',  desc: 'Drop in a video, channel, or playlist URL. Works with any public YouTube content.' },
-              { n: '2', title: 'Set your options',       desc: 'Choose how many comments, whether to include replies, and your preferred export format.' },
-              { n: '3', title: 'Download your data',     desc: 'Export to CSV, Excel, JSON, HTML, or plain text — ready for any analytics tool or pipeline.' },
-            ].map(step => (
-              <div key={step.n} className="flex gap-6 items-start">
-                <span className="text-4xl font-bold text-red-600 leading-none w-10 shrink-0 tabular-nums">
-                  {step.n}
-                </span>
-                <div className="pt-1">
-                  <h3 className="font-jakarta text-[#e5e2e1] font-semibold text-base mb-1">{step.title}</h3>
-                  <p className="text-[#555555] text-sm leading-relaxed">{step.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ── HOW IT WORKS — animated state machine ── */}
+      <HowItWorksSection />
 
       {/* ── WHO USES IT ── */}
       <section className="py-16 px-6 border-t border-white/[0.07]">
