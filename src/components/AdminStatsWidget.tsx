@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BarChart3 } from 'lucide-react'
+import { BarChart3, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
 
 type AdminStats = {
   totalUsers: number
@@ -14,6 +14,11 @@ type AdminStats = {
   activeSubscriptions: number
   planBreakdown: Record<string, number>
   lastUpdated: string
+}
+
+type FreeUsersData = {
+  count: number
+  emails: string[]
 }
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
@@ -39,6 +44,9 @@ function SkeletonCard() {
 export default function AdminStatsWidget() {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [freeUsers, setFreeUsers] = useState<FreeUsersData | null>(null)
+  const [showEmails, setShowEmails] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/stats')
@@ -48,7 +56,22 @@ export default function AdminStatsWidget() {
         else setStats(data)
       })
       .catch(() => setError('Failed to load stats'))
+
+    fetch('/api/admin/free-users')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error) setFreeUsers(data)
+      })
+      .catch(() => {})
   }, [])
+
+  function copyEmails() {
+    if (!freeUsers) return
+    navigator.clipboard.writeText(freeUsers.emails.join(', ')).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   const planOrder = ['free', 'pro', 'business', 'enterprise', 'lifetime']
   const planColors: Record<string, string> = {
@@ -136,6 +159,48 @@ export default function AdminStatsWidget() {
                   </div>
                 </div>
               </>
+            )}
+          </div>
+
+          {/* Free users panel */}
+          <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-[#888888] mb-1">Free Users</div>
+                {freeUsers ? (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-xl font-bold text-[#888888]">{freeUsers.count.toLocaleString()}</span>
+                    <span className="text-[#555555] text-xs">users on free plan</span>
+                  </div>
+                ) : (
+                  <div className="h-6 w-12 bg-white/[0.07] rounded animate-pulse" />
+                )}
+              </div>
+              {freeUsers && freeUsers.count > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={copyEmails}
+                    className="flex items-center gap-1 text-xs text-[#888888] hover:text-white border border-white/[0.07] rounded-lg px-2 py-1 transition-colors"
+                  >
+                    {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                    {copied ? 'Copied!' : 'Copy all emails'}
+                  </button>
+                  <button
+                    onClick={() => setShowEmails(v => !v)}
+                    className="flex items-center gap-1 text-xs text-[#888888] hover:text-white border border-white/[0.07] rounded-lg px-2 py-1 transition-colors"
+                  >
+                    {showEmails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    {showEmails ? 'Hide emails' : 'Show emails'}
+                  </button>
+                </div>
+              )}
+            </div>
+            {showEmails && freeUsers && freeUsers.emails.length > 0 && (
+              <div className="mt-3 max-h-48 overflow-y-auto border border-white/[0.05] rounded-lg p-3 space-y-1">
+                {freeUsers.emails.map(email => (
+                  <div key={email} className="text-xs text-[#aaaaaa] font-mono">{email}</div>
+                ))}
+              </div>
             )}
           </div>
 
