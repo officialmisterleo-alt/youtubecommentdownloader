@@ -196,7 +196,7 @@ function JoinPageInner() {
         <div className={`w-14 h-14 border rounded-2xl flex items-center justify-center mx-auto mb-5 ${borderClass}`}>
           <ErrorIcon className={`w-7 h-7 ${iconClass}`} />
         </div>
-        <h1 className="text-xl font-bold text-white mb-2">
+        <h1 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-2">
           {result.errorCode === 'expired' && 'Invitation Expired'}
           {result.errorCode === 'accepted' && 'Already Accepted'}
           {result.errorCode === 'revoked' && 'Invitation Revoked'}

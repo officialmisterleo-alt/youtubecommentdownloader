@@ -4,7 +4,7 @@ export default function AccountLoading() {
   return (
     <div className="flex-1 flex flex-col">
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 py-10">
-        <h1 className="text-2xl font-bold text-white mb-8">Account</h1>
+        <h1 className="text-2xl font-bold font-jakarta text-[#e5e2e1] mb-8">Account</h1>
 
         {/* Profile card skeleton */}
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-6">

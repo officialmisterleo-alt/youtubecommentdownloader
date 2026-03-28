@@ -45,6 +45,7 @@ html, body {
 
 /* Blog prose styles */
 .prose-custom h2 {
+  font-family: var(--font-jakarta), sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
   color: #ffffff;
@@ -54,6 +55,7 @@ html, body {
   scroll-margin-top: 6rem;
 }
 .prose-custom h3 {
+  font-family: var(--font-jakarta), sans-serif;
   font-size: 1.125rem;
   font-weight: 600;
   color: #e0e0e0;
