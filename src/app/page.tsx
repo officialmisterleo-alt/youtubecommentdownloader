@@ -84,13 +84,6 @@ export default function Home() {
           <HeroInput />
         </motion.div>
 
-        <div className="relative z-10 flex items-center gap-6 mt-10 text-sm text-[#555555]">
-          <span>45k+ users</span>
-          <span className="text-[#333]">·</span>
-          <span>6 export formats</span>
-          <span className="text-[#333]">·</span>
-          <span>5k comments/min</span>
-        </div>
       </section>
 
       {/* ── FEATURES GRID ── */}
