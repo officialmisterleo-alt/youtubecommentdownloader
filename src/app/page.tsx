@@ -44,12 +44,13 @@ export default function Home() {
 
         {/* Badge */}
         <motion.span
-          className="relative z-10 text-[#e5e2e1]/60 border border-white/10 rounded-full px-3 py-1 text-sm mb-6 inline-block"
+          className="relative z-10 bg-red-600/15 border border-red-500/40 rounded-full px-3 py-1 text-sm mb-6 inline-block"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut', delay: 0 }}
         >
-          New: AI Sentiment Analysis
+          <span className="text-red-500 font-semibold">New:</span>
+          <span className="text-red-400/80"> AI Sentiment Analysis</span>
         </motion.span>
 
         {/* Headline */}

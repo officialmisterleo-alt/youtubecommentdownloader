@@ -162,7 +162,7 @@ export default function HowItWorksSection() {
                     {i + 1}
                   </span>
                   <div className="pt-0.5">
-                    <p className="font-jakarta text-[#e5e2e1] font-semibold text-sm">{step.title}</p>
+                    <p className={`font-jakarta font-semibold text-sm transition-colors ${isActive ? 'text-red-400' : 'text-[#e5e2e1]'}`}>{step.title}</p>
                     <p className="text-[#555555] text-xs mt-0.5">{step.desc}</p>
                   </div>
                 </motion.div>
