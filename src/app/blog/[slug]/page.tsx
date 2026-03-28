@@ -56,6 +56,7 @@ export default async function BlogPostPage({
     headline: post.title,
     description: post.description,
     datePublished: post.date,
+    dateModified: post.date,
     keywords: post.tags.join(', '),
     author: {
       '@type': 'Organization',

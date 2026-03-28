@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/teams'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,10 +45,21 @@ export async function POST(req: NextRequest) {
     const stripe = new Stripe(stripeKey)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
+    // Reuse existing Stripe customer if one exists to avoid duplicates
+    const serviceClient = createServiceClient()
+    const { data: existingSub } = await serviceClient
+      .from('subscriptions')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .single()
+    const existingCustomerId = existingSub?.stripe_customer_id ?? null
+
     const session = await stripe.checkout.sessions.create({
       mode: mode as 'payment' | 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      customer_email: user.email,
+      ...(existingCustomerId
+        ? { customer: existingCustomerId }
+        : { customer_email: user.email }),
       metadata: { user_id: user.id },
       allow_promotion_codes: true,
       success_url: `${appUrl}/dashboard?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,

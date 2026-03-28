@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getPlanFromPriceId } from '@/lib/stripe-prices'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,20 +8,6 @@ const PLAN_MONTHLY_LIMITS: Record<string, number> = {
   pro: 100_000,
   business: 1_000_000,
   enterprise: -1,
-}
-
-function buildPriceToPlanMap(): Record<string, string> {
-  const map: Record<string, string> = {}
-  const add = (envVar: string | undefined, plan: string) => {
-    if (envVar && envVar !== 'price_...') map[envVar] = plan
-  }
-  add(process.env.STRIPE_PRICE_PRO_MONTHLY, 'pro')
-  add(process.env.STRIPE_PRICE_PRO_ANNUAL, 'pro')
-  add(process.env.STRIPE_PRICE_BUSINESS_MONTHLY, 'business')
-  add(process.env.STRIPE_PRICE_BUSINESS_ANNUAL, 'business')
-  add(process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY, 'enterprise')
-  add(process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL, 'enterprise')
-  return map
 }
 
 export async function POST(req: NextRequest) {
@@ -54,8 +41,6 @@ export async function POST(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
-
-  const priceToPlan = buildPriceToPlanMap()
 
   try {
     switch (event.type) {
@@ -93,7 +78,7 @@ export async function POST(req: NextRequest) {
             items: { data: Array<{ price: { id: string } }> }
           }
           const priceId = subData.items.data[0]?.price?.id
-          const plan = priceToPlan[priceId] || 'pro'
+          const plan = priceId ? getPlanFromPriceId(priceId) : 'pro'
           await supabase.from('subscriptions').upsert({
             user_id: userId,
             stripe_customer_id: session.customer,
@@ -120,8 +105,8 @@ export async function POST(req: NextRequest) {
         const newPriceId = sub.items.data[0]?.price?.id
         const oldPriceId = previousAttrs?.items?.data?.[0]?.price?.id
 
-        const newPlan = priceToPlan[newPriceId ?? ''] ?? 'free'
-        const oldPlan = priceToPlan[oldPriceId ?? ''] ?? 'free'
+        const newPlan = newPriceId ? getPlanFromPriceId(newPriceId) : 'free'
+        const oldPlan = oldPriceId ? getPlanFromPriceId(oldPriceId) : 'free'
 
         await supabase.from('subscriptions')
           .update({

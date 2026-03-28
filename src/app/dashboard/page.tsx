@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient, getUserTeam } from '@/lib/teams'
+import { getPlanFromPriceId } from '@/lib/stripe-prices'
 import { Plus, Key, Users, ExternalLink, FileText, ShieldCheck } from 'lucide-react'
 import QuotaBar from '@/components/QuotaBar'
 import AdminStatsWidget from '@/components/AdminStatsWidget'
@@ -89,16 +90,7 @@ async function syncFromCheckoutSession(sessionId: string, userId: string) {
     if (session.metadata?.user_id !== userId) return
 
     const priceId = session.line_items?.data?.[0]?.price?.id
-    const planMap: Record<string, string> = {
-      [process.env.STRIPE_PRICE_PRO_MONTHLY || '']: 'pro',
-      [process.env.STRIPE_PRICE_PRO_ANNUAL || '']: 'pro',
-      [process.env.STRIPE_PRICE_PRO || '']: 'pro',
-      [process.env.STRIPE_PRICE_BUSINESS_MONTHLY || '']: 'business',
-      [process.env.STRIPE_PRICE_BUSINESS_ANNUAL || '']: 'business',
-      [process.env.STRIPE_PRICE_BUSINESS || '']: 'business',
-      [process.env.STRIPE_PRICE_LIFETIME || '']: 'lifetime',
-    }
-    const plan = priceId ? (planMap[priceId] || 'pro') : 'pro'
+    const plan = priceId ? getPlanFromPriceId(priceId) : 'pro'
     const isLifetime = plan === 'lifetime'
 
     const supabase = createServiceClient()
@@ -116,6 +108,34 @@ async function syncFromCheckoutSession(sessionId: string, userId: string) {
 }
 
 // ── Async data sub-components ──────────────────────────────────────────────
+
+async function PastDueBanner({ userId }: { userId: string }) {
+  try {
+    const serviceClient = createServiceClient()
+    const { data: sub } = await serviceClient
+      .from('subscriptions')
+      .select('status')
+      .eq('user_id', userId)
+      .single()
+    if (sub?.status !== 'past_due') return null
+  } catch {
+    return null
+  }
+
+  return (
+    <div className="bg-yellow-950/50 border border-yellow-700/40 text-yellow-300 rounded-xl px-5 py-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 text-sm font-medium">
+        Your payment failed. Please update your billing info to restore access.
+      </div>
+      <Link
+        href="/api/stripe/portal"
+        className="shrink-0 bg-yellow-700 hover:bg-yellow-600 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+      >
+        Update billing →
+      </Link>
+    </div>
+  )
+}
 
 async function PlanBadge({ userId }: { userId: string }) {
   let planLabel = 'Free Plan'
@@ -415,7 +435,7 @@ export default async function DashboardPage({
 
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || null
   const firstName = displayName ? displayName.split(' ')[0] : null
-  const isAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
+  const isAdmin = user.email === process.env.ADMIN_EMAIL
 
   return (
     <div className="flex-1 flex flex-col">
@@ -440,6 +460,11 @@ export default async function DashboardPage({
             </Link>
           </div>
         </div>
+
+        {/* Past-due warning */}
+        <Suspense fallback={null}>
+          <PastDueBanner userId={user.id} />
+        </Suspense>
 
         {/* Stats */}
         <Suspense fallback={<StatsRowSkeleton />}>

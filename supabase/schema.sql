@@ -23,12 +23,27 @@ end;
 $$ language plpgsql security definer;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
 
+-- Auto-create default free subscription row on signup
+create or replace function public.handle_new_user_subscription()
+returns trigger as $$
+begin
+  insert into public.subscriptions (user_id, plan, status, stripe_customer_id)
+  values (new.id, 'free', 'active', null)
+  on conflict (user_id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer;
+create trigger on_auth_user_created_subscription after insert on auth.users for each row execute procedure public.handle_new_user_subscription();
+
 -- Exports
 create table public.exports (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users on delete cascade,
-  url text not null,
+  url text,
   video_id text,
+  video_url text,
+  video_title text,
+  channel_name text,
   format text not null,
   comment_count int default 0,
   status text default 'pending' check (status in ('pending','processing','completed','failed')),
