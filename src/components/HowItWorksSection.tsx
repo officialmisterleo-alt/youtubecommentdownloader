@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { MessageSquare, Download, CheckCircle } from 'lucide-react'
 
 const steps = [
@@ -15,13 +15,14 @@ const formats = ['CSV', 'JSON', 'TXT', 'HTML', 'Excel']
 
 function StepScanVisualizer() {
   const widths = ['w-full', 'w-3/4', 'w-5/6', 'w-2/3']
+  const prefersReducedMotion = useReducedMotion()
   return (
     <div className="w-full space-y-3 px-2">
       {widths.map((w, i) => (
         <motion.div
           key={i}
           className={`${w} h-4 bg-white/10 rounded-full`}
-          animate={{ opacity: [0.3, 1, 0.3], scale: [1, 1.02, 1] }}
+          animate={prefersReducedMotion ? {} : { opacity: [0.3, 1, 0.3], scale: [1, 1.02, 1] }}
           transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
         />
       ))}
@@ -50,10 +51,11 @@ function StepFormatVisualizer() {
 function StepIngestionVisualizer() {
   const count = 12
   const radius = 90
+  const prefersReducedMotion = useReducedMotion()
 
   return (
     <div className="relative w-48 h-48 mx-auto">
-      {Array.from({ length: count }).map((_, i) => {
+      {!prefersReducedMotion && Array.from({ length: count }).map((_, i) => {
         const angle = (i / count) * 2 * Math.PI
         const startX = Math.cos(angle) * radius
         const startY = Math.sin(angle) * radius
@@ -77,20 +79,23 @@ function StepIngestionVisualizer() {
         )
       })}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-        <motion.div
-          className="w-12 h-12 bg-red-600/20 border border-red-500/40 rounded-full flex items-center justify-center"
-          animate={{
-            scale: [1, 1.1, 1],
-            boxShadow: [
-              '0 0 0px rgba(220,38,38,0)',
-              '0 0 30px 10px rgba(220,38,38,0.3)',
-              '0 0 0px rgba(220,38,38,0)',
-            ],
-          }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        >
-          <Download size={20} className="text-red-400" />
-        </motion.div>
+        {/* Separate glow overlay — opacity-only animation avoids repainting box-shadow each frame */}
+        <div className="relative w-12 h-12 flex items-center justify-center">
+          {!prefersReducedMotion && (
+            <motion.div
+              className="absolute inset-0 rounded-full shadow-[0_0_30px_10px_rgba(220,38,38,0.3)]"
+              animate={{ opacity: [0, 1, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+          )}
+          <motion.div
+            className="absolute inset-0 bg-red-600/20 border border-red-500/40 rounded-full flex items-center justify-center"
+            animate={prefersReducedMotion ? {} : { scale: [1, 1.1, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <Download size={20} className="text-red-400" />
+          </motion.div>
+        </div>
       </div>
     </div>
   )
@@ -126,6 +131,7 @@ const visualizers = [
 
 export default function HowItWorksSection() {
   const [activeStep, setActiveStep] = useState(0)
+  const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -150,8 +156,8 @@ export default function HowItWorksSection() {
                 <motion.div
                   key={i}
                   className="flex gap-4 items-start cursor-pointer"
-                  animate={{ opacity: isActive ? 1 : 0.4, x: isActive ? 10 : 0 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  animate={{ opacity: isActive ? 1 : 0.4, x: prefersReducedMotion ? 0 : (isActive ? 10 : 0) }}
+                  transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
                   onClick={() => setActiveStep(i)}
                 >
                   <span
@@ -176,7 +182,7 @@ export default function HowItWorksSection() {
               <motion.div
                 className="absolute top-0 left-0 w-full bg-red-500 rounded-full"
                 animate={{ scaleY: (activeStep + 1) / 4 }}
-                transition={{ duration: 0.5, ease: 'easeInOut' }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: 'easeInOut' }}
                 style={{ originY: 0, height: '100%' }}
               />
             </div>
@@ -188,10 +194,10 @@ export default function HowItWorksSection() {
               <motion.div
                 key={activeStep}
                 className="w-full"
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
+                exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -12 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
               >
                 {visualizers[activeStep]}
               </motion.div>

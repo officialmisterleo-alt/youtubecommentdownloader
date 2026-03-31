@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import HeroInput from '@/components/HeroInput'
 import HowItWorksSection from '@/components/HowItWorksSection'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Download, FileSpreadsheet, Zap, Users, Key, Shield } from 'lucide-react'
 
 // Bevel card class — reused across all cards
@@ -26,28 +26,22 @@ const features = [
 const surfaces = ['Video Comments', 'Playlist Comments', 'Channel Comments', 'YouTube Shorts']
 
 export default function Home() {
+  const prefersReducedMotion = useReducedMotion()
+
   return (
     <div className="flex-1 overflow-x-hidden">
       {/* ── HERO ── */}
       <section className="relative flex flex-col items-center text-center px-6 pt-16 sm:pt-28 pb-24 overflow-hidden">
-        {/* Background blobs */}
-        <motion.div
-          className="absolute -top-20 -left-20 w-96 h-96 bg-red-600/10 blur-[120px] rounded-full pointer-events-none z-0"
-          animate={{ x: [0, 30, 0], y: [0, 20, 0] }}
-          transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-        />
-        <motion.div
-          className="absolute bottom-0 -right-20 w-80 h-80 bg-red-800/[0.08] blur-[120px] rounded-full pointer-events-none z-0"
-          animate={{ x: [0, -30, 0], y: [0, -20, 0] }}
-          transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-        />
+        {/* Background blobs — static, no animation (blur-[120px] on mobile can't be composited per frame) */}
+        <div className="absolute -top-20 -left-20 w-96 h-96 bg-red-600/10 blur-[120px] rounded-full pointer-events-none z-0" />
+        <div className="absolute bottom-0 -right-20 w-80 h-80 bg-red-800/[0.08] blur-[120px] rounded-full pointer-events-none z-0" />
 
         {/* Badge */}
         <motion.span
           className="relative z-10 bg-red-600/15 border border-red-500/40 rounded-full px-3 py-1 text-sm mb-6 inline-block"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut', delay: 0 }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: 'easeOut', delay: 0 }}
         >
           <span className="text-red-500 font-semibold">New:</span>
           <span className="text-red-400/80"> AI Sentiment Analysis</span>
@@ -56,9 +50,9 @@ export default function Home() {
         {/* Headline */}
         <motion.h1
           className="relative z-10 font-jakarta text-5xl md:text-7xl font-bold text-[#e5e2e1] leading-[1.05] tracking-tight max-w-4xl mb-6"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: 'easeOut', delay: prefersReducedMotion ? 0 : 0.1 }}
         >
           Download YouTube<br />
           <span className="text-white/90">Comments in Seconds.</span>
@@ -67,9 +61,9 @@ export default function Home() {
         {/* Subheadline */}
         <motion.p
           className="relative z-10 text-[#e5e2e1]/70 text-lg md:text-xl max-w-xl mb-10 leading-relaxed"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.2 }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: 'easeOut', delay: prefersReducedMotion ? 0 : 0.2 }}
         >
           The ultimate tool for creators, researchers, and marketers. Extract insights, export data, and understand your audience better than ever.
         </motion.p>
@@ -77,9 +71,9 @@ export default function Home() {
         {/* CTA input */}
         <motion.div
           className="relative z-10 w-full max-w-2xl"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.3 }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: 'easeOut', delay: prefersReducedMotion ? 0 : 0.3 }}
         >
           <HeroInput />
         </motion.div>
