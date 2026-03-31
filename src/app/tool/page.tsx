@@ -448,6 +448,7 @@ ${commentRows}
   }
 
   const isBusiness = userPlan === 'business' || userPlan === 'enterprise'
+  const hasBulkUrlDetected = urls.some(u => { if (!u.trim()) return false; const p = parseYouTubeUrl(u); return isBulkUrl(p) })
 
   const handleExport = async () => {
     const activeUrls = urls.filter(u => u.trim())
@@ -849,10 +850,18 @@ ${commentRows}
           </div>
         </div>
 
-        <button onClick={handleExport} disabled={loading || !urls[0]}
+        <button onClick={handleExport} disabled={loading || !urls[0] || (hasBulkUrlDetected && !isBusiness)}
           className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl text-base sm:text-lg transition-colors flex items-center justify-center gap-3 min-h-[56px]">
           {loading ? <><RefreshCw className="w-5 h-5 animate-spin" /> Exporting...</> : <><Download className="w-5 h-5" /> Start Export</>}
         </button>
+
+        {hasBulkUrlDetected && !isBusiness && (
+          <p className="text-xs text-[#888888] text-center mt-2">
+            <Lock className="w-3 h-3 inline mr-1 align-middle" />
+            Channel and playlist downloads require a Business plan.{' '}
+            <Link href="/pricing" className="text-red-400 hover:text-red-300 underline">Upgrade</Link>
+          </p>
+        )}
 
         {loading && (
           <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl p-4 sm:p-6">
