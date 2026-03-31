@@ -3,4 +3,4 @@ Allow: /
 Disallow: /dashboard
 Disallow: /account
 Disallow: /auth
-Sitemap: https://youtubecommentdownloader.com/sitemap.xml
+Sitemap: https://www.youtubecommentdownloader.com/sitemap.xml
