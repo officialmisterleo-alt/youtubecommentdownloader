@@ -721,16 +721,25 @@ ${commentRows}
           {/* Include Replies toggle */}
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-sm font-medium text-white">Include Replies</div>
+              <div className="text-sm font-medium text-white flex items-center gap-2">
+                Include Replies
+                {userPlan === 'free' && (
+                  <span className="text-xs text-[#555555] bg-[#1a1a1a] border border-white/[0.07] px-1.5 py-0.5 rounded font-normal">Pro only</span>
+                )}
+              </div>
               <div className="text-xs text-[#888888]">Also fetch comment replies (slower)</div>
             </div>
-            <label className="flex items-center gap-3 cursor-pointer shrink-0">
+            <label
+              className={`flex items-center gap-3 shrink-0 ${userPlan === 'free' ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
+              title={userPlan === 'free' ? 'Pro only' : undefined}
+            >
               <div className="relative">
                 <input
                   type="checkbox"
                   className="sr-only"
                   checked={includeReplies}
                   onChange={e => setIncludeReplies(e.target.checked)}
+                  disabled={userPlan === 'free'}
                 />
                 <div className={`w-10 h-6 rounded-full transition-colors ${includeReplies ? 'bg-red-600' : 'bg-[#333333]'}`} />
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${includeReplies ? 'translate-x-5' : 'translate-x-1'}`} />
