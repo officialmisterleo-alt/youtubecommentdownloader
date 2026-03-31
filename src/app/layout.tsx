@@ -14,10 +14,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'YouTube Comment Downloader - Export Comments at Scale',
   description: 'Download and export YouTube comments to CSV, Excel, JSON and more. Built for agencies, brands, and researchers.',
-  alternates: { canonical: 'https://youtubecommentdownloader.com' },
+  metadataBase: new URL('https://www.youtubecommentdownloader.com'),
+  alternates: { canonical: 'https://www.youtubecommentdownloader.com' },
   openGraph: {
     type: 'website',
-    url: 'https://youtubecommentdownloader.com',
+    url: 'https://www.youtubecommentdownloader.com',
     title: 'YouTube Comment Downloader — Export Comments at Scale',
     description: 'Download and export YouTube comments to CSV, Excel, JSON and more. Built for agencies, brands, and researchers.',
     siteName: 'YouTube Comment Downloader',

@@ -8,43 +8,43 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [
     {
-      url: 'https://youtubecommentdownloader.com',
+      url: 'https://www.youtubecommentdownloader.com',
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
-      url: 'https://youtubecommentdownloader.com/tool',
+      url: 'https://www.youtubecommentdownloader.com/tool',
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
-      url: 'https://youtubecommentdownloader.com/pricing',
+      url: 'https://www.youtubecommentdownloader.com/pricing',
       lastModified: now,
       changeFrequency: 'monthly',
       priority: 0.7,
     },
     {
-      url: 'https://youtubecommentdownloader.com/blog',
+      url: 'https://www.youtubecommentdownloader.com/blog',
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.6,
     },
     {
-      url: 'https://youtubecommentdownloader.com/privacy',
+      url: 'https://www.youtubecommentdownloader.com/privacy',
       lastModified: now,
       changeFrequency: 'yearly',
       priority: 0.3,
     },
     {
-      url: 'https://youtubecommentdownloader.com/terms',
+      url: 'https://www.youtubecommentdownloader.com/terms',
       lastModified: now,
       changeFrequency: 'yearly',
       priority: 0.3,
     },
     ...posts.map((post) => ({
-      url: `https://youtubecommentdownloader.com/blog/${post.slug}`,
+      url: `https://www.youtubecommentdownloader.com/blog/${post.slug}`,
       lastModified: new Date(post.date),
       changeFrequency: 'monthly' as const,
       priority: 0.7,
