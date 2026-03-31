@@ -31,7 +31,10 @@ const surfaces = ['Video Comments', 'Playlist Comments', 'Channel Comments', 'Yo
 
 export default function Home() {
   const prefersReducedMotion = useReducedMotion()
-  const [isMobile, setIsMobile] = useState(false)
+  // Default true (mobile-first): server and first client render both skip animation,
+  // so there is no hydration mismatch. useLayoutEffect then flips to false on desktop
+  // and the key prop forces a remount, letting Framer Motion pick up `initial` fresh.
+  const [isMobile, setIsMobile] = useState(true)
 
   useSafeLayoutEffect(() => {
     setIsMobile(window.innerWidth < 768)
@@ -50,8 +53,9 @@ export default function Home() {
 
         {/* Badge */}
         <motion.span
+          key={`badge-${skipEntrance}`}
           className="relative z-10 bg-red-600/15 border border-red-500/40 rounded-full px-3 py-1 text-sm mb-6 inline-block"
-          initial={{ opacity: 0, y: skipEntrance ? 0 : 20 }}
+          initial={skipEntrance ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: skipEntrance ? 0 : 0.5, ease: 'easeOut', delay: 0 }}
         >
@@ -61,8 +65,9 @@ export default function Home() {
 
         {/* Headline */}
         <motion.h1
+          key={`h1-${skipEntrance}`}
           className="relative z-10 font-jakarta text-5xl md:text-7xl font-bold text-[#e5e2e1] leading-[1.05] tracking-tight max-w-4xl mb-6"
-          initial={{ opacity: 0, y: skipEntrance ? 0 : 20 }}
+          initial={skipEntrance ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: skipEntrance ? 0 : 0.5, ease: 'easeOut', delay: skipEntrance ? 0 : 0.1 }}
         >
@@ -72,8 +77,9 @@ export default function Home() {
 
         {/* Subheadline */}
         <motion.p
+          key={`sub-${skipEntrance}`}
           className="relative z-10 text-[#e5e2e1]/70 text-lg md:text-xl max-w-xl mb-10 leading-relaxed"
-          initial={{ opacity: 0, y: skipEntrance ? 0 : 20 }}
+          initial={skipEntrance ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: skipEntrance ? 0 : 0.5, ease: 'easeOut', delay: skipEntrance ? 0 : 0.2 }}
         >
@@ -82,8 +88,9 @@ export default function Home() {
 
         {/* CTA input */}
         <motion.div
+          key={`cta-${skipEntrance}`}
           className="relative z-10 w-full max-w-2xl"
-          initial={{ opacity: 0, y: skipEntrance ? 0 : 20 }}
+          initial={skipEntrance ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: skipEntrance ? 0 : 0.5, ease: 'easeOut', delay: skipEntrance ? 0 : 0.3 }}
         >
