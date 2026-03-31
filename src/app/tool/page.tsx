@@ -761,7 +761,7 @@ ${commentRows}
             </div>
             <p className="mt-1.5 text-xs text-[#666666]">
               {!isSignedIn ? (
-                <><Link href="/auth/signin" className="text-[#888888] hover:text-white underline">Sign in</Link> to unlock more comments</>
+                <><Link href="/auth/login" className="text-[#888888] hover:text-white underline">Sign in</Link> to unlock more comments</>
               ) : userPlan === 'enterprise' ? (
                 'Enterprise plan'
               ) : userPlan === 'business' ? (
