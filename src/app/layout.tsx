@@ -37,6 +37,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="manifest" href="/site.webmanifest" />
+      </head>
       <body className={`${inter.className} ${jakarta.variable} bg-[#131313] text-[#e5e2e1] antialiased min-h-screen flex flex-col`}>
         <Navbar />
         {children}
