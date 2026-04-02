@@ -31,6 +31,9 @@ export const metadata: Metadata = {
     description: 'Download and export YouTube comments to CSV, Excel, JSON and more.',
     images: ['/opengraph-image.jpg'],
   },
+  icons: {
+    icon: '/favicon.ico',
+  },
   verification: {
     google: '1dR23onHLgwcg4rDcweR9Iw0AkfsUPGiNvAJp_t8pY4',
   },
