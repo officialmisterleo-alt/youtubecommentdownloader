@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
             items: { data: Array<{ price: { id: string } }> }
           }
           const priceId = subData.items.data[0]?.price?.id
-          const plan = priceId ? getPlanFromPriceId(priceId) : 'pro'
+          const plan = priceId ? getPlanFromPriceId(priceId) : 'free'
           await supabase.from('subscriptions').upsert({
             user_id: userId,
             stripe_customer_id: session.customer,

@@ -17,5 +17,5 @@ export function getPlanFromPriceId(priceId: string): string {
   add(process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL, 'enterprise')
   add(process.env.STRIPE_PRICE_ENTERPRISE, 'enterprise')
   add(process.env.STRIPE_PRICE_LIFETIME, 'lifetime')
-  return map[priceId] ?? 'pro'
+  return map[priceId] ?? 'free'
 }
