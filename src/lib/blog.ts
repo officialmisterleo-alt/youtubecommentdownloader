@@ -13,6 +13,15 @@ export type BlogPost = {
 // Registry of all posts — sorted by date desc
 const posts: Omit<BlogPost, 'Content'>[] = [
   {
+    slug: 'viral-content-ideas-competitors-youtube-comments',
+    title: "How to Find Viral Content Ideas Hidden in Your Competitors' YouTube Comments",
+    description:
+      "Your competitors' comment sections are the most honest focus group on the internet. Here's how to read them like a strategist and turn what you find into content people actually want.",
+    date: '2026-04-01',
+    readTime: '7 min read',
+    tags: ['Content Strategy', 'YouTube Research', 'Creator Economy'],
+  },
+  {
     slug: 'youtube-comments-middle-funnel-use-cases',
     title: 'What to Do With Downloaded YouTube Comments',
     description:
