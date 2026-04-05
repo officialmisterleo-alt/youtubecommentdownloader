@@ -8,7 +8,7 @@ function buildPriceMap(): Record<string, string | undefined> {
   return {
     // Monthly/annual prices — set STRIPE_PRICE_PRO_MONTHLY and STRIPE_PRICE_PRO_ANNUAL in env
     // or fall back to STRIPE_PRICE_PRO for a single price ID used for both intervals
-    'pro:monthly': process.env.STRIPE_PRICE_PRO_MONTHLY ?? process.env.STRIPE_PRICE_PRO,
+    'pro:monthly': process.env.STRIPE_PRICE_PRO_MONTHLY ?? process.env.STRIPE_PRICE_PRO ?? 'price_1TIi1WEBEUdfEjIQDVmkkKzg',
     'pro:annual': process.env.STRIPE_PRICE_PRO_ANNUAL ?? process.env.STRIPE_PRICE_PRO,
     'business:monthly': process.env.STRIPE_PRICE_BUSINESS_MONTHLY ?? process.env.STRIPE_PRICE_BUSINESS,
     'business:annual': process.env.STRIPE_PRICE_BUSINESS_ANNUAL ?? process.env.STRIPE_PRICE_BUSINESS,
