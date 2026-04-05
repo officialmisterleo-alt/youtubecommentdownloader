@@ -7,7 +7,7 @@ export function getPlanFromPriceId(priceId: string): string {
   const add = (envVar: string | undefined, plan: string) => {
     if (envVar && envVar !== 'price_...') map[envVar] = plan
   }
-  add(process.env.STRIPE_PRICE_PRO_MONTHLY, 'pro')
+  add('price_1TIi1WEBEUdfEjIQDVmkkKzg', 'pro')
   add(process.env.STRIPE_PRICE_PRO_ANNUAL, 'pro')
   add(process.env.STRIPE_PRICE_PRO, 'pro')
   add(process.env.STRIPE_PRICE_BUSINESS_MONTHLY, 'business')
