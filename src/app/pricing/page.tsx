@@ -28,21 +28,21 @@ const plans: Plan[] = [
     cta: 'Use Now', href: '/auth/signup?plan=free', checkoutPlan: null, highlight: false, badge: null, note: 'No credit card required.',
   },
   {
-    name: 'Pro', monthlyPrice: 29, annualPrice: 24,
+    name: 'Pro', monthlyPrice: 19, annualPrice: 16,
     desc: 'For individual power users',
     features: ['10,000 comments per download', '100,000 comments/month', 'All export formats', 'Reply thread capture', 'Email support', 'Priority processing', 'Basic sorting & filtering', 'AI Analysis (up to 10,000 comments)'],
     notIncluded: ['Bulk channel exports', 'REST API access', 'Team seats', 'Scheduled exports'],
     cta: 'Get Started', href: null, checkoutPlan: 'pro', highlight: false, badge: null, note: null,
   },
   {
-    name: 'Business', monthlyPrice: 79, annualPrice: 65,
+    name: 'Business', monthlyPrice: 49, annualPrice: 41,
     desc: 'For agencies and growing teams',
     features: ['100,000 comments per download', '1,000,000 comments/month', 'All export formats', 'Reply thread capture', 'Bulk channel/playlist', '3 team seats', 'Priority email support', 'AI Analysis (up to 50,000 comments)'],
     notIncluded: ['Scheduled exports', 'REST API access', 'SSO / SAML', 'White-label', 'Dedicated API quota'],
     cta: 'Get Started', href: null, checkoutPlan: 'business', highlight: true, badge: 'Most Popular', note: null,
   },
   {
-    name: 'Enterprise', monthlyPrice: 299, annualPrice: 249,
+    name: 'Enterprise', monthlyPrice: 199, annualPrice: 166,
     desc: 'For large teams and enterprise use',
     features: ['1,000,000 comments per download', 'Unlimited monthly quota', 'Dedicated API quota', 'Reply thread capture', '10 team seats', 'SSO / SAML', 'White-label exports', 'Custom data retention', '99.9% SLA', 'Priority phone support', 'Custom onboarding', 'AI Analysis (up to 100,000 comments)'],
     notIncluded: [],
@@ -259,7 +259,7 @@ export default function PricingPage() {
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 mb-16 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="text-red-500 text-xs font-semibold uppercase tracking-widest mb-1">⚡ Limited Time Offer</div>
-            <div className="text-[#e5e2e1] font-bold text-xl mb-1">Lifetime Deal — $149</div>
+            <div className="text-[#e5e2e1] font-bold text-xl mb-1">Lifetime Deal — $99</div>
             <p className="text-[#888888] text-sm">Everything in Pro, forever. One payment, no recurring fees. 10,000 comments per download, 100,000 comments/month, AI analysis up to 10,000 comments. Perfect for freelancers and indie hackers.</p>
           </div>
           {userPlan === 'lifetime' ? (

@@ -21,7 +21,7 @@ export async function generateMetadata({
   return {
     title: `${post.title} — YouTube Comment Downloader Blog`,
     description: post.description,
-    alternates: { canonical: `https://youtubecommentdownloader.com/blog/${slug}` },
+    alternates: { canonical: `https://www.youtubecommentdownloader.com/blog/${slug}` },
     openGraph: {
       title: post.title,
       description: post.description,
