@@ -33,6 +33,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
   },
   verification: {
     google: '1dR23onHLgwcg4rDcweR9Iw0AkfsUPGiNvAJp_t8pY4',
