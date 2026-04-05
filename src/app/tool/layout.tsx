@@ -3,11 +3,11 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'YouTube Comment Downloader Tool – Export to CSV, JSON, Excel',
   description: 'Use our free YouTube comment extractor to download and export comments from any YouTube video, playlist, or channel to CSV, JSON, Excel, TXT, or HTML.',
-  alternates: { canonical: 'https://youtubecommentdownloader.com/tool' },
+  alternates: { canonical: 'https://www.youtubecommentdownloader.com/tool' },
   openGraph: {
     title: 'YouTube Comment Downloader Tool – Export to CSV, JSON, Excel',
     description: 'Download and export YouTube comments to CSV, JSON, Excel, TXT, or HTML. Fast, free YouTube comments extractor.',
-    url: 'https://youtubecommentdownloader.com/tool',
+    url: 'https://www.youtubecommentdownloader.com/tool',
   },
 }
 
@@ -16,7 +16,7 @@ const webAppJsonLd = {
   '@type': 'WebApplication',
   name: 'YouTube Comment Downloader',
   description: 'Download and export YouTube comments to CSV, JSON, Excel, TXT, or HTML.',
-  url: 'https://youtubecommentdownloader.com/tool',
+  url: 'https://www.youtubecommentdownloader.com/tool',
   applicationCategory: 'UtilitiesApplication',
   operatingSystem: 'Web',
   offers: {
