@@ -32,9 +32,17 @@ export const metadata: Metadata = {
     images: ['/opengraph-image.jpg'],
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
     shortcut: '/favicon.ico',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
+  manifest: '/site.webmanifest',
   verification: {
     google: '1dR23onHLgwcg4rDcweR9Iw0AkfsUPGiNvAJp_t8pY4',
   },
@@ -42,9 +50,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="manifest" href="/site.webmanifest" />
-      </head>
+
       <body className={`${inter.className} ${jakarta.variable} bg-[#131313] text-[#e5e2e1] antialiased min-h-screen flex flex-col`}>
         <Navbar />
         {children}
