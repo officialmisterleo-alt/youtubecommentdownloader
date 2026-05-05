@@ -22,6 +22,51 @@ const posts: Omit<BlogPost, 'Content'>[] = [
     tags: ['Content Strategy', 'YouTube Research', 'Creator Economy'],
   },
   {
+    slug: 'youtube-comment-downloader',
+    title: "YouTube Comment Downloader: Export Any Video's Comments in Seconds",
+    description:
+      'A YouTube comment downloader lets you extract and save comments from any video for research, moderation, or analysis. Here\'s how to use this free tool and why it matters.',
+    date: '2026-05-01',
+    readTime: '8 min read',
+    tags: ['YouTube Tools', 'Data Export', 'Comment Analysis'],
+  },
+  {
+    slug: 'export-youtube-comments-csv',
+    title: 'How to Export YouTube Comments to CSV (Free, No Code)',
+    description:
+      'Export YouTube comments to CSV in a few clicks — no API keys, no coding. Here\'s how to do it, what the CSV columns look like, and what to do with the data in Excel or Google Sheets.',
+    date: '2026-05-01',
+    readTime: '7 min read',
+    tags: ['Data Export', 'YouTube Tools', 'Spreadsheets'],
+  },
+  {
+    slug: 'youtube-comment-scraper-free',
+    title: 'YouTube Comment Scraper: The Free Tool That Actually Works in 2025',
+    description:
+      'Most free YouTube comment scrapers are broken, abandoned, or rate-limited into uselessness. Here\'s why, and what to use instead.',
+    date: '2026-05-01',
+    readTime: '7 min read',
+    tags: ['YouTube Tools', 'Web Scraping', 'Data Collection'],
+  },
+  {
+    slug: 'how-to-download-youtube-comments',
+    title: 'How to Download All Comments from a YouTube Video',
+    description:
+      'A step-by-step guide to downloading YouTube comments — including which formats to use, how to handle videos with tens of thousands of comments, and bulk options for channels and playlists.',
+    date: '2026-05-01',
+    readTime: '6 min read',
+    tags: ['YouTube Tools', 'How-To', 'Data Export'],
+  },
+  {
+    slug: 'youtube-comments-to-spreadsheet',
+    title: 'YouTube Comments to Spreadsheet: Analyze Audience Sentiment Fast',
+    description:
+      'Move YouTube comments into a spreadsheet in seconds — then sort by likes, filter by keyword, and spot sentiment patterns without any special tools.',
+    date: '2026-05-01',
+    readTime: '6 min read',
+    tags: ['Data Analysis', 'YouTube Tools', 'Audience Research'],
+  },
+  {
     slug: 'youtube-comments-middle-funnel-use-cases',
     title: 'What to Do With Downloaded YouTube Comments',
     description:

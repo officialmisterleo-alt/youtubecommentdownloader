@@ -1,16 +1,15 @@
-'use client'
-
-import { useState, useEffect, useLayoutEffect } from 'react'
 import Link from 'next/link'
-import HeroInput from '@/components/HeroInput'
 import HowItWorksSection from '@/components/HowItWorksSection'
-import { motion, useReducedMotion } from 'framer-motion'
+import HomeHeroAnimations from '@/components/HomeHeroAnimations'
 import { Download, FileSpreadsheet, Zap, Users, Key, Shield } from 'lucide-react'
+import type { Metadata } from 'next'
 
-// useLayoutEffect fires before paint (no flash); useEffect is the SSR fallback
-const useSafeLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
+export const metadata: Metadata = {
+  title: 'YouTube Comment Downloader — Export Comments in Seconds',
+  description: 'The best free YouTube comment downloader. Export YouTube comments to CSV, Excel, JSON and more. Built for creators, researchers, and marketers.',
+  alternates: { canonical: 'https://www.youtubecommentdownloader.com' },
+}
 
-// Bevel card class — reused across all cards
 const bevel = [
   'bg-gradient-to-br from-[#1c1c1c] to-[#111111]',
   'border border-white/[0.07]',
@@ -19,84 +18,24 @@ const bevel = [
 ].join(' ')
 
 const features = [
-  { icon: Download,       title: 'Bulk Export',       desc: 'Download thousands of comments from any video, playlist, or channel in one click.' },
-  { icon: FileSpreadsheet, title: '6 Export Formats', desc: 'CSV, JSON, Excel, TXT and more. Ready to drop into any analytics workflow.' },
-  { icon: Zap,            title: 'Instant Results',   desc: '5,000 comments per minute. No queue, no waiting. Results appear as they load.' },
-  { icon: Users,          title: 'Team Access',       desc: 'Share exports, manage seats, and collaborate across your agency or research team.' },
-  { icon: Key,            title: 'REST API',          desc: 'Full API access for Business and Enterprise. Automate exports and integrate with your stack.' },
-  { icon: Shield,         title: 'Enterprise Ready',  desc: 'SOC2-grade infrastructure, SLA guarantees, and dedicated support for large teams.' },
+  { icon: Download,        title: 'Bulk Export',       desc: 'Download thousands of comments from any video, playlist, or channel in one click.' },
+  { icon: FileSpreadsheet, title: '6 Export Formats',  desc: 'CSV, JSON, Excel, TXT and more. Ready to drop into any analytics workflow.' },
+  { icon: Zap,             title: 'Instant Results',   desc: '5,000 comments per minute. No queue, no waiting. Results appear as they load.' },
+  { icon: Users,           title: 'Team Access',        desc: 'Share exports, manage seats, and collaborate across your agency or research team.' },
+  { icon: Key,             title: 'REST API',           desc: 'Full API access for Business and Enterprise. Automate exports and integrate with your stack.' },
+  { icon: Shield,          title: 'Enterprise Ready',   desc: 'SOC2-grade infrastructure, SLA guarantees, and dedicated support for large teams.' },
 ]
 
 const surfaces = ['Video Comments', 'Playlist Comments', 'Channel Comments', 'YouTube Shorts']
 
 export default function Home() {
-  const prefersReducedMotion = useReducedMotion()
-  // Default true (mobile-first): server and first client render both skip animation,
-  // so there is no hydration mismatch. useLayoutEffect then flips to false on desktop
-  // and the key prop forces a remount, letting Framer Motion pick up `initial` fresh.
-  const [isMobile, setIsMobile] = useState(true)
-
-  useSafeLayoutEffect(() => {
-    setIsMobile(window.innerWidth < 768)
-  }, [])
-
-  // Skip entrance animation entirely on mobile — animating on mobile causes stutter
-  const skipEntrance = isMobile || !!prefersReducedMotion
-
   return (
     <div className="flex-1 overflow-x-hidden">
       {/* ── HERO ── */}
       <section className="relative flex flex-col items-center text-center px-6 pt-16 sm:pt-28 pb-24 overflow-hidden">
-        {/* Background blobs — static, no animation (blur-[120px] on mobile can't be composited per frame) */}
         <div className="absolute -top-20 -left-20 w-96 h-96 bg-red-600/10 blur-[120px] rounded-full pointer-events-none z-0" />
         <div className="absolute bottom-0 -right-20 w-80 h-80 bg-red-800/[0.08] blur-[120px] rounded-full pointer-events-none z-0" />
-
-        {/* Badge */}
-        <motion.span
-          key={`badge-${skipEntrance}`}
-          className="relative z-10 bg-red-600/15 border border-red-500/40 rounded-full px-3 py-1 text-sm mb-6 inline-block"
-          initial={skipEntrance ? false : { opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: skipEntrance ? 0 : 0.5, ease: 'easeOut', delay: 0 }}
-        >
-          <span className="text-red-500 font-semibold">New:</span>
-          <span className="text-red-400/80"> AI Sentiment Analysis</span>
-        </motion.span>
-
-        {/* Headline */}
-        <motion.h1
-          key={`h1-${skipEntrance}`}
-          className="relative z-10 font-jakarta text-5xl md:text-7xl font-bold text-[#e5e2e1] leading-[1.05] tracking-tight max-w-4xl mb-6"
-          initial={skipEntrance ? false : { opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: skipEntrance ? 0 : 0.5, ease: 'easeOut', delay: skipEntrance ? 0 : 0.1 }}
-        >
-          Download YouTube<br />
-          <span className="text-white/90">Comments in Seconds.</span>
-        </motion.h1>
-
-        {/* Subheadline */}
-        <motion.p
-          key={`sub-${skipEntrance}`}
-          className="relative z-10 text-[#e5e2e1]/70 text-lg md:text-xl max-w-xl mb-10 leading-relaxed"
-          initial={skipEntrance ? false : { opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: skipEntrance ? 0 : 0.5, ease: 'easeOut', delay: skipEntrance ? 0 : 0.2 }}
-        >
-          The ultimate tool for creators, researchers, and marketers. Extract insights, export data, and understand your audience better than ever.
-        </motion.p>
-
-        {/* CTA input */}
-        <motion.div
-          key={`cta-${skipEntrance}`}
-          className="relative z-10 w-full max-w-2xl"
-          initial={skipEntrance ? false : { opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: skipEntrance ? 0 : 0.5, ease: 'easeOut', delay: skipEntrance ? 0 : 0.3 }}
-        >
-          <HeroInput />
-        </motion.div>
-
+        <HomeHeroAnimations />
       </section>
 
       {/* ── FEATURES GRID ── */}
@@ -192,7 +131,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FINAL CTA — bevel card ── */}
+      {/* ── FINAL CTA ── */}
       <section className="py-16 px-6 border-t border-white/[0.07]">
         <div className="max-w-2xl mx-auto">
           <div className={`${bevel} rounded-2xl p-10 text-center`}>
