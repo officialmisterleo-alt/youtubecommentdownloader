@@ -5,9 +5,8 @@ import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient, getUserTeam, getEffectivePlan } from '@/lib/teams'
 import { getPlanFromPriceId } from '@/lib/stripe-prices'
-import { Plus, Users, ExternalLink, FileText, ShieldCheck } from 'lucide-react'
+import { Plus, Users, ExternalLink, FileText, ShieldCheck, Building2, BarChart3 } from 'lucide-react'
 import QuotaBar from '@/components/QuotaBar'
-import AdminStatsWidget from '@/components/AdminStatsWidget'
 import { getApiKeys } from '@/lib/youtube-api'
 import { getErrorLog } from '@/lib/alerts'
 import { StatCardSkeleton } from '@/components/skeletons/StatCardSkeleton'
@@ -15,41 +14,51 @@ import { TableRowSkeleton } from '@/components/skeletons/TableRowSkeleton'
 import { CardSkeleton } from '@/components/skeletons/CardSkeleton'
 import ApiKeyCard from '@/app/dashboard/ApiKeyCard'
 import EnterpriseBanner from '@/app/dashboard/EnterpriseBanner'
+import ProvisionForm from '@/app/admin/ProvisionForm'
 
-function AdminApiHealthWidget() {
-  const configuredKeys = getApiKeys()
-  const recentErrors = getErrorLog()
-  const lastError = recentErrors[recentErrors.length - 1]
+// ── Admin types ────────────────────────────────────────────────────────────
 
-  return (
-    <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 mb-8">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-[#888888]" />
-          <h2 className="font-semibold font-jakarta text-[#e5e2e1] text-sm">API Health</h2>
-          <span className="text-xs text-[#555555]">admin</span>
-        </div>
-        <Link href="/api/admin/api-health" target="_blank" className="text-red-400 hover:text-red-300 text-xs">
-          Raw JSON →
-        </Link>
-      </div>
-      <div className="flex items-center gap-4">
-        <div>
-          <span className="text-white font-semibold">{configuredKeys.length}</span>
-          <span className="text-[#888888] text-xs ml-1">/ 5 keys configured</span>
-        </div>
-        {lastError && (
-          <div className="text-xs text-yellow-500/80 truncate max-w-xs">
-            Last alert: {lastError.event} — {lastError.timestamp.slice(0, 16).replace('T', ' ')}
-          </div>
-        )}
-        {!lastError && (
-          <div className="text-xs text-green-500/70">No errors logged this session</div>
-        )}
-      </div>
-    </div>
-  )
+type PlanBreakdown = Record<string, number>
+
+type AdminStats = {
+  totalUsers: number
+  newUsersThisMonth: number
+  activeUsersThisMonth: number
+  totalExports: number
+  exportsThisMonth: number
+  totalComments: number
+  activeSubscriptions: number
+  planBreakdown: PlanBreakdown
+  lastUpdated: string
 }
+
+type EnterpriseTeam = {
+  id: string
+  name: string
+  owner_id: string
+  owner_email: string | null
+  created_at: string
+  max_seats: number
+  active_seats: number
+  pending_invitations: number
+  subscription: {
+    plan: string
+    status: string
+    current_period_end: string | null
+    stripe_customer_id: string | null
+  } | null
+  monthly_comments: number
+}
+
+type PendingProvision = {
+  id: string
+  email: string
+  team_name: string
+  max_seats: number
+  created_at: string
+}
+
+// ── User-facing types ──────────────────────────────────────────────────────
 
 type ExportRecord = {
   id: string
@@ -69,6 +78,8 @@ const FORMAT_COLORS: Record<string, string> = {
   TXT: 'text-[#888888] bg-white/[0.04] border-white/[0.07]',
 }
 
+// ── Shared helpers ─────────────────────────────────────────────────────────
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
@@ -80,6 +91,180 @@ function timeAgo(dateStr: string): string {
   if (d < 30) return `${d}d ago`
   return new Date(dateStr).toLocaleDateString()
 }
+
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return '—'
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+// ── Admin data fetchers ────────────────────────────────────────────────────
+
+async function fetchAdminStats(): Promise<AdminStats | null> {
+  try {
+    const service = createServiceClient()
+    const now = new Date()
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
+
+    const [
+      totalExportsRes,
+      exportsThisMonthRes,
+      totalCommentsRes,
+      activeUsersRes,
+      activeSubsRes,
+      planBreakdownRes,
+      usersRes,
+    ] = await Promise.all([
+      service.from('exports').select('*', { count: 'exact', head: true }),
+      service.from('exports').select('*', { count: 'exact', head: true }).gte('created_at', startOfMonth),
+      service.from('exports').select('comment_count'),
+      service.from('exports').select('user_id').gte('created_at', startOfMonth),
+      service.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+      service.from('subscriptions').select('plan').eq('status', 'active'),
+      service.auth.admin.listUsers({ perPage: 1, page: 1 }),
+    ])
+
+    const totalComments = (totalCommentsRes.data ?? []).reduce(
+      (sum: number, row: { comment_count?: number }) => sum + (row.comment_count ?? 0),
+      0
+    )
+
+    const activeUserIds = new Set((activeUsersRes.data ?? []).map((r: { user_id: string }) => r.user_id))
+
+    const planCounts: PlanBreakdown = {}
+    for (const row of planBreakdownRes.data ?? []) {
+      const plan = (row as { plan?: string }).plan ?? 'unknown'
+      planCounts[plan] = (planCounts[plan] ?? 0) + 1
+    }
+
+    const totalUsers = (usersRes.data as any)?.total ?? (usersRes.data?.users?.length ?? 0)
+
+    let newUsersThisMonth = 0
+    const pageSize = 1000
+    const totalPages = Math.ceil(totalUsers / pageSize)
+    const startMs = new Date(startOfMonth).getTime()
+    const pagePromises = []
+    for (let p = 1; p <= Math.min(totalPages, 10); p++) {
+      pagePromises.push(service.auth.admin.listUsers({ perPage: pageSize, page: p }))
+    }
+    const pages = await Promise.all(pagePromises)
+    for (const page of pages) {
+      for (const u of page.data?.users ?? []) {
+        if (new Date(u.created_at).getTime() >= startMs) newUsersThisMonth++
+      }
+    }
+
+    return {
+      totalUsers,
+      newUsersThisMonth,
+      activeUsersThisMonth: activeUserIds.size,
+      totalExports: totalExportsRes.count ?? 0,
+      exportsThisMonth: exportsThisMonthRes.count ?? 0,
+      totalComments,
+      activeSubscriptions: activeSubsRes.count ?? 0,
+      planBreakdown: planCounts,
+      lastUpdated: now.toISOString().slice(0, 10),
+    }
+  } catch {
+    return null
+  }
+}
+
+async function fetchEnterpriseData(): Promise<{ teams: EnterpriseTeam[]; pending: PendingProvision[] }> {
+  try {
+    const service = createServiceClient()
+    const now = new Date()
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
+
+    const [teamsRes, pendingRes] = await Promise.all([
+      service
+        .from('teams')
+        .select('id, name, owner_id, plan, max_seats, created_at')
+        .eq('plan', 'enterprise')
+        .order('created_at', { ascending: false }),
+      service
+        .from('enterprise_provisions')
+        .select('id, email, team_name, max_seats, created_at')
+        .eq('claimed', false)
+        .order('created_at', { ascending: false }),
+    ])
+
+    const pending: PendingProvision[] = (pendingRes.data ?? []).map((p: {
+      id: string; email: string; team_name: string; max_seats: number; created_at: string
+    }) => ({
+      id: p.id,
+      email: p.email,
+      team_name: p.team_name,
+      max_seats: p.max_seats,
+      created_at: p.created_at,
+    }))
+
+    if (teamsRes.error || !teamsRes.data || teamsRes.data.length === 0) {
+      return { teams: [], pending }
+    }
+
+    const teams = teamsRes.data
+    const teamIds = teams.map((t: { id: string }) => t.id)
+    const ownerIds = Array.from(new Set(teams.map((t: { owner_id: string }) => t.owner_id).filter(Boolean))) as string[]
+
+    const [membersRes, subsRes, usageRes] = await Promise.all([
+      service.from('team_members').select('team_id, status').in('team_id', teamIds),
+      service.from('subscriptions').select('user_id, plan, status, current_period_end, stripe_customer_id').in('user_id', ownerIds),
+      service.from('exports').select('user_id, comment_count').in('user_id', ownerIds).gte('created_at', startOfMonth),
+    ])
+
+    const ownerEmails: Record<string, string> = {}
+    await Promise.all(
+      ownerIds.map(async (ownerId) => {
+        try {
+          const { data } = await service.auth.admin.getUserById(ownerId)
+          if (data?.user?.email) ownerEmails[ownerId] = data.user.email
+        } catch { /* non-fatal */ }
+      })
+    )
+
+    const membersByTeam: Record<string, { active: number; pending: number }> = {}
+    for (const m of membersRes.data ?? []) {
+      const entry = membersByTeam[m.team_id] ?? { active: 0, pending: 0 }
+      if (m.status === 'active') entry.active++
+      else if (m.status === 'pending' || m.status === 'invited') entry.pending++
+      membersByTeam[m.team_id] = entry
+    }
+
+    const subsByOwner: Record<string, EnterpriseTeam['subscription']> = {}
+    for (const s of subsRes.data ?? []) {
+      subsByOwner[s.user_id] = {
+        plan: s.plan,
+        status: s.status,
+        current_period_end: s.current_period_end ?? null,
+        stripe_customer_id: s.stripe_customer_id ?? null,
+      }
+    }
+
+    const usageByOwner: Record<string, number> = {}
+    for (const e of usageRes.data ?? []) {
+      usageByOwner[e.user_id] = (usageByOwner[e.user_id] ?? 0) + (e.comment_count ?? 0)
+    }
+
+    const hydratedTeams: EnterpriseTeam[] = teams.map((team: { id: string; name: string; owner_id: string; plan: string; max_seats: number; created_at: string }) => ({
+      id: team.id,
+      name: team.name,
+      owner_id: team.owner_id,
+      owner_email: ownerEmails[team.owner_id] ?? null,
+      created_at: team.created_at,
+      max_seats: team.max_seats ?? 10,
+      active_seats: membersByTeam[team.id]?.active ?? 0,
+      pending_invitations: membersByTeam[team.id]?.pending ?? 0,
+      subscription: subsByOwner[team.owner_id] ?? null,
+      monthly_comments: usageByOwner[team.owner_id] ?? 0,
+    }))
+
+    return { teams: hydratedTeams, pending }
+  } catch {
+    return { teams: [], pending: [] }
+  }
+}
+
+// ── Stripe sync ────────────────────────────────────────────────────────────
 
 async function syncFromCheckoutSession(sessionId: string, userId: string) {
   try {
@@ -109,7 +294,411 @@ async function syncFromCheckoutSession(sessionId: string, userId: string) {
   }
 }
 
-// ── Async data sub-components ──────────────────────────────────────────────
+// ── Admin sub-components ───────────────────────────────────────────────────
+
+function AdminStatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+  return (
+    <div className="bg-[#171717] border border-white/[0.07] rounded-xl p-5">
+      <div className="text-2xl font-bold text-white mb-1">
+        {typeof value === 'number' ? value.toLocaleString() : value}
+      </div>
+      <div className="text-[#888888] text-xs">{label}</div>
+      {sub && <div className="text-[#555555] text-xs mt-1">{sub}</div>}
+    </div>
+  )
+}
+
+function AdminStatCardSkeleton() {
+  return (
+    <div className="bg-[#171717] border border-white/[0.07] rounded-xl p-5 animate-pulse">
+      <div className="h-7 w-20 bg-white/[0.07] rounded mb-2" />
+      <div className="h-3 w-28 bg-white/[0.05] rounded" />
+    </div>
+  )
+}
+
+const PLAN_COLORS: Record<string, string> = {
+  free: 'text-[#888888]',
+  pro: 'text-blue-400',
+  business: 'text-purple-400',
+  enterprise: 'text-yellow-400',
+  lifetime: 'text-green-400',
+}
+const PLAN_ORDER = ['free', 'pro', 'business', 'enterprise', 'lifetime']
+
+async function TopStatsSection() {
+  const stats = await fetchAdminStats()
+
+  if (!stats) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        {Array.from({ length: 4 }).map((_, i) => <AdminStatCardSkeleton key={i} />)}
+      </div>
+    )
+  }
+
+  const planSummary = PLAN_ORDER
+    .filter(p => (stats.planBreakdown[p] ?? 0) > 0)
+    .map(p => `${stats.planBreakdown[p]} ${p}`)
+    .join(' · ')
+
+  return (
+    <div className="mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+        <AdminStatCard label="Total Users" value={stats.totalUsers} sub={`+${stats.newUsersThisMonth} this month`} />
+        <AdminStatCard
+          label="Active Subscriptions"
+          value={stats.activeSubscriptions}
+          sub={planSummary || undefined}
+        />
+        <AdminStatCard label="Exports This Month" value={stats.exportsThisMonth} sub={`${stats.totalExports.toLocaleString()} all-time`} />
+        <AdminStatCard label="Comments Downloaded" value={stats.totalComments} />
+      </div>
+
+      {/* Plan breakdown row */}
+      {Object.keys(stats.planBreakdown).length > 0 && (
+        <div className="bg-[#171717] border border-white/[0.07] rounded-xl px-5 py-4 flex flex-wrap items-center gap-5">
+          <span className="text-[#888888] text-xs font-medium">Plan Breakdown</span>
+          {PLAN_ORDER.filter(p => (stats.planBreakdown[p] ?? 0) > 0).map(plan => (
+            <div key={plan} className="flex items-baseline gap-1">
+              <span className={`text-sm font-bold ${PLAN_COLORS[plan] ?? 'text-white'}`}>
+                {stats.planBreakdown[plan]}
+              </span>
+              <span className="text-[#555555] text-xs capitalize">{plan}</span>
+            </div>
+          ))}
+          {Object.keys(stats.planBreakdown)
+            .filter(p => !PLAN_ORDER.includes(p))
+            .map(plan => (
+              <div key={plan} className="flex items-baseline gap-1">
+                <span className="text-sm font-bold text-white">{stats.planBreakdown[plan]}</span>
+                <span className="text-[#555555] text-xs capitalize">{plan}</span>
+              </div>
+            ))}
+          <span className="ml-auto text-[#444444] text-xs">Updated {stats.lastUpdated}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SubStatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    active: 'text-green-400 bg-green-900/20 border-green-900/40',
+    past_due: 'text-yellow-400 bg-yellow-900/20 border-yellow-900/40',
+    canceled: 'text-red-400 bg-red-900/20 border-red-900/40',
+    trialing: 'text-blue-400 bg-blue-900/20 border-blue-900/40',
+  }
+  return (
+    <span className={`text-xs font-medium px-2 py-0.5 rounded border ${styles[status] ?? 'text-[#888888] bg-white/[0.04] border-white/[0.07]'}`}>
+      {status}
+    </span>
+  )
+}
+
+async function EnterpriseSection() {
+  const { teams, pending } = await fetchEnterpriseData()
+  const totalCount = teams.length + pending.length
+
+  return (
+    <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-8">
+      <div className="p-5 border-b border-white/[0.07] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-[#888888]" />
+          <h2 className="font-semibold font-jakarta text-[#e5e2e1]">Enterprise Accounts</h2>
+          <span className="text-xs text-[#555555]">admin</span>
+          {totalCount > 0 && (
+            <span className="text-xs bg-yellow-900/30 text-yellow-400 border border-yellow-900/40 px-2 py-0.5 rounded-full">
+              {totalCount}
+            </span>
+          )}
+          {pending.length > 0 && (
+            <span className="text-xs bg-blue-900/30 text-blue-400 border border-blue-900/40 px-2 py-0.5 rounded-full">
+              {pending.length} pending
+            </span>
+          )}
+        </div>
+        <Link href="/api/admin/enterprise" target="_blank" className="text-red-400 hover:text-red-300 text-xs">
+          Raw JSON →
+        </Link>
+      </div>
+
+      {totalCount === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+          <div className="w-12 h-12 bg-[#0a0a0a] border border-white/[0.07] rounded-xl flex items-center justify-center mb-4">
+            <Building2 className="w-5 h-5 text-[#555555]" />
+          </div>
+          <p className="text-[#888888] text-sm font-medium mb-1">No Enterprise accounts yet</p>
+          <p className="text-[#555555] text-xs">Enterprise teams will appear here once created.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[#0a0a0a]">
+              <tr>
+                {['Team Name', 'Owner', 'Seats', 'Plan Status', 'Renewal', 'Stripe Customer', 'Usage / mo'].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-[#888888] font-medium text-xs whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {/* Active enterprise teams */}
+              {teams.map(team => {
+                const seatPct = team.max_seats > 0 ? Math.min((team.active_seats / team.max_seats) * 100, 100) : 0
+                const stripeId = team.subscription?.stripe_customer_id ?? null
+                const truncatedStripe = stripeId ? stripeId.slice(0, 14) + '…' : '—'
+
+                return (
+                  <tr key={team.id} className="border-t border-white/[0.05] hover:bg-white/[0.02] transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="text-white text-xs font-medium">{team.name}</div>
+                      <div className="text-[#555555] text-xs">{timeAgo(team.created_at)}</div>
+                    </td>
+                    <td className="px-4 py-3 max-w-[180px]">
+                      <span className="text-[#aaaaaa] text-xs truncate block" title={team.owner_email ?? undefined}>
+                        {team.owner_email ?? team.owner_id.slice(0, 8) + '…'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2 min-w-[100px]">
+                        <div className="flex-1 bg-white/[0.05] rounded-full h-1.5 min-w-[48px]">
+                          <div
+                            className="bg-yellow-500 h-1.5 rounded-full transition-all"
+                            style={{ width: `${seatPct}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-white whitespace-nowrap">
+                          {team.active_seats}
+                          <span className="text-[#555555]">/{team.max_seats}</span>
+                        </span>
+                      </div>
+                      {team.pending_invitations > 0 && (
+                        <div className="text-[#666666] text-xs mt-0.5">{team.pending_invitations} pending</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {team.subscription ? (
+                        <SubStatusBadge status={team.subscription.status} />
+                      ) : (
+                        <span className="text-[#555555] text-xs">No subscription</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-[#888888] text-xs whitespace-nowrap">
+                      {formatDate(team.subscription?.current_period_end ?? null)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {stripeId ? (
+                        <span className="text-[#888888] text-xs font-mono" title={stripeId}>
+                          {truncatedStripe}
+                        </span>
+                      ) : (
+                        <span className="text-[#555555] text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-[#888888] text-xs whitespace-nowrap">
+                      {team.monthly_comments > 0
+                        ? team.monthly_comments.toLocaleString() + ' cmts'
+                        : '—'}
+                    </td>
+                  </tr>
+                )
+              })}
+
+              {/* Pending provision slots */}
+              {pending.map(provision => (
+                <tr key={provision.id} className="border-t border-white/[0.05] hover:bg-white/[0.02] transition-colors opacity-70">
+                  <td className="px-4 py-3">
+                    <div className="text-white text-xs font-medium">{provision.team_name}</div>
+                    <div className="text-[#555555] text-xs">{timeAgo(provision.created_at)}</div>
+                  </td>
+                  <td className="px-4 py-3 max-w-[180px]">
+                    <span className="text-[#aaaaaa] text-xs truncate block" title={provision.email}>
+                      {provision.email}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-[#888888] text-xs">0/{provision.max_seats}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded border text-blue-400 bg-blue-900/20 border-blue-900/40">
+                      Pending
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-[#555555] text-xs">—</td>
+                  <td className="px-4 py-3 text-[#555555] text-xs">—</td>
+                  <td className="px-4 py-3 text-[#555555] text-xs">—</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ApiHealthSection() {
+  const configuredKeys = getApiKeys()
+  const recentErrors = getErrorLog()
+  const lastError = recentErrors[recentErrors.length - 1]
+
+  const keyDetails = []
+  for (let i = 1; i <= 5; i++) {
+    const key = process.env[`YOUTUBE_API_KEY_${i}`]
+    keyDetails.push({
+      index: i,
+      configured: Boolean(key && key.trim() !== '' && !key.startsWith('PLACEHOLDER')),
+    })
+  }
+
+  return (
+    <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 mb-8">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-[#888888]" />
+          <h2 className="font-semibold font-jakarta text-[#e5e2e1]">API Health</h2>
+          <span className="text-xs text-[#555555]">admin</span>
+        </div>
+        <Link href="/api/admin/api-health" target="_blank" className="text-red-400 hover:text-red-300 text-xs">
+          Raw JSON →
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Key status */}
+        <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
+          <div className="text-xs text-[#888888] mb-3">YouTube API Keys</div>
+          <div className="flex items-baseline gap-1 mb-3">
+            <span className="text-2xl font-bold text-white">{configuredKeys.length}</span>
+            <span className="text-[#555555] text-xs">/ 5 configured</span>
+          </div>
+          <div className="flex gap-1.5">
+            {keyDetails.map(k => (
+              <div
+                key={k.index}
+                title={`Key ${k.index}: ${k.configured ? 'active' : 'not set'}`}
+                className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold transition-colors ${
+                  k.configured
+                    ? 'bg-green-900/30 border border-green-900/50 text-green-400'
+                    : 'bg-white/[0.03] border border-white/[0.05] text-[#333333]'
+                }`}
+              >
+                {k.index}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Error log */}
+        <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4">
+          <div className="text-xs text-[#888888] mb-3">Recent Errors</div>
+          {recentErrors.length === 0 ? (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-green-500/80 text-xs">No errors logged this session</span>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {[...recentErrors].reverse().slice(0, 5).map((err, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full bg-yellow-500 mt-1 shrink-0" />
+                  <div>
+                    <div className="text-yellow-400/80 text-xs font-medium">{err.event}</div>
+                    <div className="text-[#555555] text-xs">{err.timestamp.slice(0, 16).replace('T', ' ')}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {recentErrors.length > 5 && (
+            <div className="text-[#444444] text-xs mt-2">{recentErrors.length - 5} more errors</div>
+          )}
+        </div>
+      </div>
+
+      {lastError && (
+        <div className="mt-3 text-xs text-[#555555]">
+          Last alert: <span className="text-yellow-500/70">{lastError.event}</span>
+          {' '}at {lastError.timestamp.slice(0, 16).replace('T', ' ')}
+          {lastError.endpoint && <> · endpoint: <code className="text-[#777777]">{lastError.endpoint}</code></>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AdminRawDataLinks() {
+  return (
+    <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 mb-8">
+      <div className="flex items-center gap-2 mb-4">
+        <BarChart3 className="w-5 h-5 text-[#888888]" />
+        <h2 className="font-semibold font-jakarta text-[#e5e2e1] text-sm">Raw Data</h2>
+        <span className="text-xs text-[#555555]">admin</span>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        {[
+          { href: '/api/admin/stats', label: 'Stats JSON' },
+          { href: '/api/admin/enterprise', label: 'Enterprise JSON' },
+          { href: '/api/admin/api-health', label: 'API Health JSON' },
+          { href: '/api/admin/free-users', label: 'Free Users JSON' },
+        ].map(link => (
+          <Link
+            key={link.href}
+            href={link.href}
+            target="_blank"
+            className="text-xs text-red-400 hover:text-red-300 bg-red-900/10 border border-red-900/20 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            {link.label} →
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Admin skeleton wrappers ────────────────────────────────────────────────
+
+function TopStatsSkeleton() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      {Array.from({ length: 4 }).map((_, i) => <AdminStatCardSkeleton key={i} />)}
+    </div>
+  )
+}
+
+function EnterpriseSkeleton() {
+  return (
+    <div className="bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden mb-8">
+      <div className="p-5 border-b border-white/[0.07]">
+        <div className="h-5 w-44 bg-white/5 animate-pulse rounded" />
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-[#0a0a0a]">
+            <tr>
+              {['Team Name', 'Owner', 'Seats', 'Plan Status', 'Renewal', 'Stripe Customer', 'Usage / mo'].map(h => (
+                <th key={h} className="text-left px-4 py-3 text-[#888888] font-medium text-xs whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <tr key={i} className="border-t border-white/[0.05]">
+                {Array.from({ length: 7 }).map((__, j) => (
+                  <td key={j} className="px-4 py-4">
+                    <div className="h-3 bg-white/[0.05] rounded animate-pulse" style={{ width: '75%' }} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ── User-facing async data sub-components ─────────────────────────────────
 
 async function PastDueBanner({ userId }: { userId: string }) {
   try {
@@ -464,7 +1053,31 @@ export default async function DashboardPage({
           <EnterpriseBanner userId={user.id} />
         </Suspense>
 
-        {/* Stats */}
+        {/* Admin sections — full platform view, rendered before personal stats */}
+        {isAdmin && (
+          <>
+            {/* Top stats: 4-column grid + plan breakdown */}
+            <Suspense fallback={<TopStatsSkeleton />}>
+              <TopStatsSection />
+            </Suspense>
+
+            {/* Enterprise accounts table */}
+            <Suspense fallback={<EnterpriseSkeleton />}>
+              <EnterpriseSection />
+            </Suspense>
+
+            {/* Provision enterprise account form */}
+            <ProvisionForm />
+
+            {/* API health — synchronous, reads env vars and in-memory log */}
+            <ApiHealthSection />
+
+            {/* Raw data links */}
+            <AdminRawDataLinks />
+          </>
+        )}
+
+        {/* Personal stats */}
         <Suspense fallback={<StatsRowSkeleton />}>
           <DashboardStats userId={user.id} />
         </Suspense>
@@ -478,14 +1091,6 @@ export default async function DashboardPage({
         <Suspense fallback={<ExportsSkeleton />}>
           <DashboardExports userId={user.id} />
         </Suspense>
-
-        {/* Admin: Stats + API Health */}
-        {isAdmin && (
-          <>
-            <AdminStatsWidget />
-            <AdminApiHealthWidget />
-          </>
-        )}
 
         {/* API Key + Team */}
         <Suspense fallback={<TeamSectionSkeleton />}>
