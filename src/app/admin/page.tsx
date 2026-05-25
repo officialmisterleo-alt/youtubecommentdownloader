@@ -108,7 +108,6 @@ async function fetchAdminStats(): Promise<AdminStats | null> {
       planCounts[plan] = (planCounts[plan] ?? 0) + 1
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const totalUsers = (usersRes.data as any)?.total ?? (usersRes.data?.users?.length ?? 0)
 
     let newUsersThisMonth = 0
