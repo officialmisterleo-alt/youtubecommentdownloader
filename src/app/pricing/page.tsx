@@ -44,7 +44,7 @@ const plans: Plan[] = [
   {
     name: 'Enterprise', monthlyPrice: 199, annualPrice: 166,
     desc: 'For large teams and enterprise use',
-    features: ['1,000,000 comments per download', 'Unlimited monthly quota', 'Dedicated API quota', 'Reply thread capture', '10 team seats', 'White-label exports', 'Custom data retention', '99.9% SLA', 'Priority phone support', 'Custom onboarding', 'AI Analysis (up to 100,000 comments)'],
+    features: ['1,000,000 comments per download', 'Unlimited monthly quota', 'Dedicated API quota', 'Reply thread capture', '10 team seats', 'Custom seat count', 'Priority email support', 'Dedicated onboarding call', 'All export formats', 'AI Analysis (up to 100,000 comments)', 'Custom onboarding'],
     notIncluded: [],
     cta: 'Contact Sales', href: '/contact', checkoutPlan: null, highlight: false, badge: null, note: null,
   },
@@ -59,8 +59,6 @@ const comparisonFeatures = [
   { label: 'Bulk channel/playlist', free: false, pro: false, business: true, enterprise: true },
   { label: 'REST API access', free: false, pro: false, business: false, enterprise: true },
   { label: 'Team seats', free: '1', pro: '1', business: '3', enterprise: '10' },
-  { label: 'White-label exports', free: false, pro: false, business: false, enterprise: true },
-  { label: 'SLA guarantee', free: false, pro: false, business: false, enterprise: true },
 ]
 
 const faqs = [
@@ -193,9 +191,18 @@ export default function PricingPage() {
               {plan.badge && <div className="inline-flex items-center gap-1 text-red-400 text-xs font-semibold uppercase tracking-widest mb-3"><Zap className="w-3 h-3" /> {plan.badge}</div>}
               <div className="font-bold text-[#e5e2e1] text-xl mb-1">{plan.name}</div>
               <div className="mb-4">
-                <span className="text-4xl font-extrabold text-[#e5e2e1]">${annual ? plan.annualPrice : plan.monthlyPrice}</span>
-                {plan.monthlyPrice > 0 && <span className="text-[#555555] text-sm">/mo</span>}
-                {annual && plan.monthlyPrice > 0 && <div className="text-[#555555] text-xs mt-1">Billed annually</div>}
+                {plan.name === 'Enterprise' ? (
+                  <>
+                    <span className="text-4xl font-extrabold text-[#e5e2e1]">Starting at $299</span>
+                    <span className="text-[#555555] text-sm">/mo</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-4xl font-extrabold text-[#e5e2e1]">${annual ? plan.annualPrice : plan.monthlyPrice}</span>
+                    {plan.monthlyPrice > 0 && <span className="text-[#555555] text-sm">/mo</span>}
+                    {annual && plan.monthlyPrice > 0 && <div className="text-[#555555] text-xs mt-1">Billed annually</div>}
+                  </>
+                )}
               </div>
               <p className="text-[#888888] text-sm mb-6">{plan.desc}</p>
 
