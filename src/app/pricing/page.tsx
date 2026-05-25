@@ -193,7 +193,8 @@ export default function PricingPage() {
               <div className="mb-4">
                 {plan.name === 'Enterprise' ? (
                   <>
-                    <span className="text-4xl font-extrabold text-[#e5e2e1]">Starting at $299</span>
+                    <div className="text-xs text-[#888888] mb-1">Starting at</div>
+                    <span className="text-4xl font-extrabold text-[#e5e2e1]">$299</span>
                     <span className="text-[#555555] text-sm">/mo</span>
                   </>
                 ) : (
