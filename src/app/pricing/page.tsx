@@ -38,13 +38,13 @@ const plans: Plan[] = [
     name: 'Business', monthlyPrice: 49, annualPrice: 41,
     desc: 'For agencies and growing teams',
     features: ['100,000 comments per download', '1,000,000 comments/month', 'All export formats', 'Reply thread capture', 'Bulk channel/playlist', '3 team seats', 'Priority email support', 'AI Analysis (up to 50,000 comments)'],
-    notIncluded: ['Scheduled exports', 'REST API access', 'SSO / SAML', 'White-label', 'Dedicated API quota'],
+    notIncluded: ['Scheduled exports', 'REST API access', 'White-label', 'Dedicated API quota'],
     cta: 'Get Started', href: null, checkoutPlan: 'business', highlight: true, badge: 'Most Popular', note: null,
   },
   {
     name: 'Enterprise', monthlyPrice: 199, annualPrice: 166,
     desc: 'For large teams and enterprise use',
-    features: ['1,000,000 comments per download', 'Unlimited monthly quota', 'Dedicated API quota', 'Reply thread capture', '10 team seats', 'SSO / SAML', 'White-label exports', 'Custom data retention', '99.9% SLA', 'Priority phone support', 'Custom onboarding', 'AI Analysis (up to 100,000 comments)'],
+    features: ['1,000,000 comments per download', 'Unlimited monthly quota', 'Dedicated API quota', 'Reply thread capture', '10 team seats', 'White-label exports', 'Custom data retention', '99.9% SLA', 'Priority phone support', 'Custom onboarding', 'AI Analysis (up to 100,000 comments)'],
     notIncluded: [],
     cta: 'Contact Sales', href: '/contact', checkoutPlan: null, highlight: false, badge: null, note: null,
   },
@@ -59,7 +59,6 @@ const comparisonFeatures = [
   { label: 'Bulk channel/playlist', free: false, pro: false, business: true, enterprise: true },
   { label: 'REST API access', free: false, pro: false, business: false, enterprise: true },
   { label: 'Team seats', free: '1', pro: '1', business: '3', enterprise: '10' },
-  { label: 'SSO / SAML', free: false, pro: false, business: false, enterprise: true },
   { label: 'White-label exports', free: false, pro: false, business: false, enterprise: true },
   { label: 'SLA guarantee', free: false, pro: false, business: false, enterprise: true },
 ]
@@ -232,7 +231,18 @@ export default function PricingPage() {
                     </Link>
                   )
                 }
-                return <Link href={plan.href!} className={ctaClass(plan.highlight)}>{plan.cta}</Link>
+                return (
+                  <div>
+                    <Link href={plan.href!} className={ctaClass(plan.highlight)}>{plan.cta}</Link>
+                    {plan.name === 'Enterprise' && (
+                      <div className="text-center mt-1">
+                        <Link href="/docs" className="text-xs text-[#888888] hover:text-white transition-colors">
+                          View API Documentation →
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )
               })()}
 
               {plan.note && <p className="text-[#555555] text-xs text-center mb-4">{plan.note}</p>}

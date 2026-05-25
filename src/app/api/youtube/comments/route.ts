@@ -18,8 +18,8 @@ function decodeHtml(str: string): string {
     .replace(/<[^>]+>/g, '') // strip any other HTML tags
 }
 
-type Reply = { id: string; author: string; text: string; likes: number; date: string }
-type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
+type Reply = { id: string; author: string; text: string; likes: number; date: string; dateRaw?: string }
+type Comment = { id: string; author: string; text: string; likes: number; date: string; dateRaw?: string; replies: number; replyList: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
 
 const PLAN_LIMITS: Record<string, { maxComments: number }> = {
   free: { maxComments: 100 },
@@ -230,6 +230,7 @@ export async function POST(req: NextRequest) {
                   text: decodeHtml(rr.snippet.textDisplay),
                   likes: rr.snippet.likeCount,
                   date: new Date(rr.snippet.publishedAt).toLocaleDateString(),
+                  dateRaw: rr.snippet.publishedAt,
                 }
               })
             }
@@ -242,6 +243,7 @@ export async function POST(req: NextRequest) {
           text: decodeHtml(s.textDisplay),
           likes: s.likeCount,
           date: new Date(s.publishedAt).toLocaleDateString(),
+          dateRaw: s.publishedAt,
           replies: replyCount,
           replyList,
           videoTitle,

@@ -3,9 +3,9 @@ import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient, getUserTeam } from '@/lib/teams'
+import { createServiceClient, getUserTeam, getEffectivePlan } from '@/lib/teams'
 import { getPlanFromPriceId } from '@/lib/stripe-prices'
-import { Plus, Key, Users, ExternalLink, FileText, ShieldCheck } from 'lucide-react'
+import { Plus, Users, ExternalLink, FileText, ShieldCheck } from 'lucide-react'
 import QuotaBar from '@/components/QuotaBar'
 import AdminStatsWidget from '@/components/AdminStatsWidget'
 import { getApiKeys } from '@/lib/youtube-api'
@@ -13,6 +13,8 @@ import { getErrorLog } from '@/lib/alerts'
 import { StatCardSkeleton } from '@/components/skeletons/StatCardSkeleton'
 import { TableRowSkeleton } from '@/components/skeletons/TableRowSkeleton'
 import { CardSkeleton } from '@/components/skeletons/CardSkeleton'
+import ApiKeyCard from '@/app/dashboard/ApiKeyCard'
+import EnterpriseBanner from '@/app/dashboard/EnterpriseBanner'
 
 function AdminApiHealthWidget() {
   const configuredKeys = getApiKeys()
@@ -300,42 +302,33 @@ async function DashboardTeamSection({
 }) {
   let activePlan = 'free'
   let userTeam: Awaited<ReturnType<typeof getUserTeam>> = null
+  let existingKey: { prefix: string; createdAt: string; lastUsedAt: string | null } | null = null
 
   try {
     const serviceClient = createServiceClient()
-    const [{ data: sub }, team] = await Promise.all([
-      serviceClient.from('subscriptions').select('plan, status, lifetime').eq('user_id', userId).single(),
+    const [effectivePlan, team, keyRes] = await Promise.all([
+      getEffectivePlan(userId),
       getUserTeam(userId),
+      serviceClient
+        .from('api_keys')
+        .select('key_prefix, created_at, last_used_at')
+        .eq('user_id', userId)
+        .maybeSingle(),
     ])
+    activePlan = effectivePlan
     userTeam = team
-    if (sub?.lifetime) {
-      activePlan = sub.plan || 'pro'
-    } else if (sub?.status === 'active' && sub.plan !== 'free') {
-      activePlan = sub.plan
-    }
-    if (userTeam && (activePlan === 'free' || activePlan === 'pro')) {
-      const teamPlan = String(userTeam.team?.plan ?? 'free')
-      if (teamPlan === 'business' || teamPlan === 'enterprise') {
-        activePlan = teamPlan
+    if (keyRes.data) {
+      existingKey = {
+        prefix: keyRes.data.key_prefix as string,
+        createdAt: keyRes.data.created_at as string,
+        lastUsedAt: (keyRes.data.last_used_at as string | null) ?? null,
       }
     }
   } catch { /* non-fatal */ }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Key className="w-5 h-5 text-[#888888]" />
-          <h2 className="font-semibold font-jakarta text-[#e5e2e1]">API Key</h2>
-        </div>
-        <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-3 flex items-center gap-3 mb-3">
-          <code className="text-[#888888] text-xs flex-1">••••••••••••••••••••••••••••••</code>
-        </div>
-        <p className="text-[#888888] text-xs">
-          Available on Enterprise plans.{' '}
-          <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade</Link>
-        </p>
-      </div>
+      <ApiKeyCard effectivePlan={activePlan} existingKey={existingKey} />
 
       <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
@@ -464,6 +457,11 @@ export default async function DashboardPage({
         {/* Past-due warning */}
         <Suspense fallback={null}>
           <PastDueBanner userId={user.id} />
+        </Suspense>
+
+        {/* Enterprise status banner */}
+        <Suspense fallback={null}>
+          <EnterpriseBanner userId={user.id} />
         </Suspense>
 
         {/* Stats */}

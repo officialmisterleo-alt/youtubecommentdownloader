@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import AnalysisPanel from '@/components/AnalysisPanel'
 import Link from 'next/link'
@@ -8,8 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import { parseYouTubeUrl, isBulkUrl, isVideoUrl } from '@/lib/youtube/url-parser'
 import * as XLSX from 'xlsx'
 
-type Reply = { id: string; author: string; text: string; likes: number; date: string }
-type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
+type Reply = { id: string; author: string; text: string; likes: number; date: string; dateRaw?: string }
+type Comment = { id: string; author: string; text: string; likes: number; date: string; dateRaw?: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
 type VideoListItem = { videoId: string; videoUrl: string; title: string; channelTitle: string }
 type SourceMeta = { kind: 'video' | 'channel' | 'playlist'; title: string; channelName?: string; sourceUrl: string; videoCount?: number; thumbnailUrl?: string }
 type VideoMeta = { videoId: string; title: string; url: string; thumbnailUrl: string }
@@ -70,6 +70,12 @@ function ToolPageContent() {
   const [sourceMeta, setSourceMeta] = useState<SourceMeta | null>(null)
   const [videosMeta, setVideosMeta] = useState<VideoMeta[]>([])
 
+  // Pro+ filter state
+  const [filterKeyword, setFilterKeyword] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+  const [filterMinLikes, setFilterMinLikes] = useState('')
+
   // Pre-fill URL from query param
   useEffect(() => {
     const urlParam = searchParams.get('url')
@@ -120,6 +126,30 @@ function ToolPageContent() {
   const availableOptions = effectiveLimit === 0
     ? ALL_COMMENT_OPTIONS
     : ALL_COMMENT_OPTIONS.filter(opt => opt.value <= effectiveLimit && opt.value !== 0)
+
+  // Pro+ = signed-in and not on free plan
+  const isProPlus = isSignedIn && userPlan !== 'free'
+  const hasActiveFilters = isProPlus && (!!filterKeyword || !!filterDateFrom || !!filterDateTo || !!filterMinLikes)
+
+  const filteredComments = useMemo(() => {
+    if (!isProPlus) return comments
+    return comments.filter(c => {
+      if (filterKeyword) {
+        const kw = filterKeyword.toLowerCase()
+        if (!c.text.toLowerCase().includes(kw) && !c.author.toLowerCase().includes(kw)) return false
+      }
+      if (filterDateFrom && c.dateRaw) {
+        if (c.dateRaw.slice(0, 10) < filterDateFrom) return false
+      }
+      if (filterDateTo && c.dateRaw) {
+        if (c.dateRaw.slice(0, 10) > filterDateTo) return false
+      }
+      if (filterMinLikes !== '' && filterMinLikes !== '0') {
+        if (c.likes < parseInt(filterMinLikes, 10)) return false
+      }
+      return true
+    })
+  }, [comments, filterKeyword, filterDateFrom, filterDateTo, filterMinLikes, isProPlus])
 
   const addUrl = () => { if (urls.length < 5) setUrls([...urls, '']) }
   const updateUrl = (i: number, v: string) => { const u = [...urls]; u[i] = v; setUrls(u) }
@@ -951,16 +981,79 @@ ${commentRows}
             <div className="p-4 border-b border-white/[0.07] flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-white font-semibold text-sm">Preview</span>
-                <span className="text-[#888888] text-sm ml-2">({comments.length} comments)</span>
+                <span className="text-[#888888] text-sm ml-2">
+                  {hasActiveFilters
+                    ? `(${filteredComments.length.toLocaleString()} of ${comments.length.toLocaleString()} comments)`
+                    : `(${comments.length.toLocaleString()} comments)`}
+                </span>
               </div>
               <div className="flex gap-3 flex-wrap">
-                <button onClick={() => { setDone(false); setComments([]); setUrls(['']); setSourceMeta(null); setVideosMeta([]) }} className="text-[#888888] hover:text-white text-sm transition-colors min-h-[36px]">Export another</button>
-                <button onClick={() => downloadComments(comments, format)}
+                <button onClick={() => { setDone(false); setComments([]); setUrls(['']); setSourceMeta(null); setVideosMeta([]); setFilterKeyword(''); setFilterDateFrom(''); setFilterDateTo(''); setFilterMinLikes('') }} className="text-[#888888] hover:text-white text-sm transition-colors min-h-[36px]">Export another</button>
+                <button onClick={() => downloadComments(filteredComments, format)}
                   className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 min-h-[36px]">
                   <Download className="w-4 h-4" /> Download {format}
                 </button>
               </div>
             </div>
+
+            {/* Pro+ filter bar — shown when results are ready */}
+            <div className="p-4 border-b border-white/[0.07] bg-[#0f0f0f]">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-sm font-medium text-white">Filter Results</span>
+                {!isProPlus && (
+                  <span className="text-xs text-[#555555] bg-[#1a1a1a] border border-white/[0.07] px-1.5 py-0.5 rounded font-normal flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Pro+ only
+                  </span>
+                )}
+                {hasActiveFilters && (
+                  <button
+                    onClick={() => { setFilterKeyword(''); setFilterDateFrom(''); setFilterDateTo(''); setFilterMinLikes('') }}
+                    className="text-xs text-[#888888] hover:text-white px-2 py-0.5 rounded border border-white/[0.07] hover:border-white/[0.15] transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  type="text"
+                  value={filterKeyword}
+                  onChange={e => setFilterKeyword(e.target.value)}
+                  placeholder="Keyword search…"
+                  disabled={!isProPlus}
+                  className={`bg-[#0a0a0a] border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white placeholder-[#555555] focus:outline-none focus:border-red-600 w-40 ${!isProPlus ? 'opacity-40 cursor-not-allowed' : ''}`}
+                />
+                <input
+                  type="date"
+                  value={filterDateFrom}
+                  onChange={e => setFilterDateFrom(e.target.value)}
+                  disabled={!isProPlus}
+                  title="From date"
+                  style={{ colorScheme: 'dark' }}
+                  className={`bg-[#0a0a0a] border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-600 ${!isProPlus ? 'opacity-40 cursor-not-allowed' : ''}`}
+                />
+                <span className="text-[#555555] text-sm self-center">–</span>
+                <input
+                  type="date"
+                  value={filterDateTo}
+                  onChange={e => setFilterDateTo(e.target.value)}
+                  disabled={!isProPlus}
+                  title="To date"
+                  style={{ colorScheme: 'dark' }}
+                  className={`bg-[#0a0a0a] border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-600 ${!isProPlus ? 'opacity-40 cursor-not-allowed' : ''}`}
+                />
+                <input
+                  type="number"
+                  value={filterMinLikes}
+                  onChange={e => setFilterMinLikes(e.target.value)}
+                  placeholder="Min likes"
+                  min="0"
+                  disabled={!isProPlus}
+                  className={`bg-[#0a0a0a] border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white placeholder-[#555555] focus:outline-none focus:border-red-600 w-28 ${!isProPlus ? 'opacity-40 cursor-not-allowed' : ''}`}
+                />
+              </div>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-[#0a0a0a]">
@@ -971,7 +1064,7 @@ ${commentRows}
                   </tr>
                 </thead>
                 <tbody>
-                  {comments.slice(0, 10).map(c => (
+                  {filteredComments.slice(0, 10).map(c => (
                     <tr key={c.id} className="border-t border-white/[0.07]">
                       <td className="px-4 py-3 text-[#888888] text-xs font-medium whitespace-nowrap">{c.author}</td>
                       <td className="px-4 py-3 text-white min-w-[200px] max-w-xs">
@@ -991,7 +1084,7 @@ ${commentRows}
 
       {done && comments.length > 0 && (
         <div className="max-w-4xl mx-auto px-4 pb-10">
-          <AnalysisPanel comments={comments} isSignedIn={isSignedIn} />
+          <AnalysisPanel comments={filteredComments} isSignedIn={isSignedIn} />
         </div>
       )}
 

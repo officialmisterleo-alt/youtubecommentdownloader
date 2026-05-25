@@ -94,6 +94,17 @@ async function AccountPlanCard({ userId }: { userId: string }) {
         >
           Upgrade
         </Link>
+      ) : !isLifetime && !isTeamMember && effectivePlan === 'enterprise' ? (
+        <div className="flex flex-col items-end gap-1.5">
+          <ManageBillingButton label="Billing History" />
+          <p className="text-xs text-[#555555]">
+            To modify or cancel your Enterprise plan,{' '}
+            <Link href="/contact" className="underline hover:text-[#888888] transition-colors">
+              contact us
+            </Link>
+            .
+          </p>
+        </div>
       ) : !isLifetime && !isTeamMember ? (
         <ManageBillingButton />
       ) : null}

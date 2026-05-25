@@ -2,7 +2,11 @@
 import { useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 
-export function ManageBillingButton() {
+type Props = {
+  label?: string
+}
+
+export function ManageBillingButton({ label = 'Manage Billing' }: Props) {
   const [loading, setLoading] = useState(false)
 
   async function handleClick() {
@@ -23,7 +27,7 @@ export function ManageBillingButton() {
       className="inline-flex items-center gap-1.5 text-xs text-[#888888] hover:text-white border border-white/[0.07] hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <ExternalLink className="w-3 h-3" />
-      {loading ? 'Loading...' : 'Manage Billing'}
+      {loading ? 'Loading...' : label}
     </button>
   )
 }
