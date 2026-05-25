@@ -15,6 +15,7 @@ import { CardSkeleton } from '@/components/skeletons/CardSkeleton'
 import ApiKeyCard from '@/app/dashboard/ApiKeyCard'
 import EnterpriseBanner from '@/app/dashboard/EnterpriseBanner'
 import ProvisionForm from '@/app/admin/ProvisionForm'
+import CopyEmailsButton from '@/app/dashboard/CopyEmailsButton'
 
 // ── Admin types ────────────────────────────────────────────────────────────
 
@@ -651,6 +652,7 @@ function AdminRawDataLinks() {
             {link.label} →
           </Link>
         ))}
+        <CopyEmailsButton />
       </div>
     </div>
   )
@@ -1056,6 +1058,17 @@ export default async function DashboardPage({
         {/* Admin sections — full platform view, rendered before personal stats */}
         {isAdmin && (
           <>
+            {/* Admin section header */}
+            <div className="flex items-center gap-3 mt-4 mb-6 pt-6 border-t border-white/[0.07]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold font-jakarta text-[#e5e2e1]">Admin Overview</h2>
+                  <span className="bg-yellow-900/30 text-yellow-400 border border-yellow-900/40 text-xs px-2.5 py-1 rounded-full font-medium">admin</span>
+                </div>
+                <p className="text-[#888888] text-xs mt-0.5">Platform overview</p>
+              </div>
+            </div>
+
             {/* Top stats: 4-column grid + plan breakdown */}
             <Suspense fallback={<TopStatsSkeleton />}>
               <TopStatsSection />
