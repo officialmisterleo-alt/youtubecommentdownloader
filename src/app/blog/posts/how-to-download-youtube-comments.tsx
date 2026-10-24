@@ -46,7 +46,7 @@ export default function HowToDownloadYouTubeComments() {
       <h3 className="font-jakarta">Step 4: Choose your settings</h3>
       <ul>
         <li><strong>Max comments:</strong> How many comments to fetch (free: up to 100, Pro: up to 10,000)</li>
-        <li><strong>Sort order:</strong> Top comments (most liked), Newest first, or Oldest first</li>
+        <li><strong>Sort order:</strong> Top comments (relevance) or Newest first</li>
         <li><strong>Include replies:</strong> Toggle on to also fetch the reply threads under each top-level comment (Pro plan)</li>
       </ul>
 
@@ -105,17 +105,17 @@ export default function HowToDownloadYouTubeComments() {
 
       <h3 className="font-jakarta">Set a realistic comment limit</h3>
       <p>
-        For most research purposes, the top 1,000–5,000 comments by likes give you most of the actionable signal. The 100,000th comment on a viral video is likely to be low-quality or spam. Unless you specifically need the full corpus (for NLP training data, for example), start with a capped export.
+        Choose a limit that matches your research question. A smaller export is faster to review, while studies of changes over time or uncommon opinions may need a larger, more representative sample. Remember that plan limits and YouTube API availability can affect completeness.
       </p>
 
       <h3 className="font-jakarta">Start with &ldquo;Top comments&rdquo; sort</h3>
       <p>
-        YouTube&apos;s top-comment sort surfaces the most-liked and most-replied comments first. These are the highest-signal comments for understanding audience sentiment and popular opinions. Unless you&apos;re doing temporal analysis (watching how reaction evolves over time), top-sorted downloads are more useful than chronological ones.
+        Top comments are useful for seeing prominent reactions, but they are not a representative sample of every viewer. Choose newest comments when timing matters, and describe the sort order when sharing your findings.
       </p>
 
       <h3 className="font-jakarta">Expect proportional export time</h3>
       <p>
-        The tool processes around 5,000 comments per minute. A 10,000-comment export takes about 2 minutes. A 50,000-comment export takes around 10 minutes. Leave the tab open — the download button appears automatically when it finishes.
+        Export time depends on comment volume, YouTube API response times, and whether replies are included. Larger exports can take longer; keep the tab open until the results are ready.
       </p>
 
       <h3 className="font-jakarta">Check the comment count first</h3>
@@ -130,10 +130,10 @@ export default function HowToDownloadYouTubeComments() {
 
       <ul>
         <li>
-          <strong>Playlists:</strong> Paste a playlist URL (youtube.com/playlist?list=...). The tool fetches every video in the playlist and pulls comments from each one. Results are combined into a single file with video source tags.
+          <strong>Playlists:</strong> On Business or Enterprise, paste a playlist URL (youtube.com/playlist?list=...). The tool gathers available comments from playlist videos within plan and API limits. Results include video source context.
         </li>
         <li>
-          <strong>Channels:</strong> Paste a channel URL (@handle, youtube.com/channel/, or youtube.com/c/). The tool fetches the channel&apos;s video library and processes each video. This is a Business plan feature.
+          <strong>Channels:</strong> On Business or Enterprise, paste a channel URL (@handle, youtube.com/channel/, or youtube.com/c/). The tool processes available videos within plan and API limits.
         </li>
         <li>
           <strong>Multiple videos:</strong> Use the &ldquo;Add URL&rdquo; button to paste up to 5 individual video URLs. Useful for comparing engagement across a set of videos side by side.
@@ -145,7 +145,7 @@ export default function HowToDownloadYouTubeComments() {
       </Callout>
 
       <KeyTakeaway>
-        Downloading YouTube comments takes about 30 seconds for a single video. Paste the URL, choose your format, click Export. For large videos, set a comment limit that matches your actual needs — the top 1,000–5,000 comments usually contain most of the useful signal. Use CSV for spreadsheets, JSON for code, TXT for quick reads.
+        Paste a public video URL, choose your format and comment limit, then export. Use CSV for spreadsheets, JSON for code, and TXT for quick reading. The time and completeness of an export depend on the source, plan limit, and YouTube API availability.
       </KeyTakeaway>
     </BlogPostLayout>
   )

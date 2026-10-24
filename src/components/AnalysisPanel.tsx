@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Sparkles, Lock, RefreshCw, ChevronDown, ChevronUp, Download } from 'lucide-react'
+import { ArrowRight, BadgePercent, CheckCircle2, Sparkles, RefreshCw, ChevronDown, ChevronUp, Download } from 'lucide-react'
 
 type Reply = { id: string; author: string; text: string; likes: number; date: string }
 type Comment = { id: string; author: string; text: string; likes: number; date: string; replies: number; replyList?: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
@@ -861,19 +861,53 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
 
       {/* Lock overlay — shown for unauthenticated or free-plan users */}
       {isLocked && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-gray-900/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 text-center px-8 py-6 max-w-xs">
-            <Lock className="w-10 h-10 text-red-400" />
-            <div>
-              <div className="text-white font-bold text-lg mb-1">AI Analysis — Pro Feature</div>
-              <p className="text-[#aaaaaa] text-sm leading-relaxed">Upgrade to Pro to analyze up to 10,000 comments and generate branded reports.</p>
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/85 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-red-500/30 bg-[#111111] shadow-2xl shadow-red-950/30">
+            <div className="border-b border-white/[0.07] bg-gradient-to-r from-red-600/20 via-[#171717] to-[#171717] px-5 py-4">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-200">
+                <BadgePercent className="h-3.5 w-3.5" />
+                Use code SAVE10 for 10% off forever
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-red-600 p-2 text-white">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-jakarta text-xl font-bold text-white">Unlock Pro analysis</div>
+                  <p className="mt-1 text-sm leading-relaxed text-[#c7c7c7]">
+                    Turn your exported comments into audience insights, sentiment breakdowns, and branded reports.
+                  </p>
+                </div>
+              </div>
             </div>
-            <Link
-              href="/pricing"
-              className="bg-red-600 hover:bg-red-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-colors"
-            >
-              Upgrade to Pro →
-            </Link>
+
+            <div className="space-y-4 px-5 py-5">
+              <div className="grid gap-2 text-sm text-[#dddddd]">
+                {['Analyze up to 10,000 comments', 'Download branded HTML reports', 'Find topics, feedback, trends, and audience segments'].map(item => (
+                  <div key={item} className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-red-400" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#888888]">Pro starts at</div>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="font-jakarta text-2xl font-bold text-white">$9/mo</span>
+                  <span className="text-sm text-[#888888]">before discount</span>
+                </div>
+              </div>
+
+              <Link
+                href="/pricing"
+                className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-red-500"
+              >
+                Upgrade to Pro
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <p className="text-center text-xs text-[#777777]">Enter SAVE10 in Stripe checkout to keep the discount on future renewals.</p>
+            </div>
           </div>
         </div>
       )}

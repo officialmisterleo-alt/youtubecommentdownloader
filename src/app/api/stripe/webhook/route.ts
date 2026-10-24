@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPlanFromPriceId } from '@/lib/stripe-prices'
+import { getPlanFromPriceId, getSubscriptionPeriodEnd } from '@/lib/stripe-prices'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,8 +74,8 @@ export async function POST(req: NextRequest) {
           const subData = sub as unknown as {
             id: string
             status: string
-            current_period_end: number
-            items: { data: Array<{ price: { id: string } }> }
+            current_period_end?: number
+            items: { data: Array<{ price: { id: string }; current_period_end?: number }> }
           }
           const priceId = subData.items.data[0]?.price?.id
           const plan = priceId ? getPlanFromPriceId(priceId) : 'free'
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
             plan,
             status: subData.status,
             lifetime: false,
-            current_period_end: new Date(subData.current_period_end * 1000).toISOString(),
+            current_period_end: getSubscriptionPeriodEnd(subData),
           }, { onConflict: 'user_id' })
         }
         break
@@ -96,8 +96,8 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as unknown as {
           id: string
           status: string
-          current_period_end: number
-          items: { data: Array<{ price: { id: string } }> }
+          current_period_end?: number
+          items: { data: Array<{ price: { id: string }; current_period_end?: number }> }
         }
         const previousAttrs = (event.data.previous_attributes ?? {}) as {
           items?: { data?: Array<{ price?: { id?: string } }> }
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
           .update({
             plan: newPlan,
             status: sub.status,
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            current_period_end: getSubscriptionPeriodEnd(sub),
           })
           .eq('stripe_subscription_id', sub.id)
 
@@ -148,11 +148,16 @@ export async function POST(req: NextRequest) {
       }
 
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as { subscription?: string }
-        if (invoice.subscription) {
+        // Newer API versions moved invoice.subscription under parent.subscription_details
+        const invoice = event.data.object as {
+          subscription?: string
+          parent?: { subscription_details?: { subscription?: string } | null } | null
+        }
+        const subscriptionId = invoice.subscription ?? invoice.parent?.subscription_details?.subscription
+        if (subscriptionId) {
           await supabase.from('subscriptions')
             .update({ status: 'past_due' })
-            .eq('stripe_subscription_id', invoice.subscription)
+            .eq('stripe_subscription_id', subscriptionId)
         }
         break
       }

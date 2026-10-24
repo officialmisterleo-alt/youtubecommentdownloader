@@ -136,6 +136,12 @@ export async function POST(req: NextRequest) {
     // Use mock mode when no real keys are configured
     const configuredKeys = getApiKeys()
     if (configuredKeys.length === 0) {
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          { error: 'Comment exports are temporarily unavailable. Please try again later.' },
+          { status: 503 }
+        )
+      }
       await new Promise(r => setTimeout(r, 1500))
       const mockWithMeta = (includeReplies ? MOCK_COMMENTS : MOCK_COMMENTS.map(c => ({ ...c, replyList: [] }))).map(c => ({
         ...c,

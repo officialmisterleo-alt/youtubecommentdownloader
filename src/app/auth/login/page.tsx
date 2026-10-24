@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { trackEvent } from '@/lib/analytics'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -14,14 +15,22 @@ function LoginForm() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    trackEvent('login_submit', { method: 'email', next })
     setLoading(true); setError('')
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError(error.message); setLoading(false) }
-    else { window.location.href = next }
+    if (error) {
+      trackEvent('login_error', { method: 'email', message: error.message })
+      setError(error.message); setLoading(false)
+    }
+    else {
+      trackEvent('login_success', { method: 'email', next })
+      window.location.href = next
+    }
   }
 
   const handleGoogleSignIn = async () => {
+    trackEvent('login_submit', { method: 'google', next })
     const supabase = createClient()
     // Store redirect destination in a cookie — more reliable than ?next= query param
     // which Supabase may strip if not in the allowed redirect URL list
@@ -34,12 +43,12 @@ function LoginForm() {
     })
   }
 
-  // Auto-redirect if already authenticated (handles middleware kick to login page
-  // when client-side session exists but server needs a moment to catch up)
+  // Auto-redirect only after Supabase confirms the session is still valid.
+  // A stale local session can otherwise bounce between /dashboard and /auth/login.
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) window.location.href = next
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) window.location.href = next
     })
   }, [next])
 

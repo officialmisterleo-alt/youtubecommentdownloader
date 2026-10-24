@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { plan, interval } = await req.json()
+    const { plan, interval, confirmSwitch = false } = await req.json()
     const isLifetime = plan === 'lifetime'
     const mode = isLifetime ? 'payment' : 'subscription'
     const key = isLifetime ? 'lifetime' : `${plan}:${interval}`
@@ -49,10 +49,52 @@ export async function POST(req: NextRequest) {
     const serviceClient = createServiceClient()
     const { data: existingSub } = await serviceClient
       .from('subscriptions')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, stripe_subscription_id, plan, lifetime')
       .eq('user_id', user.id)
       .single()
     const existingCustomerId = existingSub?.stripe_customer_id ?? null
+
+    // One subscription per account: if the user already has a live subscription,
+    // switch it to the new price instead of creating a second one via Checkout.
+    if (!isLifetime && existingSub?.stripe_subscription_id && !existingSub.lifetime) {
+      const current = await stripe.subscriptions.retrieve(existingSub.stripe_subscription_id)
+      if (['active', 'trialing', 'past_due'].includes(current.status)) {
+        const item = current.items.data[0]
+        if (item?.price.id === priceId) {
+          return NextResponse.json({ error: `You're already on this plan.`, code: 'already_subscribed' }, { status: 409 })
+        }
+
+        if (current.status === 'past_due') {
+          return NextResponse.json({
+            error: 'Your last payment failed. Update your payment method under Manage Billing before changing plans.',
+            code: 'past_due',
+          }, { status: 402 })
+        }
+
+        // Ask the client to confirm before charging the saved card
+        if (!confirmSwitch) {
+          return NextResponse.json({
+            code: 'confirm_switch',
+            currentPlan: existingSub.plan,
+            newPlan: plan,
+          }, { status: 409 })
+        }
+
+        // Charges the prorated difference now; the customer.subscription.updated webhook
+        // also syncs this, but update the row directly so the new plan applies immediately.
+        const updated = await stripe.subscriptions.update(current.id, {
+          items: [{ id: item.id, price: priceId }],
+          proration_behavior: 'always_invoice',
+          payment_behavior: 'error_if_incomplete',
+        })
+        await serviceClient
+          .from('subscriptions')
+          .update({ plan, status: updated.status })
+          .eq('user_id', user.id)
+
+        return NextResponse.json({ url: `${appUrl}/dashboard?upgraded=true` })
+      }
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: mode as 'payment' | 'subscription',

@@ -3,6 +3,20 @@ import Link from 'next/link'
 export const metadata = {
   title: 'Privacy Policy — YouTubeCommentDownloader',
   description: 'Privacy Policy for YouTubeCommentDownloader.',
+  alternates: { canonical: 'https://www.youtubecommentdownloader.com/privacy' },
+  openGraph: {
+    title: 'Privacy Policy — YouTubeCommentDownloader',
+    description: 'Privacy Policy for YouTubeCommentDownloader.',
+    url: 'https://www.youtubecommentdownloader.com/privacy',
+    type: 'website',
+    images: [{ url: '/opengraph-image.jpg', width: 1200, height: 675 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Privacy Policy — YouTubeCommentDownloader',
+    description: 'Privacy Policy for YouTubeCommentDownloader.',
+    images: ['/opengraph-image.jpg'],
+  },
 }
 
 export default function PrivacyPage() {

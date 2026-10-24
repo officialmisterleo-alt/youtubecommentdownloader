@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Check, X, Zap } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import TrackedLink from '@/components/TrackedLink'
+import { trackEvent } from '@/lib/analytics'
 
 type Plan = {
   name: string
-  monthlyPrice: number
-  annualPrice: number
+  monthlyPrice: number | null
+  annualPrice: number | null
   desc: string
   features: string[]
   notIncluded: string[]
@@ -23,37 +25,37 @@ const plans: Plan[] = [
   {
     name: 'Free', monthlyPrice: 0, annualPrice: 0,
     desc: 'Perfect for trying out the tool',
-    features: ['100 comments per download', '100 comments/month', 'No account required', 'Basic sorting'],
+    features: ['Up to 50 comments per download without an account', 'Up to 100 comments per download with a free account', '100 comments/month with a free account', 'TXT and HTML without an account', 'CSV, Excel, and JSON with a free account', 'Basic sorting'],
     notIncluded: ['AI Analysis', 'Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
-    cta: 'Use Now', href: '/auth/signup?plan=free', checkoutPlan: null, highlight: false, badge: null, note: 'No credit card required.',
+    cta: 'Use Now', href: '/tool', checkoutPlan: null, highlight: false, badge: null, note: 'No credit card required.',
   },
   {
     name: 'Pro', monthlyPrice: 19, annualPrice: 16,
     desc: 'For individual power users',
     features: ['10,000 comments per download', '100,000 comments/month', 'All export formats', 'Reply thread capture', 'Email support', 'Priority processing', 'Basic sorting & filtering', 'AI Analysis (up to 10,000 comments)'],
     notIncluded: ['Bulk channel exports', 'REST API access', 'Team seats', 'Scheduled exports'],
-    cta: 'Get Started', href: null, checkoutPlan: 'pro', highlight: false, badge: null, note: null,
+    cta: 'Get Started', href: null, checkoutPlan: 'pro', highlight: true, badge: 'Most Popular', note: null,
   },
   {
     name: 'Business', monthlyPrice: 49, annualPrice: 41,
     desc: 'For agencies and growing teams',
     features: ['100,000 comments per download', '1,000,000 comments/month', 'All export formats', 'Reply thread capture', 'Bulk channel/playlist', '3 team seats', 'Priority email support', 'AI Analysis (up to 50,000 comments)'],
     notIncluded: ['Scheduled exports', 'REST API access', 'White-label', 'Dedicated API quota'],
-    cta: 'Get Started', href: null, checkoutPlan: 'business', highlight: true, badge: 'Most Popular', note: null,
+    cta: 'Get Started', href: null, checkoutPlan: 'business', highlight: false, badge: null, note: null,
   },
   {
-    name: 'Enterprise', monthlyPrice: 199, annualPrice: 166,
+    name: 'Enterprise', monthlyPrice: null, annualPrice: null,
     desc: 'For large teams and enterprise use',
     features: ['1,000,000 comments per download', 'Unlimited monthly quota', 'Dedicated API quota', 'Reply thread capture', '10 team seats', 'Custom seat count', 'Priority email support', 'Dedicated onboarding call', 'All export formats', 'AI Analysis (up to 100,000 comments)', 'Custom onboarding'],
     notIncluded: [],
-    cta: 'Contact Sales', href: '/contact', checkoutPlan: null, highlight: false, badge: null, note: null,
+    cta: 'Contact Sales', href: '/contact', checkoutPlan: null, highlight: false, badge: null, note: 'Contact us for a quote.',
   },
 ]
 
 const comparisonFeatures = [
-  { label: 'Comments per download', free: '100', pro: '10k', business: '100k', enterprise: '1M' },
-  { label: 'Monthly quota', free: '100', pro: '100k', business: '1M', enterprise: 'Unlimited' },
-  { label: 'Export formats', free: 'All 6', pro: 'All 6', business: 'All 6', enterprise: 'All 6' },
+  { label: 'Comments per download', free: '50 anonymous / 100 signed in', pro: '10k', business: '100k', enterprise: '1M' },
+  { label: 'Monthly quota', free: '100 signed in', pro: '100k', business: '1M', enterprise: 'Unlimited' },
+  { label: 'Export formats', free: '5 (account for CSV, Excel, JSON)', pro: 'All 5', business: 'All 5', enterprise: 'All 5' },
   { label: 'AI Analysis', free: false, pro: '10k comments', business: '50k comments', enterprise: '100k comments' },
   { label: 'Reply threads', free: false, pro: true, business: true, enterprise: true },
   { label: 'Bulk channel/playlist', free: false, pro: false, business: true, enterprise: true },
@@ -62,9 +64,9 @@ const comparisonFeatures = [
 ]
 
 const faqs = [
-  { q: 'What counts as a "comment"?', a: 'Each unique top-level comment counts as 1 comment. Replies to comments also count individually when you enable the "Include Replies" option.' },
+  { q: 'What counts toward the comment quota?', a: 'The current quota counts top-level comments returned by an export. Reply capture is available on Pro and higher, and replies may be incomplete if YouTube does not return them.' },
   { q: 'Can I upgrade or downgrade my plan at any time?', a: 'Absolutely. You can change your plan at any time from your dashboard. Upgrades take effect immediately. Downgrades take effect at the end of your billing cycle.' },
-  { q: 'Is the YouTube API key required?', a: 'For the free web tool, no — we handle API access on our end. If you use the REST API on Business/Enterprise, you can optionally bring your own YouTube API key for higher quota.' },
+  { q: 'Is a YouTube API key required?', a: 'No key is needed to use the web tool. Programmatic access requires an Enterprise plan and an API key generated for your account.' },
   { q: 'Do you offer refunds?', a: 'Refunds are considered only within 48 hours of initial purchase, and only if the tool demonstrably failed to function as described. Usage fees for successfully completed exports are non-refundable. We strongly recommend testing the free tier before upgrading.' },
 ]
 
@@ -117,19 +119,33 @@ export default function PricingPage() {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function handleCheckout(plan: string, interval: string) {
+  async function handleCheckout(plan: string, interval: string, confirmSwitch = false) {
+    trackEvent('checkout_start', { plan, interval })
     setLoadingPlan(plan)
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, interval }),
+        body: JSON.stringify({ plan, interval, confirmSwitch }),
       })
       const data = await res.json()
+      if (data.code === 'confirm_switch') {
+        // User already has a subscription — switch it in place instead of buying a second one
+        const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+        const ok = window.confirm(
+          `Switch your ${cap(data.currentPlan)} plan to ${cap(data.newPlan)}? The change takes effect now and replaces your current plan (it is not added). Any extra cost for the rest of this billing period is charged to your card on file today; unused time becomes credit on your next invoice.`
+        )
+        if (ok) return handleCheckout(plan, interval, true)
+        setLoadingPlan(null)
+        return
+      }
       if (data.url) {
+        trackEvent('checkout_redirect', { plan, interval })
         window.location.href = data.url
       } else {
+        trackEvent('checkout_error', { plan, interval, message: data.error ?? 'unknown' })
         console.error('Checkout error:', data.error)
+        if (data.error) window.alert(data.error)
         setLoadingPlan(null)
       }
     } catch {
@@ -138,11 +154,15 @@ export default function PricingPage() {
   }
 
   async function handlePortal() {
+    trackEvent('billing_portal_start')
     setLoadingPlan('portal')
     try {
       const res = await fetch('/api/stripe/portal')
       const data = await res.json()
-      if (data.url) window.location.href = data.url
+      if (data.url) {
+        trackEvent('billing_portal_redirect')
+        window.location.href = data.url
+      }
       else setLoadingPlan(null)
     } catch {
       setLoadingPlan(null)
@@ -176,10 +196,11 @@ export default function PricingPage() {
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-16">
         <div className="text-center mb-14">
           <h1 className="text-4xl sm:text-5xl font-extrabold font-jakarta text-[#e5e2e1] mb-4">Simple, transparent pricing</h1>
-          <p className="text-[#888888] text-lg mb-8">Start free. Scale as you grow. No hidden fees.</p>
+          <p className="text-[#888888] text-lg mb-3">Start with 50 comments without an account. A free account adds CSV, Excel, and JSON exports plus a 100-comment monthly quota.</p>
+          <p className="text-[#777777] text-sm mb-8">Pro adds larger downloads, replies, filters, and AI analysis. Business adds playlist and channel exports. Enterprise adds the REST API.</p>
           <div className="inline-flex items-center gap-1 bg-[#171717] border border-white/[0.07] rounded-xl p-1">
-            <button onClick={() => setAnnual(false)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${!annual ? 'bg-red-600 text-[#e5e2e1]' : 'text-[#888888] hover:text-white'}`}>Monthly</button>
-            <button onClick={() => setAnnual(true)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${annual ? 'bg-red-600 text-[#e5e2e1]' : 'text-[#888888] hover:text-white'}`}>
+            <button onClick={() => { trackEvent('pricing_interval_select', { interval: 'monthly' }); setAnnual(false) }} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${!annual ? 'bg-red-600 text-[#e5e2e1]' : 'text-[#888888] hover:text-white'}`}>Monthly</button>
+            <button onClick={() => { trackEvent('pricing_interval_select', { interval: 'annual' }); setAnnual(true) }} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${annual ? 'bg-red-600 text-[#e5e2e1]' : 'text-[#888888] hover:text-white'}`}>
               Annual <span className={`text-xs px-2 py-0.5 rounded-full ${annual ? 'bg-red-900 text-red-200' : 'bg-white/[0.07] text-[#888888]'}`}>Save 2 months</span>
             </button>
           </div>
@@ -193,15 +214,13 @@ export default function PricingPage() {
               <div className="mb-4">
                 {plan.name === 'Enterprise' ? (
                   <>
-                    <div className="text-xs text-[#888888] mb-1">Starting at</div>
-                    <span className="text-4xl font-extrabold text-[#e5e2e1]">$299</span>
-                    <span className="text-[#555555] text-sm">/mo</span>
+                    <span className="text-2xl font-extrabold text-[#e5e2e1]">Custom pricing</span>
                   </>
                 ) : (
                   <>
                     <span className="text-4xl font-extrabold text-[#e5e2e1]">${annual ? plan.annualPrice : plan.monthlyPrice}</span>
-                    {plan.monthlyPrice > 0 && <span className="text-[#555555] text-sm">/mo</span>}
-                    {annual && plan.monthlyPrice > 0 && <div className="text-[#555555] text-xs mt-1">Billed annually</div>}
+                    {plan.monthlyPrice !== null && plan.monthlyPrice > 0 && <span className="text-[#555555] text-sm">/mo</span>}
+                    {annual && plan.monthlyPrice !== null && plan.monthlyPrice > 0 && <div className="text-[#555555] text-xs mt-1">Billed annually</div>}
                   </>
                 )}
               </div>
@@ -217,6 +236,18 @@ export default function PricingPage() {
                   return <button disabled className={disabledClass}>Lifetime Member</button>
                 }
                 if (action === 'downgrade') {
+                  // Paid → paid downgrades switch the subscription in place; → Free means cancelling in the portal
+                  if (plan.checkoutPlan) {
+                    return (
+                      <button
+                        onClick={() => handleCheckout(plan.checkoutPlan!, annual ? 'annual' : 'monthly')}
+                        disabled={loadingPlan === plan.checkoutPlan}
+                        className={ctaClass(false)}
+                      >
+                        {loadingPlan === plan.checkoutPlan ? 'Switching...' : 'Downgrade'}
+                      </button>
+                    )
+                  }
                   return (
                     <button onClick={handlePortal} disabled={loadingPlan === 'portal'} className={ctaClass(false)}>
                       {loadingPlan === 'portal' ? 'Redirecting...' : 'Downgrade'}
@@ -234,19 +265,36 @@ export default function PricingPage() {
                       {loadingPlan === plan.checkoutPlan ? 'Redirecting...' : plan.cta}
                     </button>
                   ) : (
-                    <Link href="/auth/login?next=/pricing" className={ctaClass(plan.highlight)}>
+                    <TrackedLink
+                      href="/auth/login?next=/pricing"
+                      eventName="pricing_auth_cta_click"
+                      eventProperties={{ plan: plan.name.toLowerCase(), interval: annual ? 'annual' : 'monthly' }}
+                      className={ctaClass(plan.highlight)}
+                    >
                       {isSignedIn === null ? plan.cta : 'Sign In to Get Started'}
-                    </Link>
+                    </TrackedLink>
                   )
                 }
                 return (
                   <div>
-                    <Link href={plan.href!} className={ctaClass(plan.highlight)}>{plan.cta}</Link>
+                    <TrackedLink
+                      href={plan.href!}
+                      eventName={plan.name === 'Enterprise' ? 'contact_sales_click' : 'pricing_plan_cta_click'}
+                      eventProperties={{ plan: plan.name.toLowerCase(), interval: annual ? 'annual' : 'monthly' }}
+                      className={ctaClass(plan.highlight)}
+                    >
+                      {plan.cta}
+                    </TrackedLink>
                     {plan.name === 'Enterprise' && (
                       <div className="text-center mt-1">
-                        <Link href="/docs" className="text-xs text-[#888888] hover:text-white transition-colors">
+                        <TrackedLink
+                          href="/docs"
+                          eventName="api_docs_cta_click"
+                          eventProperties={{ location: 'pricing_enterprise_card' }}
+                          className="text-xs text-[#888888] hover:text-white transition-colors"
+                        >
                           View API Documentation →
-                        </Link>
+                        </TrackedLink>
                       </div>
                     )}
                   </div>
@@ -276,7 +324,7 @@ export default function PricingPage() {
         {/* Lifetime */}
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 mb-16 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <div className="text-red-500 text-xs font-semibold uppercase tracking-widest mb-1">⚡ Limited Time Offer</div>
+            <div className="text-red-500 text-xs font-semibold uppercase tracking-widest mb-1">One-time purchase</div>
             <div className="text-[#e5e2e1] font-bold text-xl mb-1">Lifetime Deal — $99</div>
             <p className="text-[#888888] text-sm">Everything in Pro, forever. One payment, no recurring fees. 10,000 comments per download, 100,000 comments/month, AI analysis up to 10,000 comments. Perfect for freelancers and indie hackers.</p>
           </div>

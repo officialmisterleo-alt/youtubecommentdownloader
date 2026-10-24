@@ -12,6 +12,15 @@ export const metadata: Metadata = {
     description:
       'Insights on YouTube SEO, content strategy, and getting more from your comments.',
     type: 'website',
+    url: 'https://www.youtubecommentdownloader.com/blog',
+    images: [{ url: '/opengraph-image.jpg', width: 1200, height: 675 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Blog — YouTube Comment Downloader',
+    description:
+      'Insights on YouTube SEO, content strategy, and getting more from your comments.',
+    images: ['/opengraph-image.jpg'],
   },
 }
 

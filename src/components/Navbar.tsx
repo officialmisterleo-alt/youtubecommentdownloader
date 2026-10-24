@@ -1,8 +1,10 @@
 'use client'
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
-import { Youtube, Wrench, CreditCard, LayoutDashboard, LogOut, User, BookOpen } from 'lucide-react'
+import { Youtube, Wrench, CreditCard, LayoutDashboard, LogOut, User, BookOpen, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import TrackedLink from '@/components/TrackedLink'
+import { trackEvent } from '@/lib/analytics'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const navLinks = [
@@ -71,6 +73,7 @@ export default function Navbar() {
                 <Link
                   key={href}
                   href={href}
+                  onClick={() => trackEvent('nav_link_click', { destination: href, label })}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-[#888888] hover:text-white hover:bg-white/[0.05] transition-colors"
                 >
                   <Icon size={14} />
@@ -80,8 +83,17 @@ export default function Navbar() {
             </div>
 
             {/* Right auth — desktop */}
-            <div className={`hidden md:flex items-center justify-end gap-1 transition-opacity duration-150 ${loaded ? 'opacity-100' : 'opacity-0'}`}>
-              {user ? (
+            <div className="hidden md:flex items-center justify-end gap-1">
+              {!loaded ? (
+                <div
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/[0.07] bg-white/[0.02] text-[#888888]"
+                  aria-label="Checking account status"
+                  aria-live="polite"
+                >
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Checking account...</span>
+                </div>
+              ) : user ? (
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -124,18 +136,22 @@ export default function Navbar() {
                 </div>
               ) : (
                 <>
-                  <Link
+                  <TrackedLink
                     href="/auth/login"
+                    eventName="login_cta_click"
+                    eventProperties={{ location: 'desktop_nav' }}
                     className="text-sm text-[#888888] hover:text-white px-4 py-2 rounded-lg hover:bg-white/[0.05] transition-colors"
                   >
                     Sign In
-                  </Link>
-                  <Link
+                  </TrackedLink>
+                  <TrackedLink
                     href="/auth/signup"
+                    eventName="signup_cta_click"
+                    eventProperties={{ location: 'desktop_nav' }}
                     className="bg-red-600 hover:bg-red-500 text-[#e5e2e1] text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
                   >
                     Get Started
-                  </Link>
+                  </TrackedLink>
                 </>
               )}
             </div>
@@ -160,7 +176,10 @@ export default function Navbar() {
               <Link
                 key={href}
                 href={href}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  trackEvent('nav_link_click', { destination: href, label, location: 'mobile_nav' })
+                  setOpen(false)
+                }}
                 className="flex items-center gap-3 px-6 border-b border-white/[0.05] text-[#888888] hover:text-white hover:bg-white/[0.04] transition-colors text-sm font-medium"
                 style={{ minHeight: 52 }}
               >
@@ -168,7 +187,17 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
-            {user ? (
+            {!loaded ? (
+              <div
+                className="flex items-center gap-3 px-6 border-b border-white/[0.05] text-[#888888] text-sm font-medium"
+                style={{ minHeight: 52 }}
+                aria-label="Checking account status"
+                aria-live="polite"
+              >
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Checking account...
+              </div>
+            ) : user ? (
               <>
                 <Link
                   href="/account"
@@ -192,22 +221,26 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link
+                <TrackedLink
                   href="/auth/login"
+                  eventName="login_cta_click"
+                  eventProperties={{ location: 'mobile_nav' }}
                   onClick={() => setOpen(false)}
                   className="flex items-center px-6 border-b border-white/[0.05] text-[#888888] hover:text-white hover:bg-white/[0.04] transition-colors text-sm font-medium"
                   style={{ minHeight: 52 }}
                 >
                   Sign In
-                </Link>
+                </TrackedLink>
                 <div className="px-6 py-4">
-                  <Link
+                  <TrackedLink
                     href="/auth/signup"
+                    eventName="signup_cta_click"
+                    eventProperties={{ location: 'mobile_nav' }}
                     onClick={() => setOpen(false)}
                     className="block bg-red-600 hover:bg-red-500 text-[#e5e2e1] font-medium px-4 py-3 rounded-lg text-center transition-colors text-sm"
                   >
                     Get Started
-                  </Link>
+                  </TrackedLink>
                 </div>
               </>
             )}

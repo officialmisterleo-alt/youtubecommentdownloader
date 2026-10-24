@@ -4,35 +4,36 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import AttributionTracker from '@/components/AttributionTracker'
 import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' })
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
 }
 export const metadata: Metadata = {
-  title: 'YouTube Comment Downloader - Export Comments at Scale',
-  description: 'Download and export YouTube comments to CSV, Excel, JSON and more. Built for agencies, brands, and researchers.',
+  title: 'YouTube Comment Downloader - Export Comments to CSV, Excel, JSON',
+  description: 'Download and export YouTube comments from videos, Shorts, playlists, and channels to CSV, Excel, JSON, TXT, and HTML.',
   metadataBase: new URL('https://www.youtubecommentdownloader.com'),
   alternates: { canonical: 'https://www.youtubecommentdownloader.com' },
   openGraph: {
     type: 'website',
     url: 'https://www.youtubecommentdownloader.com',
-    title: 'YouTube Comment Downloader — Export Comments at Scale',
-    description: 'Download and export YouTube comments to CSV, Excel, JSON and more. Built for agencies, brands, and researchers.',
+    title: 'YouTube Comment Downloader - Export Comments to CSV, Excel, JSON',
+    description: 'Download and export YouTube comments from videos, Shorts, playlists, and channels to CSV, Excel, JSON, TXT, and HTML.',
     siteName: 'YouTube Comment Downloader',
-    images: [{ url: '/opengraph-image.jpg', width: 1200, height: 630 }],
+    images: [{ url: '/opengraph-image.jpg', width: 1200, height: 675 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'YouTube Comment Downloader — Export Comments at Scale',
-    description: 'Download and export YouTube comments to CSV, Excel, JSON and more.',
+    title: 'YouTube Comment Downloader - Export Comments to CSV, Excel, JSON',
+    description: 'Download and export YouTube comments from videos, Shorts, playlists, and channels.',
     images: ['/opengraph-image.jpg'],
   },
   icons: {
     icon: [
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
       { url: '/favicon.ico' },
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       <body className={`${inter.className} ${jakarta.variable} bg-[#131313] text-[#e5e2e1] antialiased min-h-screen flex flex-col`}>
         <Navbar />
+        <AttributionTracker />
         {children}
         <Footer />
         <Analytics />

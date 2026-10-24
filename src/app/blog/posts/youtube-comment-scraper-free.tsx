@@ -14,7 +14,7 @@ const toc = [
 export default function YouTubeCommentScraperFree() {
   return (
     <BlogPostLayout
-      title="YouTube Comment Scraper: The Free Tool That Actually Works in 2025"
+      title="YouTube Comment Scraper: The Free Tool That Actually Works"
       description="Most free YouTube comment scrapers are broken, abandoned, or rate-limited into uselessness. Here's why, and what to use instead — a free YouTube comment scraper built on the official API."
       date="2026-05-01"
       readTime="7 min read"
@@ -25,7 +25,7 @@ export default function YouTubeCommentScraperFree() {
         If you&apos;ve tried to find a free YouTube comment scraper recently, you already know the landscape: half the tools are dead, a quarter require you to install something sketchy, and the rest hit a rate limit after 20 comments and ask you to upgrade.
       </p>
       <p>
-        This page explains why that is, what scraping YouTube comments actually means in 2025, and how this tool gets you real comment data free — without the usual nonsense.
+        This page explains why that is, what scraping YouTube comments actually means now, and how this tool gets you real comment data free — without the usual nonsense.
       </p>
 
       <h2 className="font-jakarta" id="what-is-scraping">What Scraping YouTube Comments Actually Means</h2>
@@ -101,7 +101,7 @@ export default function YouTubeCommentScraperFree() {
           <strong>Paste your YouTube URL</strong> — video, playlist, or channel URL. No setup needed.
         </li>
         <li>
-          <strong>Choose your settings</strong> — comment limit, sort order (top/newest/oldest), and whether to include replies.
+          <strong>Choose your settings</strong> — comment limit, sort order (top/newest), and whether to include replies on Pro or higher.
         </li>
         <li>
           <strong>Select a format</strong> — TXT (free, no account), CSV/JSON/Excel (free account required).
@@ -112,7 +112,7 @@ export default function YouTubeCommentScraperFree() {
       </ol>
 
       <p>
-        Free users get up to 100 comments per export in TXT or HTML format. For CSV, higher limits, or bulk exports across channels and playlists, a free account gets you most of what you need.
+        Without an account, you can export up to 50 comments in TXT or HTML. A free account unlocks CSV, Excel, and JSON with up to 100 comments per download and a 100-comment monthly quota. Higher limits need Pro; channel and playlist exports need Business or Enterprise.
       </p>
 
       <h2 className="font-jakarta" id="api-limitations">Limitations of the YouTube API (What Any Honest Scraper Will Tell You)</h2>

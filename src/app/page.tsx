@@ -5,8 +5,8 @@ import { Download, FileSpreadsheet, Zap, Users, Key, Shield } from 'lucide-react
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'YouTube Comment Downloader — Export Comments in Seconds',
-  description: 'The best free YouTube comment downloader. Export YouTube comments to CSV, Excel, JSON and more. Built for creators, researchers, and marketers.',
+  title: 'YouTube Comment Downloader - Export Comments to CSV, Excel, JSON',
+  description: 'Download YouTube comments from videos, Shorts, playlists, and channels. Export to CSV, Excel, JSON, TXT, or HTML for research, reporting, and analysis.',
   alternates: { canonical: 'https://www.youtubecommentdownloader.com' },
 }
 
@@ -18,19 +18,63 @@ const bevel = [
 ].join(' ')
 
 const features = [
-  { icon: Download,        title: 'Bulk Export',       desc: 'Download thousands of comments from any video, playlist, or channel in one click.' },
-  { icon: FileSpreadsheet, title: '6 Export Formats',  desc: 'CSV, JSON, Excel, TXT and more. Ready to drop into any analytics workflow.' },
-  { icon: Zap,             title: 'Instant Results',   desc: '5,000 comments per minute. No queue, no waiting. Results appear as they load.' },
-  { icon: Users,           title: 'Team Access',        desc: 'Share exports, manage seats, and collaborate across your agency or research team.' },
-  { icon: Key,             title: 'REST API',           desc: 'Full API access for Business and Enterprise. Automate exports and integrate with your stack.' },
-  { icon: Shield,          title: 'Enterprise Ready',   desc: 'SOC2-grade infrastructure, SLA guarantees, and dedicated support for large teams.' },
+  { icon: Download,        title: 'Bulk Export',       desc: 'Export comments across playlist and channel videos on Business or Enterprise plans.' },
+  { icon: FileSpreadsheet, title: '5 Export Formats',  desc: 'Download CSV, Excel, JSON, TXT, or HTML. CSV, Excel, and JSON require an account.' },
+  { icon: Zap,             title: 'Choose Your Limit',  desc: 'Start with up to 50 comments without an account, or sign up for a 100-comment monthly free quota.' },
+  { icon: Users,           title: 'Team Access',        desc: 'Business includes three team seats for agencies and research teams.' },
+  { icon: Key,             title: 'REST API',           desc: 'Enterprise API access supports automated comment export workflows.' },
+  { icon: Shield,          title: 'Plan for Your Scale', desc: 'Move from individual exports to larger downloads, bulk sources, and API access as needed.' },
 ]
 
-const surfaces = ['Video Comments', 'Playlist Comments', 'Channel Comments', 'YouTube Shorts']
+const surfaces = ['Video Comments', 'YouTube Shorts', 'Playlists (Business+)', 'Channels (Business+)']
+
+const workflows = [
+  { href: '/youtube-comment-scraper', title: 'YouTube Comment Scraper', desc: 'Extract structured comment data without brittle browser scraping.' },
+  { href: '/export-youtube-comments-to-csv', title: 'Export Comments to CSV', desc: 'Download spreadsheet-ready CSV files for filtering and analysis.' },
+  { href: '/bulk-youtube-comment-export', title: 'Bulk Comment Export', desc: 'Export across playlists and channels on Business or Enterprise.' },
+  { href: '/youtube-comment-sentiment-analysis', title: 'Comment Sentiment Analysis', desc: 'Use Pro or higher to turn exported comments into AI-assisted insights.' },
+]
+
+const productJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'YouTube Comment Downloader',
+  applicationCategory: 'UtilitiesApplication',
+  operatingSystem: 'Web',
+  url: 'https://www.youtubecommentdownloader.com',
+  description: 'Download and export YouTube comments to CSV, Excel, JSON, TXT, and HTML for research, reporting, and analysis.',
+  offers: [
+    {
+      '@type': 'Offer',
+      name: 'Free',
+      price: '0',
+      priceCurrency: 'USD',
+      url: 'https://www.youtubecommentdownloader.com/pricing',
+    },
+    {
+      '@type': 'Offer',
+      name: 'Pro',
+      price: '19',
+      priceCurrency: 'USD',
+      url: 'https://www.youtubecommentdownloader.com/pricing',
+    },
+    {
+      '@type': 'Offer',
+      name: 'Business',
+      price: '49',
+      priceCurrency: 'USD',
+      url: 'https://www.youtubecommentdownloader.com/pricing',
+    },
+  ],
+}
 
 export default function Home() {
   return (
     <div className="flex-1 overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
       {/* ── HERO ── */}
       <section className="relative flex flex-col items-center text-center px-6 pt-16 sm:pt-28 pb-24 overflow-hidden">
         <div className="absolute -top-20 -left-20 w-96 h-96 bg-red-600/10 blur-[120px] rounded-full pointer-events-none z-0" />
@@ -82,16 +126,44 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── QUOTE ── */}
+      {/* ── POPULAR WORKFLOWS ── */}
+      <section className="py-16 px-6 border-t border-white/[0.07]">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-10">
+            <h2 className="font-jakarta text-2xl font-bold text-[#e5e2e1] mb-2">
+              Popular YouTube comment workflows
+            </h2>
+            <p className="text-sm text-[#555555] max-w-lg">
+              Start with a specific export or analysis task, then scale into bulk research when you need it.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {workflows.map((workflow) => (
+              <Link
+                key={workflow.href}
+                href={workflow.href}
+                className={`${bevel} group p-5 transition-colors hover:border-white/[0.15]`}
+              >
+                <h3 className="font-jakarta text-sm font-semibold text-[#e5e2e1] mb-2 group-hover:text-red-300">
+                  {workflow.title}
+                </h3>
+                <p className="text-xs text-[#555555] leading-relaxed">{workflow.desc}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── EXPORT PREVIEW ── */}
       <section className="py-16 px-6 border-t border-white/[0.07]">
         <div className="max-w-3xl mx-auto">
-          <blockquote className="text-xl md:text-2xl font-medium text-white/70 italic leading-relaxed mb-4">
-            &ldquo;We manage 30+ brand accounts. What used to take a full day now takes
-            20 minutes. The bulk channel export changed how we do competitive analysis.&rdquo;
-          </blockquote>
-          <cite className="text-[#555555] text-sm not-italic">
-            — Sarah K., Social Media Manager at MediaWave Agency
-          </cite>
+          <h2 className="font-jakarta text-2xl font-bold text-[#e5e2e1] mb-3">See the export before you start</h2>
+          <p className="text-sm text-[#888888] leading-relaxed mb-5">
+            Preview an illustrative comment dataset and its fields, including author, text, likes, date, and source video. Replies are available on Pro or higher.
+          </p>
+          <Link href="/sample-youtube-comment-export" className="inline-flex rounded-lg border border-white/[0.12] px-5 py-2.5 text-sm font-medium text-[#e5e2e1] transition-colors hover:border-white/25">
+            View sample export →
+          </Link>
         </div>
       </section>
 

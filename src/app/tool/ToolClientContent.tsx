@@ -1,11 +1,14 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import AnalysisPanel from '@/components/AnalysisPanel'
 import Link from 'next/link'
-import { Plus, Download, RefreshCw, ChevronDown, X, Lock } from 'lucide-react'
+import { ArrowRight, BadgePercent, Plus, Download, RefreshCw, ChevronDown, X, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { parseYouTubeUrl, isBulkUrl, isVideoUrl } from '@/lib/youtube/url-parser'
+import { trackEvent } from '@/lib/analytics'
+import { toolFaqs } from '@/lib/tool-faqs'
 import * as XLSX from 'xlsx'
 
 type Reply = { id: string; author: string; text: string; likes: number; date: string; dateRaw?: string }
@@ -14,7 +17,7 @@ type VideoListItem = { videoId: string; videoUrl: string; title: string; channel
 type SourceMeta = { kind: 'video' | 'channel' | 'playlist'; title: string; channelName?: string; sourceUrl: string; videoCount?: number; thumbnailUrl?: string }
 type VideoMeta = { videoId: string; title: string; url: string; thumbnailUrl: string }
 type Format = 'CSV' | 'Excel' | 'JSON' | 'HTML' | 'TXT'
-type SortBy = 'top' | 'newest' | 'oldest'
+type SortBy = 'top' | 'newest'
 
 const GATED_FORMATS: Format[] = ['CSV', 'Excel', 'JSON']
 const ALL_FORMATS: Format[] = ['CSV', 'Excel', 'JSON', 'HTML', 'TXT']
@@ -58,6 +61,7 @@ function ToolPageContent() {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [statusMsg, setStatusMsg] = useState('')
+  const [exportError, setExportError] = useState('')
   const [comments, setComments] = useState<Comment[]>([])
   const [done, setDone] = useState(false)
 
@@ -157,9 +161,11 @@ function ToolPageContent() {
 
   const selectFormat = (f: Format) => {
     if (GATED_FORMATS.includes(f) && !isSignedIn) {
+      trackEvent('export_format_gated', { format: f })
       setShowAuthGate(true)
       return
     }
+    trackEvent('export_format_select', { format: f })
     setFormat(f)
   }
 
@@ -168,9 +174,17 @@ function ToolPageContent() {
 
   const downloadComments = (comments: Comment[], fmt: Format) => {
     if (GATED_FORMATS.includes(fmt) && !isSignedIn) {
+      trackEvent('download_gated', { format: fmt, comment_count: comments.length })
       setShowAuthGate(true)
       return
     }
+
+    trackEvent('download_click', {
+      format: fmt,
+      comment_count: comments.length,
+      plan: userPlan,
+      signed_in: isSignedIn,
+    })
 
     // Detect multi-video: are there multiple distinct video URLs?
     const uniqueVideoUrls = Array.from(new Set(comments.map(c => c.videoUrl ?? c.videoTitle ?? '').filter(Boolean)))
@@ -487,17 +501,29 @@ ${commentRows}
     // Parse all URLs upfront
     const parsedUrls = activeUrls.map(u => ({ url: u, parsed: parseYouTubeUrl(u) }))
     const hasBulkUrl = parsedUrls.some(({ parsed }) => isBulkUrl(parsed))
+    const maxCommentsParsed = parseInt(maxComments) || 100
 
     // Gate bulk (channel/playlist) to Business+ users
     if (hasBulkUrl && !isBusiness) {
+      trackEvent('bulk_export_gated', { plan: userPlan, url_count: activeUrls.length })
       setShowBulkUpgradeModal(true)
       return
     }
 
-    setLoading(true); setDone(false); setProgress(0); setComments([]); setVideosMeta([])
+    trackEvent('export_start', {
+      format,
+      plan: userPlan,
+      signed_in: isSignedIn,
+      url_count: activeUrls.length,
+      requested_comments: maxCommentsParsed,
+      include_replies: includeReplies,
+      sort_by: sortBy,
+      has_bulk_url: hasBulkUrl,
+    })
+
+    setLoading(true); setDone(false); setProgress(0); setComments([]); setVideosMeta([]); setExportError('')
     const allComments: Comment[] = []
     const collectedVideosMeta: VideoMeta[] = []
-    const maxCommentsParsed = parseInt(maxComments) || 100
     let pendingMeta: SourceMeta | null = null
 
     // For bulk exports: fetch current month's usage so we can enforce quota
@@ -538,10 +564,7 @@ ${commentRows}
           })
           const listData = await listRes.json()
 
-          if (listData.error) {
-            setStatusMsg(`Error: ${listData.error}`)
-            break
-          }
+          if (!listRes.ok || listData.error) throw new Error(listData.error ?? 'Unable to fetch the video list.')
 
           const videos: VideoListItem[] = listData.videos ?? []
           const total = videos.length
@@ -579,6 +602,7 @@ ${commentRows}
               body: JSON.stringify({ url: video.videoUrl, maxComments: maxCommentsParsed, includeReplies, sortBy }),
             })
             const data = await res.json()
+            if (!res.ok || data.error) throw new Error(data.error ?? 'Unable to fetch comments.')
             if (data.comments) {
               const videoComments: Comment[] = data.comments
               allComments.push(...videoComments)
@@ -612,6 +636,7 @@ ${commentRows}
             body: JSON.stringify({ url: canonicalUrl, maxComments: maxCommentsParsed, includeReplies, sortBy }),
           })
           const data = await res.json()
+          if (!res.ok || data.error) throw new Error(data.error ?? 'Unable to fetch comments.')
           if (data.comments) {
             const videoComments: Comment[] = data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
             allComments.push(...videoComments)
@@ -661,6 +686,7 @@ ${commentRows}
             body: JSON.stringify({ url, maxComments: maxCommentsParsed, includeReplies, sortBy }),
           })
           const data = await res.json()
+          if (!res.ok || data.error) throw new Error(data.error ?? 'Unable to fetch comments.')
           if (data.comments) {
             allComments.push(...data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` })))
             videosProcessed++
@@ -678,19 +704,31 @@ ${commentRows}
         setDone(true)
         if (isSignedIn) fetchQuota()
       }
+      trackEvent('export_complete', {
+        format,
+        plan: userPlan,
+        signed_in: isSignedIn,
+        comment_count: allComments.length,
+        videos_processed: videosProcessed,
+        quota_exceeded: quotaExceeded,
+        has_bulk_url: hasBulkUrl,
+      })
       setSourceMeta(pendingMeta)
       setVideosMeta(collectedVideosMeta)
       if (allComments.length > 0) setDone(true)
-    } catch {
-      const mockMeta = { videoTitle: 'Sample YouTube Video — Tutorial & Deep Dive', channelName: 'CreatorChannel', videoUrl: urls[0] }
-      setComments([
-        { id: '1', author: '@techreviewer99', text: 'This is exactly what I needed! The tutorial was super clear.', likes: 342, date: '2 days ago', replies: 2, replyList: [{ id: '1-1', author: '@CreatorChannel', text: 'Thank you! Really glad it helped.', likes: 48, date: '2 days ago' }], ...mockMeta },
-        { id: '2', author: '@marketingpro_sarah', text: 'Great content as always. Would love to see a follow-up.', likes: 187, date: '3 days ago', replies: 1, replyList: [{ id: '2-1', author: '@CreatorChannel', text: 'Advanced series coming next month!', likes: 34, date: '3 days ago' }], ...mockMeta },
-        { id: '3', author: '@dataanalyst_mike', text: "I've been using this method for 6 months and it works perfectly.", likes: 156, date: '4 days ago', replies: 0, replyList: [], ...mockMeta },
-        { id: '4', author: '@creativedirector', text: 'The production quality keeps improving. Keep up the amazing work!', likes: 134, date: '5 days ago', replies: 0, replyList: [], ...mockMeta },
-        { id: '5', author: '@researcher_2024', text: 'Perfect for academic research. Downloaded 50k comments in 10 min.', likes: 98, date: '1 week ago', replies: 0, replyList: [], ...mockMeta },
-      ])
-      setDone(true)
+    } catch (error) {
+      trackEvent('export_error', { format, plan: userPlan, has_bulk_url: hasBulkUrl })
+      const message = error instanceof Error ? error.message : 'Unable to complete the export.'
+      setExportError(allComments.length > 0
+        ? `Export stopped after ${allComments.length.toLocaleString()} comments. You can download the partial results below. ${message}`
+        : `Export failed. ${message}`)
+      if (allComments.length > 0) {
+        setComments(allComments)
+        setSourceMeta(pendingMeta)
+        setVideosMeta(collectedVideosMeta)
+        setDone(true)
+        if (isSignedIn) fetchQuota()
+      }
     }
     setProgress(100); setLoading(false)
   }
@@ -701,7 +739,7 @@ ${commentRows}
       <div className="max-w-4xl mx-auto px-4 py-10 sm:py-12">
         <div className="text-center mb-8 sm:mb-10">
           <h1 className="text-2xl sm:text-3xl font-bold font-jakarta text-[#e5e2e1] mb-2">YouTube Comment Downloader</h1>
-          <p className="text-[#888888] text-sm sm:text-base">Paste a YouTube URL to extract and export all comments instantly.</p>
+          <p className="text-[#888888] text-sm sm:text-base">Paste a public YouTube URL to export available comments within your plan limit.</p>
         </div>
 
         {/* URL inputs */}
@@ -729,7 +767,7 @@ ${commentRows}
                         {detected!.type === 'channel' ? 'Channel' : 'Playlist'} — {isBusiness ? 'bulk download enabled' : 'Business plan required'}
                       </span>
                       {!isBusiness && (
-                        <Link href="/pricing" className="text-xs text-red-400 hover:text-red-300 underline">Upgrade</Link>
+                        <Link href="/pricing" onClick={() => trackEvent('upgrade_cta_click', { location: 'bulk_url_badge', plan: userPlan })} className="text-xs text-red-400 hover:text-red-300 underline">Upgrade</Link>
                       )}
                     </div>
                   )}
@@ -792,7 +830,7 @@ ${commentRows}
             </div>
             <p className="mt-1.5 text-xs text-[#666666]">
               {!isSignedIn ? (
-                <><Link href="/auth/login" className="text-[#888888] hover:text-white underline">Sign in</Link> to unlock more comments</>
+                <><Link href="/auth/login" onClick={() => trackEvent('login_cta_click', { location: 'tool_comment_limit' })} className="text-[#888888] hover:text-white underline">Sign in</Link> to unlock more comments</>
               ) : userPlan === 'enterprise' ? (
                 'Enterprise plan'
               ) : userPlan === 'business' ? (
@@ -800,7 +838,7 @@ ${commentRows}
               ) : userPlan === 'pro' ? (
                 'Pro plan'
               ) : (
-                <>Free plan · 100 comment max · <Link href="/pricing" className="text-[#888888] hover:text-white underline">Upgrade for more</Link></>
+                <>Free plan · 100 comment max · <Link href="/pricing" onClick={() => trackEvent('upgrade_cta_click', { location: 'tool_quota_hint', plan: userPlan })} className="text-[#888888] hover:text-white underline">Upgrade for more</Link></>
               )}
             </p>
           </div>
@@ -824,10 +862,24 @@ ${commentRows}
                   </div>
                   <p className="text-xs text-[#888888]">
                     {quotaData.used.toLocaleString()} / {quotaData.limit.toLocaleString()} comments used this month
-                    {quotaData.remaining === 0 && (
-                      <> · <Link href="/pricing" className="text-red-400 hover:text-red-300">Upgrade for more</Link></>
-                    )}
                   </p>
+                  {quotaData.remaining === 0 && (
+                    <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+                      <div className="flex items-start gap-2">
+                        <BadgePercent className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+                        <div>
+                          <p className="text-sm font-semibold text-white">Free quota used for this month</p>
+                          <p className="mt-1 text-xs leading-5 text-[#aaaaaa]">
+                            Upgrade to Pro for a 100,000-comment monthly quota and larger downloads.
+                          </p>
+                          <Link href="/pricing" onClick={() => trackEvent('upgrade_cta_click', { location: 'tool_monthly_quota_empty', plan: userPlan })} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-red-500">
+                            Upgrade to Pro
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -839,7 +891,7 @@ ${commentRows}
             {!isSignedIn && (
               <p className="text-xs text-[#888888] mb-3 flex items-center gap-1.5">
                 <Lock className="w-3 h-3 text-[#888888]" />
-                <span>CSV, JSON &amp; Excel require a free account. <Link href="/auth/login" className="text-red-400 hover:text-red-300 underline">Sign in to unlock</Link></span>
+                <span>CSV, JSON &amp; Excel require a free account. <Link href="/auth/login" onClick={() => trackEvent('login_cta_click', { location: 'tool_format_gate' })} className="text-red-400 hover:text-red-300 underline">Sign in to unlock</Link></span>
               </p>
             )}
             <div className="flex flex-wrap gap-2">
@@ -870,7 +922,7 @@ ${commentRows}
           <div>
             <label className="text-sm font-medium text-white block mb-2">Sort By</label>
             <div className="flex flex-wrap gap-2">
-              {(['top', 'newest', 'oldest'] as SortBy[]).map(s => (
+              {(['top', 'newest'] as SortBy[]).map(s => (
                 <button key={s} onClick={() => setSortBy(s)}
                   className={`px-4 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors duration-200 min-h-[40px] border ${sortBy === s ? 'bg-red-600 border-transparent text-white' : 'bg-[#0a0a0a] border-white/[0.07] text-[#888888] hover:border-white/[0.2]'}`}>
                   {s}
@@ -885,11 +937,17 @@ ${commentRows}
           {loading ? <><RefreshCw className="w-5 h-5 animate-spin" /> Exporting...</> : <><Download className="w-5 h-5" /> Start Export</>}
         </button>
 
+        {exportError && (
+          <p role="alert" className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {exportError}
+          </p>
+        )}
+
         {hasBulkUrlDetected && !isBusiness && (
           <p className="text-xs text-[#888888] text-center mt-2">
             <Lock className="w-3 h-3 inline mr-1 align-middle" />
             Channel and playlist downloads require a Business plan.{' '}
-            <Link href="/pricing" className="text-red-400 hover:text-red-300 underline">Upgrade</Link>
+            <Link href="/pricing" onClick={() => trackEvent('upgrade_cta_click', { location: 'tool_bulk_gate_message', plan: userPlan })} className="text-red-400 hover:text-red-300 underline">Upgrade</Link>
           </p>
         )}
 
@@ -913,11 +971,14 @@ ${commentRows}
                 <div className={`grid gap-3 ${videosMeta.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
                   {videosMeta.map((vm) => (
                     <div key={vm.videoId} className="bg-[#171717] border border-white/[0.07] rounded-xl overflow-hidden relative group">
-                      <div className="relative">
-                        <img
+                      <div className="relative aspect-video">
+                        <Image
                           src={vm.thumbnailUrl}
                           alt={vm.title}
-                          className="w-full aspect-video object-cover"
+                          fill
+                          sizes={videosMeta.length === 1 ? '(max-width: 768px) 100vw, 896px' : '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'}
+                          className="object-cover"
+                          unoptimized
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                         />
                         <button
@@ -946,10 +1007,14 @@ ${commentRows}
             {sourceMeta && sourceMeta.kind !== 'video' && videosMeta.length === 0 && (
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-4 sm:p-5 border-b border-white/[0.07] bg-[#111111]">
                 {sourceMeta.thumbnailUrl && (
-                  <img
+                  <Image
                     src={sourceMeta.thumbnailUrl}
                     alt="thumbnail"
+                    width={140}
+                    height={79}
+                    sizes="(max-width: 640px) 100vw, 140px"
                     className="w-full sm:w-[140px] sm:h-[79px] rounded-lg object-cover flex-shrink-0 self-start"
+                    unoptimized
                     onError={(e) => {
                       const img = e.currentTarget
                       if (img.src.includes('hqdefault')) {
@@ -1088,6 +1153,25 @@ ${commentRows}
         </div>
       )}
 
+      <section className="border-t border-white/[0.07] px-4 py-12 sm:py-14">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-6">
+            <h2 className="font-jakarta text-2xl font-bold text-[#e5e2e1]">YouTube comment downloader FAQ</h2>
+            <p className="mt-2 text-sm leading-6 text-[#777777]">
+              Quick answers about export formats, bulk downloads, and AI comment analysis.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {toolFaqs.map((faq) => (
+              <div key={faq.question} className="border border-white/[0.07] bg-white/[0.02] p-5">
+                <h3 className="font-jakarta text-sm font-semibold text-white">{faq.question}</h3>
+                <p className="mt-2 text-sm leading-6 text-[#777777]">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Bulk upgrade modal — shown when non-Business users try to use channel/playlist URLs */}
       {showBulkUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
@@ -1103,7 +1187,7 @@ ${commentRows}
               <strong className="text-white">Business plan</strong>. Upgrade to download comments from entire channels and playlists in one go.
             </p>
             <div className="flex flex-col gap-3">
-              <Link href="/pricing" className="block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-xl text-center transition-colors">
+              <Link href="/pricing" onClick={() => trackEvent('upgrade_cta_click', { location: 'bulk_upgrade_modal', plan: userPlan })} className="block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-xl text-center transition-colors">
                 View Business Plan
               </Link>
               <button onClick={() => setShowBulkUpgradeModal(false)} className="text-[#888888] hover:text-white text-sm transition-colors mt-1">
@@ -1128,10 +1212,14 @@ ${commentRows}
               Create a free account to download in <strong className="text-white">CSV, JSON, and Excel</strong> formats. Plain text is always free — no sign-in needed.
             </p>
             <div className="flex flex-col gap-3">
-              <Link href="/auth/signup" className="block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-xl text-center transition-colors">
+              <Link href="/auth/signup" onClick={() => trackEvent('signup_cta_click', { location: 'auth_gate_modal' })} className="block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-xl text-center transition-colors">
                 Create Free Account
               </Link>
-              <Link href="/auth/login" className="block border border-white/[0.07] hover:border-white/[0.15] text-white font-medium px-4 py-3 rounded-xl text-center transition-colors text-sm">
+              <Link href="/pricing" onClick={() => trackEvent('upgrade_cta_click', { location: 'auth_gate_modal_pro_offer', plan: userPlan })} className="flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-center text-sm font-bold text-red-100 transition-colors hover:border-red-400/50 hover:bg-red-500/15">
+                <BadgePercent className="h-4 w-4" />
+                Get Pro with SAVE10
+              </Link>
+              <Link href="/auth/login" onClick={() => trackEvent('login_cta_click', { location: 'auth_gate_modal' })} className="block border border-white/[0.07] hover:border-white/[0.15] text-white font-medium px-4 py-3 rounded-xl text-center transition-colors text-sm">
                 Sign In
               </Link>
               <button onClick={() => setShowAuthGate(false)} className="text-[#888888] hover:text-[#888888] text-sm transition-colors mt-1">

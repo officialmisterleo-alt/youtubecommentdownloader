@@ -7,8 +7,8 @@ import { MessageSquare, Download, CheckCircle } from 'lucide-react'
 const steps = [
   { title: 'Paste your YouTube URL',  desc: 'Drop in any video link' },
   { title: 'Choose your format',      desc: 'CSV, JSON, TXT, HTML, or Excel' },
-  { title: 'Data ingestion',          desc: 'We pull every comment at full speed' },
-  { title: 'Download instantly',      desc: 'Your file is ready in seconds' },
+  { title: 'Fetch available comments', desc: 'We retrieve comments up to your plan limit' },
+  { title: 'Download your file',      desc: 'Export when the results are ready' },
 ]
 
 const formats = ['CSV', 'JSON', 'TXT', 'HTML', 'Excel']
@@ -144,7 +144,7 @@ export default function HowItWorksSection() {
     <section className="py-16 px-6 border-t border-white/[0.07]">
       <div className="max-w-5xl mx-auto">
         <h2 className="font-jakarta text-2xl font-bold text-[#e5e2e1] mb-10">
-          From URL to insights in 3 steps
+          From URL to export in 4 steps
         </h2>
 
         <div className="grid md:grid-cols-[1fr_auto_1fr] gap-8 items-start">

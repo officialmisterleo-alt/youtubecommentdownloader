@@ -58,7 +58,7 @@ export async function authenticateV1Request(
     return NextResponse.json(
       {
         error: 'plan_required',
-        message: `The v1 API requires an Enterprise plan. Your current plan is "${result.plan}". Upgrade at https://ytcommentdownloader.com/pricing.`,
+        message: `The v1 API requires an Enterprise plan. Your current plan is "${result.plan}". Upgrade at https://www.youtubecommentdownloader.com/pricing.`,
       },
       { status: 403 },
     )

@@ -1,0 +1,4 @@
+Type,VideoTitle,Channel,Author,Comment,Likes,Date
+comment,"Product Launch Demo","Example Channel","@viewer_one","Can this export replies too? That would help our research team.",42,"7/14/2026"
+reply,"Product Launch Demo","Example Channel","@creator","Yes, reply threads can be included on supported plans.",8,"7/14/2026"
+comment,"Product Launch Demo","Example Channel","@agency_researcher","CSV output makes this easier to filter by question and topic.",27,"7/15/2026"

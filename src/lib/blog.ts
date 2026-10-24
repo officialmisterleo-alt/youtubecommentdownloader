@@ -13,6 +13,33 @@ export type BlogPost = {
 // Registry of all posts — sorted by date desc
 const posts: Omit<BlogPost, 'Content'>[] = [
   {
+    slug: 'youtube-comment-analysis-for-content-ideas',
+    title: 'How to Analyze YouTube Comments for Content Ideas',
+    description:
+      'A practical workflow for turning YouTube comments into video ideas, blog topics, landing page copy, and customer research.',
+    date: '2026-08-21',
+    readTime: '6 min read',
+    tags: ['Content Strategy', 'Comment Analysis', 'YouTube Research'],
+  },
+  {
+    slug: 'youtube-comments-market-research',
+    title: 'Using YouTube Comments for Market Research',
+    description:
+      'How teams can collect, structure, and analyze YouTube comments to understand audience demand, objections, competitors, and product feedback.',
+    date: '2026-08-21',
+    readTime: '7 min read',
+    tags: ['Market Research', 'Audience Research', 'YouTube Tools'],
+  },
+  {
+    slug: 'best-youtube-comment-export-format',
+    title: 'Best Format for Exporting YouTube Comments: CSV, Excel, JSON, TXT, or HTML?',
+    description:
+      'A clear guide to choosing the right YouTube comment export format for spreadsheets, client reports, research, development, and quick review.',
+    date: '2026-08-21',
+    readTime: '6 min read',
+    tags: ['Data Export', 'Spreadsheets', 'YouTube Tools'],
+  },
+  {
     slug: 'viral-content-ideas-competitors-youtube-comments',
     title: "How to Find Viral Content Ideas Hidden in Your Competitors' YouTube Comments",
     description:
@@ -41,7 +68,7 @@ const posts: Omit<BlogPost, 'Content'>[] = [
   },
   {
     slug: 'youtube-comment-scraper-free',
-    title: 'YouTube Comment Scraper: The Free Tool That Actually Works in 2025',
+    title: 'YouTube Comment Scraper: The Free Tool That Actually Works',
     description:
       'Most free YouTube comment scrapers are broken, abandoned, or rate-limited into uselessness. Here\'s why, and what to use instead.',
     date: '2026-05-01',

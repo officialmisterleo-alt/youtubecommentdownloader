@@ -8,6 +8,14 @@ export const metadata: Metadata = {
     title: 'Pricing – YouTube Comment Downloader',
     description: 'Simple, transparent pricing for YouTubeCommentDownloader. Start free and scale as you grow.',
     url: 'https://www.youtubecommentdownloader.com/pricing',
+    type: 'website',
+    images: [{ url: '/opengraph-image.jpg', width: 1200, height: 675 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Pricing – YouTube Comment Downloader',
+    description: 'Simple, transparent pricing for YouTubeCommentDownloader. Start free and scale as you grow.',
+    images: ['/opengraph-image.jpg'],
   },
 }
 

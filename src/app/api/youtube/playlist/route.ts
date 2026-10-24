@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { parseYouTubeUrl } from '@/lib/youtube/url-parser'
 import { getEffectivePlan } from '@/lib/teams'
 import { getMonthlyUsage, MONTHLY_LIMITS } from '@/lib/quota'
+import { fetchWithKeyRotation, getApiKeys } from '@/lib/youtube-api'
 
 export type PlaylistVideo = {
   videoId: string
@@ -54,8 +55,13 @@ export async function POST(req: NextRequest) {
     }
     const playlistId = parsed.id
 
-    const apiKey = process.env.YOUTUBE_API_KEY
-    if (!apiKey || apiKey === 'PLACEHOLDER_YOUTUBE_KEY') {
+    if (getApiKeys().length === 0) {
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          { error: 'Playlist exports are temporarily unavailable. Please try again later.' },
+          { status: 503 },
+        )
+      }
       return NextResponse.json({
         videos: MOCK_PLAYLIST_VIDEOS,
         playlistTitle: 'Sample Playlist',
@@ -67,10 +73,10 @@ export async function POST(req: NextRequest) {
     // Fetch playlist metadata
     let playlistTitle = ''
     try {
-      const metaQs = new URLSearchParams({ part: 'snippet', id: playlistId, key: apiKey })
-      const metaRes = await fetch(`https://www.googleapis.com/youtube/v3/playlists?${metaQs}`)
-      const metaData = await metaRes.json()
-      playlistTitle = metaData.items?.[0]?.snippet?.title ?? ''
+      const { data: metaData } = await fetchWithKeyRotation(
+        (key) => `https://www.googleapis.com/youtube/v3/playlists?${new URLSearchParams({ part: 'snippet', id: playlistId, key })}`
+      )
+      playlistTitle = (metaData as { items?: { snippet?: { title?: string } }[] }).items?.[0]?.snippet?.title ?? ''
     } catch { /* non-fatal */ }
 
     // Paginate through playlist items (in order)
@@ -78,21 +84,26 @@ export async function POST(req: NextRequest) {
     let pageToken = ''
 
     while (true) {
-      const qs = new URLSearchParams({
-        part: 'snippet',
-        playlistId,
-        maxResults: '50',
-        key: apiKey,
-        ...(pageToken ? { pageToken } : {}),
-      })
-      const res = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?${qs}`)
-      const data = await res.json()
+      const result = await fetchWithKeyRotation(
+        (key) => `https://www.googleapis.com/youtube/v3/playlistItems?${new URLSearchParams({
+          part: 'snippet',
+          playlistId,
+          maxResults: '50',
+          key,
+          ...(pageToken ? { pageToken } : {}),
+        })}`
+      )
+      const data = result.data as {
+        items?: { snippet?: { resourceId?: { videoId?: string }; title?: string; videoOwnerChannelTitle?: string; position?: number } }[]
+        nextPageToken?: string
+        error?: { message?: string }
+      }
       if (data.error) {
-        return NextResponse.json({ error: data.error.message }, { status: 400 })
+        return NextResponse.json({ error: data.error.message ?? 'Failed to fetch playlist' }, { status: 400 })
       }
 
       for (const item of data.items ?? []) {
-        const videoId: string = item.snippet?.resourceId?.videoId
+        const videoId = item.snippet?.resourceId?.videoId
         if (!videoId) continue
         videos.push({
           videoId,

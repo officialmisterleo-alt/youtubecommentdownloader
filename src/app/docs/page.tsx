@@ -1,9 +1,23 @@
-import Link from 'next/link'
 import type { Metadata } from 'next'
+import TrackedLink from '@/components/TrackedLink'
 
 export const metadata: Metadata = {
-  title: 'API Reference — YouTube Comment Downloader',
-  description: 'Programmatic access to YouTube comment data for Enterprise plans. Full REST API documentation.',
+  title: 'YouTube Comment API Reference — Export Comments Programmatically',
+  description: 'REST API documentation for exporting YouTube comments, checking quota, and automating comment research workflows on Enterprise plans.',
+  alternates: { canonical: 'https://www.youtubecommentdownloader.com/docs' },
+  openGraph: {
+    title: 'YouTube Comment API Reference',
+    description: 'Automate YouTube comment exports with REST endpoints for comments, channel videos, and quota checks.',
+    url: 'https://www.youtubecommentdownloader.com/docs',
+    type: 'website',
+    images: [{ url: '/opengraph-image.jpg', width: 1200, height: 675 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'YouTube Comment API Reference',
+    description: 'REST API documentation for automated YouTube comment exports.',
+    images: ['/opengraph-image.jpg'],
+  },
 }
 
 // ── Shared UI components ──────────────────────────────────────────────────────
@@ -146,8 +160,8 @@ function EndpointBadge({ method, path }: { method: string; path: string }) {
 const commentsParams: ParamRow[] = [
   { param: 'url', type: 'string', required: true, defaultVal: '', description: 'YouTube video URL (any standard format, including youtu.be short links and /shorts/).' },
   { param: 'maxComments', type: 'integer', required: false, defaultVal: '100', description: 'Maximum number of comments to return. Capped at 10,000 per request.' },
-  { param: 'includeReplies', type: 'boolean', required: false, defaultVal: 'false', description: 'When true, reply threads are fetched and included in replyList. Each reply counts toward your quota individually.' },
-  { param: 'sortBy', type: 'string', required: false, defaultVal: '"top"', description: 'Sort order for comments. One of: "top" (most relevant), "newest", or "oldest".' },
+  { param: 'includeReplies', type: 'boolean', required: false, defaultVal: 'false', description: 'When true, available replies are requested and included in replyList. The current quota counts returned top-level comments.' },
+  { param: 'sortBy', type: 'string', required: false, defaultVal: '"top"', description: 'Use "top" (relevance) or "newest" (time order). The legacy "oldest" value is accepted but does not return chronological oldest-first results.' },
 ]
 
 const channelParams: ParamRow[] = [
@@ -358,11 +372,34 @@ async function fetchChannelComments(channelUrl, videosToFetch = 10, commentsPerV
 fetchChannelComments("https://www.youtube.com/@MrBeast")
   .then((comments) => console.log(\`Total collected: \${comments.length}\`))`
 
+const apiJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: 'YouTube Comment API Reference',
+  description: 'REST API documentation for exporting YouTube comments, listing channel videos, and checking quota usage.',
+  url: 'https://www.youtubecommentdownloader.com/docs',
+  about: {
+    '@type': 'SoftwareApplication',
+    name: 'YouTube Comment Downloader API',
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Web',
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'YouTube Comment Downloader',
+    url: 'https://www.youtubecommentdownloader.com',
+  },
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DocsPage() {
   return (
     <div className="flex-1 flex flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(apiJsonLd) }}
+      />
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-16">
 
         {/* ── Header ── */}
@@ -372,12 +409,44 @@ export default function DocsPage() {
             <Badge variant="gray">REST API</Badge>
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold font-jakarta text-[#e5e2e1] mb-4">
-            API Reference
+            YouTube Comment API Reference
           </h1>
           <p className="text-[#888888] text-lg leading-relaxed">
-            Programmatic access to YouTube comment data for Enterprise plans.
+            Programmatic access to YouTube comment data for Enterprise plans. Use the REST API to export comments from videos,
+            build channel research pipelines, monitor monthly quota, and connect comment data to your internal reporting stack.
           </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <TrackedLink
+              href="/contact"
+              eventName="contact_sales_click"
+              eventProperties={{ location: 'docs_header' }}
+              className="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+            >
+              Contact sales
+            </TrackedLink>
+            <TrackedLink
+              href="/youtube-comment-api"
+              eventName="seo_internal_link_click"
+              eventProperties={{ location: 'docs_header', destination: '/youtube-comment-api' }}
+              className="inline-flex items-center justify-center rounded-xl border border-white/[0.07] px-5 py-3 text-sm font-medium text-[#888888] transition-colors hover:border-white/[0.15] hover:text-white"
+            >
+              API overview
+            </TrackedLink>
+          </div>
         </div>
+
+        <section className="mb-14 grid gap-3 sm:grid-cols-3">
+          {[
+            ['Export comments', 'Fetch structured comment data from individual YouTube videos.'],
+            ['Build pipelines', 'Pair channel video discovery with comment exports for recurring reports.'],
+            ['Control quota', 'Check monthly usage before large jobs so automated exports stay predictable.'],
+          ].map(([title, text]) => (
+            <div key={title} className="border border-white/[0.07] bg-[#171717] p-5">
+              <h2 className="font-jakarta text-sm font-semibold text-[#e5e2e1]">{title}</h2>
+              <p className="mt-2 text-sm leading-6 text-[#777777]">{text}</p>
+            </div>
+          ))}
+        </section>
 
         {/* ── Authentication ── */}
         <section className="mb-14">
@@ -412,8 +481,8 @@ export default function DocsPage() {
           <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-6 mb-8">
             <EndpointBadge method="GET" path="/api/v1/comments" />
             <p className="text-[#888888] text-sm leading-relaxed mb-6">
-              Fetch comments from a YouTube video. Returns up to 10,000 comments per request, sorted by your chosen order. Each
-              comment (and each reply, if enabled) counts as 1 toward your monthly quota.
+              Fetch comments from a YouTube video. Returns up to 10,000 top-level comments per request, sorted by your chosen order.
+              The current monthly quota counts returned top-level comments; available replies can be included separately.
             </p>
 
             <div className="text-xs text-[#555555] font-semibold uppercase tracking-widest mb-3">Query parameters</div>
@@ -525,12 +594,14 @@ export default function DocsPage() {
             <p className="text-[#888888] text-sm leading-relaxed mb-6 max-w-md mx-auto">
               Contact us to set up your Enterprise account and get your API key. We&apos;ll get you up and running quickly.
             </p>
-            <Link
+            <TrackedLink
               href="/contact"
+              eventName="contact_sales_click"
+              eventProperties={{ location: 'docs_bottom_cta' }}
               className="inline-flex items-center justify-center px-6 py-3 bg-red-600 hover:bg-red-700 text-[#e5e2e1] font-semibold text-sm rounded-xl transition-colors"
             >
               Contact us →
-            </Link>
+            </TrackedLink>
           </div>
         </section>
 

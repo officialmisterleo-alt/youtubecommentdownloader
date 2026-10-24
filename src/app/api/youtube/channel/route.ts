@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { parseYouTubeUrl } from '@/lib/youtube/url-parser'
 import { getEffectivePlan } from '@/lib/teams'
 import { getMonthlyUsage, MONTHLY_LIMITS } from '@/lib/quota'
+import { fetchWithKeyRotation, getApiKeys } from '@/lib/youtube-api'
 
 export type ChannelVideo = {
   videoId: string
@@ -25,19 +26,19 @@ const MOCK_CHANNEL_VIDEOS: ChannelVideo[] = [
 async function resolveChannel(
   id: string,
   idType: 'channel_id' | 'handle' | 'user' | 'custom' | 'legacy',
-  apiKey: string,
 ): Promise<{ uploadsPlaylistId: string; title: string } | null> {
   const base = 'https://www.googleapis.com/youtube/v3/channels'
 
   async function attempt(params: Record<string, string>) {
-    const qs = new URLSearchParams({ part: 'contentDetails,snippet', key: apiKey, ...params })
-    const res = await fetch(`${base}?${qs}`)
-    const data = await res.json()
-    const item = data.items?.[0]
-    if (!item) return null
+    const { data } = await fetchWithKeyRotation(
+      (key) => `${base}?${new URLSearchParams({ part: 'contentDetails,snippet', key, ...params })}`
+    )
+    const typed = data as { items?: { contentDetails?: { relatedPlaylists?: { uploads?: string } }; snippet?: { title?: string } }[] }
+    const item = typed.items?.[0]
+    if (!item?.contentDetails?.relatedPlaylists?.uploads) return null
     return {
-      uploadsPlaylistId: item.contentDetails?.relatedPlaylists?.uploads as string,
-      title: item.snippet?.title as string,
+      uploadsPlaylistId: item.contentDetails.relatedPlaylists.uploads,
+      title: item.snippet?.title ?? '',
     }
   }
 
@@ -60,7 +61,6 @@ async function resolveChannel(
  */
 async function fetchPlaylistVideos(
   playlistId: string,
-  apiKey: string,
   channelTitle: string,
   maxVideos = 0,
 ): Promise<ChannelVideo[]> {
@@ -68,19 +68,24 @@ async function fetchPlaylistVideos(
   let pageToken = ''
 
   while (true) {
-    const qs = new URLSearchParams({
-      part: 'snippet',
-      playlistId,
-      maxResults: '50',
-      key: apiKey,
-      ...(pageToken ? { pageToken } : {}),
-    })
-    const res = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?${qs}`)
-    const data = await res.json()
+    const result = await fetchWithKeyRotation(
+      (key) => `https://www.googleapis.com/youtube/v3/playlistItems?${new URLSearchParams({
+        part: 'snippet',
+        playlistId,
+        maxResults: '50',
+        key,
+        ...(pageToken ? { pageToken } : {}),
+      })}`
+    )
+    const data = result.data as {
+      items?: { snippet?: { resourceId?: { videoId?: string }; title?: string } }[]
+      nextPageToken?: string
+      error?: unknown
+    }
     if (data.error) break
 
     for (const item of data.items ?? []) {
-      const videoId: string = item.snippet?.resourceId?.videoId
+      const videoId = item.snippet?.resourceId?.videoId
       if (!videoId) continue
       videos.push({
         videoId,
@@ -133,8 +138,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not a valid YouTube channel URL' }, { status: 400 })
     }
 
-    const apiKey = process.env.YOUTUBE_API_KEY
-    if (!apiKey || apiKey === 'PLACEHOLDER_YOUTUBE_KEY') {
+    if (getApiKeys().length === 0) {
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          { error: 'Channel exports are temporarily unavailable. Please try again later.' },
+          { status: 503 },
+        )
+      }
       return NextResponse.json({
         videos: MOCK_CHANNEL_VIDEOS,
         channelTitle: 'SampleChannel',
@@ -144,12 +154,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Resolve channel → uploads playlist ID
-    const resolved = await resolveChannel(parsed.id, parsed.idType, apiKey)
+    const resolved = await resolveChannel(parsed.id, parsed.idType)
     if (!resolved) {
       return NextResponse.json({ error: 'Channel not found. Check the URL and try again.' }, { status: 404 })
     }
 
-    const videos = await fetchPlaylistVideos(resolved.uploadsPlaylistId, apiKey, resolved.title, maxVideos)
+    const videos = await fetchPlaylistVideos(resolved.uploadsPlaylistId, resolved.title, maxVideos)
 
     return NextResponse.json({
       videos,

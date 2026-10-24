@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient, getUserTeam, getEffectivePlan } from '@/lib/teams'
-import { getPlanFromPriceId } from '@/lib/stripe-prices'
+import { getPlanFromPriceId, getSubscriptionPeriodEnd } from '@/lib/stripe-prices'
 import { Plus, Users, ExternalLink, FileText, ShieldCheck, Building2, BarChart3 } from 'lucide-react'
 import QuotaBar from '@/components/QuotaBar'
 import { getApiKeys } from '@/lib/youtube-api'
@@ -16,6 +16,7 @@ import ApiKeyCard from '@/app/dashboard/ApiKeyCard'
 import EnterpriseBanner from '@/app/dashboard/EnterpriseBanner'
 import ProvisionForm from '@/app/admin/ProvisionForm'
 import CopyEmailsButton from '@/app/dashboard/CopyEmailsButton'
+import AdminCompAccessButton from '@/app/dashboard/AdminCompAccessButton'
 
 // ── Admin types ────────────────────────────────────────────────────────────
 
@@ -281,6 +282,8 @@ async function syncFromCheckoutSession(sessionId: string, userId: string) {
     const plan = priceId ? getPlanFromPriceId(priceId) : 'pro'
     const isLifetime = plan === 'lifetime'
 
+    const subscription = typeof session.subscription === 'string' ? null : session.subscription as Stripe.Subscription | null
+
     const supabase = createServiceClient()
     await supabase.from('subscriptions').upsert({
       user_id: userId,
@@ -288,7 +291,8 @@ async function syncFromCheckoutSession(sessionId: string, userId: string) {
       status: 'active',
       lifetime: isLifetime,
       stripe_customer_id: typeof session.customer === 'string' ? session.customer : session.customer?.id,
-      stripe_subscription_id: typeof session.subscription === 'string' ? session.subscription : (session.subscription as Stripe.Subscription | null)?.id ?? null,
+      stripe_subscription_id: typeof session.subscription === 'string' ? session.subscription : subscription?.id ?? null,
+      current_period_end: subscription ? getSubscriptionPeriodEnd(subscription) : null,
     }, { onConflict: 'user_id' })
   } catch (e) {
     console.error('syncFromCheckoutSession error:', e)
@@ -653,6 +657,7 @@ function AdminRawDataLinks() {
           </Link>
         ))}
         <CopyEmailsButton />
+        <AdminCompAccessButton />
       </div>
     </div>
   )

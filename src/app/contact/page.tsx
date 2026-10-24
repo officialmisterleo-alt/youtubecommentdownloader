@@ -5,6 +5,22 @@ export const metadata: Metadata = {
   title: 'Contact Us | YouTubeCommentDownloader',
   description:
     'Get in touch with the YouTubeCommentDownloader team. We typically respond within 1 business day.',
+  alternates: { canonical: 'https://www.youtubecommentdownloader.com/contact' },
+  openGraph: {
+    title: 'Contact Us | YouTubeCommentDownloader',
+    description:
+      'Get in touch with the YouTubeCommentDownloader team. We typically respond within 1 business day.',
+    url: 'https://www.youtubecommentdownloader.com/contact',
+    type: 'website',
+    images: [{ url: '/opengraph-image.jpg', width: 1200, height: 675 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Contact Us | YouTubeCommentDownloader',
+    description:
+      'Get in touch with the YouTubeCommentDownloader team. We typically respond within 1 business day.',
+    images: ['/opengraph-image.jpg'],
+  },
 }
 
 export default function ContactPage() {

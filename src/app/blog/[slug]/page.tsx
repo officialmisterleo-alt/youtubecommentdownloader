@@ -5,6 +5,8 @@ import { getAllPosts, getPostMeta } from '@/lib/blog'
 // Dynamic imports for each post's content
 import { getPostContent } from '../posts'
 
+const siteUrl = 'https://www.youtubecommentdownloader.com'
+
 export async function generateStaticParams() {
   return getAllPosts().map((p) => ({ slug: p.slug }))
 }
@@ -21,19 +23,21 @@ export async function generateMetadata({
   return {
     title: `${post.title} — YouTube Comment Downloader Blog`,
     description: post.description,
-    alternates: { canonical: `https://www.youtubecommentdownloader.com/blog/${slug}` },
+    alternates: { canonical: `${siteUrl}/blog/${slug}` },
     openGraph: {
       title: post.title,
       description: post.description,
+      url: `${siteUrl}/blog/${slug}`,
       type: 'article',
       publishedTime: post.date,
       tags: post.tags,
+      images: [{ url: `${siteUrl}/opengraph-image.jpg`, width: 1200, height: 675 }],
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description: post.description,
-      images: [`https://youtubecommentdownloader.com/opengraph-image.jpg`],
+      images: [`${siteUrl}/opengraph-image.jpg`],
     },
   }
 }
@@ -61,20 +65,20 @@ export default async function BlogPostPage({
     author: {
       '@type': 'Organization',
       name: 'YouTube Comment Downloader',
-      url: 'https://youtubecommentdownloader.com',
+      url: siteUrl,
     },
     publisher: {
       '@type': 'Organization',
       name: 'YouTube Comment Downloader',
-      url: 'https://youtubecommentdownloader.com',
+      url: siteUrl,
       logo: {
         '@type': 'ImageObject',
-        url: 'https://youtubecommentdownloader.com/opengraph-image.jpg',
+        url: `${siteUrl}/opengraph-image.jpg`,
       },
     },
-    image: 'https://youtubecommentdownloader.com/opengraph-image.jpg',
-    url: `https://youtubecommentdownloader.com/blog/${slug}`,
-    mainEntityOfPage: `https://youtubecommentdownloader.com/blog/${slug}`,
+    image: `${siteUrl}/opengraph-image.jpg`,
+    url: `${siteUrl}/blog/${slug}`,
+    mainEntityOfPage: `${siteUrl}/blog/${slug}`,
   }
 
   return (

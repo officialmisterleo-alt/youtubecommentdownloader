@@ -3,6 +3,20 @@ import Link from 'next/link'
 export const metadata = {
   title: 'Terms of Service — YouTubeCommentDownloader',
   description: 'Terms of Service for YouTubeCommentDownloader.',
+  alternates: { canonical: 'https://www.youtubecommentdownloader.com/terms' },
+  openGraph: {
+    title: 'Terms of Service — YouTubeCommentDownloader',
+    description: 'Terms of Service for YouTubeCommentDownloader.',
+    url: 'https://www.youtubecommentdownloader.com/terms',
+    type: 'website',
+    images: [{ url: '/opengraph-image.jpg', width: 1200, height: 675 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Terms of Service — YouTubeCommentDownloader',
+    description: 'Terms of Service for YouTubeCommentDownloader.',
+    images: ['/opengraph-image.jpg'],
+  },
 }
 
 export default function TermsPage() {

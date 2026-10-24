@@ -7,8 +7,14 @@ import ExportYouTubeCommentsCSV from './export-youtube-comments-csv'
 import YouTubeCommentScraperFree from './youtube-comment-scraper-free'
 import HowToDownloadYouTubeComments from './how-to-download-youtube-comments'
 import YouTubeCommentsToSpreadsheet from './youtube-comments-to-spreadsheet'
+import YouTubeCommentAnalysisForContentIdeas from './youtube-comment-analysis-for-content-ideas'
+import YouTubeCommentsMarketResearch from './youtube-comments-market-research'
+import BestYouTubeCommentExportFormat from './best-youtube-comment-export-format'
 
 const posts: Record<string, ComponentType> = {
+  'youtube-comment-analysis-for-content-ideas': YouTubeCommentAnalysisForContentIdeas,
+  'youtube-comments-market-research': YouTubeCommentsMarketResearch,
+  'best-youtube-comment-export-format': BestYouTubeCommentExportFormat,
   'viral-content-ideas-competitors-youtube-comments': ViralContentIdeasCompetitorsComments,
   'youtube-comments-middle-funnel-use-cases': YouTubeCommentsMiddleFunnel,
   'youtube-comments-seo-value': YouTubeCommentsSEO,

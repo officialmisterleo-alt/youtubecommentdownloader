@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import OpenAI from 'openai'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getEffectivePlan } from '@/lib/teams'
 
+export const maxDuration = 60
+
 export type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
+
+type AnalysisComment = { author: string; text: string; likes: number; date: string }
+type PartialAnalysis = { commentCount: number; result: unknown }
 
 const TIER_LIMITS: Record<string, number> = {
   free: 0,
@@ -10,6 +16,18 @@ const TIER_LIMITS: Record<string, number> = {
   business: 50000,
   enterprise: 100000,
 }
+
+const AI_USAGE_LIMITS: Record<string, { analysesPerMonth: number; commentsPerMonth: number; requestsPerMinute: number }> = {
+  free: { analysesPerMonth: 0, commentsPerMonth: 0, requestsPerMinute: 0 },
+  pro: { analysesPerMonth: 50, commentsPerMonth: 100_000, requestsPerMinute: 3 },
+  business: { analysesPerMonth: 250, commentsPerMonth: 1_000_000, requestsPerMinute: 6 },
+  enterprise: { analysesPerMonth: 1_000, commentsPerMonth: 5_000_000, requestsPerMinute: 10 },
+}
+
+const MODEL = 'gpt-4o-mini'
+const CHUNK_CHAR_LIMIT = 120_000
+const MERGE_CHAR_LIMIT = 90_000
+const CHUNK_CONCURRENCY = 2
 
 const PROMPTS: Record<AnalysisType, (comments: string, sampleSize: number) => string> = {
   sentiment: (comments, sampleSize) => `Analyze the sentiment of these ${sampleSize} YouTube comments in depth. Return a JSON object with this exact structure:
@@ -140,6 +158,406 @@ COMMENTS:
 ${comments}`,
 }
 
+const stringArraySchema = {
+  type: 'array',
+  items: { type: 'string' },
+} as const
+
+const ANALYSIS_RESPONSE_FORMATS = {
+  sentiment: {
+    type: 'json_schema',
+    json_schema: {
+      name: 'sentiment_analysis',
+      strict: true,
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          positive: { type: 'number' },
+          neutral: { type: 'number' },
+          negative: { type: 'number' },
+          summary: { type: 'string' },
+          themes: stringArraySchema,
+          emotionalDrivers: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              positive: stringArraySchema,
+              negative: stringArraySchema,
+            },
+            required: ['positive', 'negative'],
+          },
+          notableQuotes: stringArraySchema,
+          sentimentOverTime: { type: 'string' },
+        },
+        required: ['positive', 'neutral', 'negative', 'summary', 'themes', 'emotionalDrivers', 'notableQuotes', 'sentimentOverTime'],
+      },
+    },
+  },
+  audience: {
+    type: 'json_schema',
+    json_schema: {
+      name: 'audience_analysis',
+      strict: true,
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          segments: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                emoji: { type: 'string' },
+                name: { type: 'string' },
+                percentage: { type: 'number' },
+                description: { type: 'string' },
+                typicalComment: { type: 'string' },
+                engagementStyle: { type: 'string' },
+              },
+              required: ['emoji', 'name', 'percentage', 'description', 'typicalComment', 'engagementStyle'],
+            },
+          },
+          audienceSummary: { type: 'string' },
+          geographicSignals: { type: 'string' },
+          ageSignals: { type: 'string' },
+          loyaltySignal: { type: 'string' },
+          recommendations: stringArraySchema,
+        },
+        required: ['segments', 'audienceSummary', 'geographicSignals', 'ageSignals', 'loyaltySignal', 'recommendations'],
+      },
+    },
+  },
+  topics: {
+    type: 'json_schema',
+    json_schema: {
+      name: 'topics_analysis',
+      strict: true,
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          topics: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                topic: { type: 'string' },
+                percentage: { type: 'number' },
+                description: { type: 'string' },
+                sentiment: { type: 'string', enum: ['positive', 'negative', 'mixed', 'neutral'] },
+                representativeComments: stringArraySchema,
+              },
+              required: ['topic', 'percentage', 'description', 'sentiment', 'representativeComments'],
+            },
+          },
+          topicSummary: { type: 'string' },
+          contentGaps: stringArraySchema,
+          controversialTopics: stringArraySchema,
+          unusualFindings: { type: 'string' },
+        },
+        required: ['topics', 'topicSummary', 'contentGaps', 'controversialTopics', 'unusualFindings'],
+      },
+    },
+  },
+  feedback: {
+    type: 'json_schema',
+    json_schema: {
+      name: 'feedback_analysis',
+      strict: true,
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          praise: stringArraySchema,
+          requests: stringArraySchema,
+          criticisms: stringArraySchema,
+          questions: stringArraySchema,
+          insights: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                insight: { type: 'string' },
+                evidence: { type: 'string' },
+                priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+              },
+              required: ['insight', 'evidence', 'priority'],
+            },
+          },
+          overallFeedbackSummary: { type: 'string' },
+          contentStrengths: stringArraySchema,
+          improvementAreas: stringArraySchema,
+        },
+        required: ['praise', 'requests', 'criticisms', 'questions', 'insights', 'overallFeedbackSummary', 'contentStrengths', 'improvementAreas'],
+      },
+    },
+  },
+  trends: {
+    type: 'json_schema',
+    json_schema: {
+      name: 'trends_analysis',
+      strict: true,
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          trendingPhrases: stringArraySchema,
+          viralComments: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                comment: { type: 'string' },
+                reason: { type: 'string' },
+              },
+              required: ['comment', 'reason'],
+            },
+          },
+          keywords: stringArraySchema,
+          emergingTrends: stringArraySchema,
+          insideJokes: stringArraySchema,
+          viralityFactors: { type: 'string' },
+          communityHealth: { type: 'string' },
+          contentMoments: stringArraySchema,
+          crossContentSignals: { type: 'string' },
+          recommendations: stringArraySchema,
+        },
+        required: ['trendingPhrases', 'viralComments', 'keywords', 'emergingTrends', 'insideJokes', 'viralityFactors', 'communityHealth', 'contentMoments', 'crossContentSignals', 'recommendations'],
+      },
+    },
+  },
+} as const
+
+function getCurrentMonth(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function getCurrentMinute(): string {
+  return new Date().toISOString().slice(0, 16)
+}
+
+function formatComment(c: AnalysisComment, index: number) {
+  return `[${index + 1}] ${c.author} (${c.likes} likes): ${c.text}`
+}
+
+function createCommentChunks(comments: AnalysisComment[]) {
+  const chunks: Array<{ comments: string; count: number }> = []
+  let current = ''
+  let currentCount = 0
+
+  comments.forEach((comment, index) => {
+    const line = formatComment(comment, index)
+    const next = current ? `${current}\n${line}` : line
+
+    if (current && next.length > CHUNK_CHAR_LIMIT) {
+      chunks.push({ comments: current, count: currentCount })
+      current = line
+      currentCount = 1
+      return
+    }
+
+    current = next
+    currentCount += 1
+  })
+
+  if (current) chunks.push({ comments: current, count: currentCount })
+  return chunks
+}
+
+function mergePrompt(analysisType: AnalysisType, partials: PartialAnalysis[], sampleSize: number) {
+  return `Combine these partial ${analysisType} analyses into one final analysis covering all ${sampleSize} YouTube comments.
+
+Rules:
+- Deduplicate repeated themes, topics, phrases, quotes, and recommendations.
+- Weight percentages by each partial result's commentCount.
+- Preserve specific evidence and representative comments when useful.
+- Return one cohesive final JSON object matching the schema.
+
+PARTIAL ANALYSES:
+${JSON.stringify(partials)}`
+}
+
+function createMergeBatches(partials: PartialAnalysis[]) {
+  const batches: PartialAnalysis[][] = []
+  let current: PartialAnalysis[] = []
+  let currentLength = 2
+
+  for (const partial of partials) {
+    const partialLength = JSON.stringify(partial).length + 1
+    if (current.length > 0 && currentLength + partialLength > MERGE_CHAR_LIMIT) {
+      batches.push(current)
+      current = []
+      currentLength = 2
+    }
+
+    current.push(partial)
+    currentLength += partialLength
+  }
+
+  if (current.length > 0) batches.push(current)
+  return batches
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>
+) {
+  const results: R[] = new Array(items.length)
+  let nextIndex = 0
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex
+      nextIndex += 1
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex)
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  )
+
+  return results
+}
+
+async function checkAndReserveAiUsage(userId: string, plan: string, commentCount: number) {
+  const limits = AI_USAGE_LIMITS[plan] ?? AI_USAGE_LIMITS.pro
+  if (limits.analysesPerMonth <= 0 || limits.commentsPerMonth <= 0 || limits.requestsPerMinute <= 0) {
+    return {
+      allowed: false,
+      status: 403,
+      error: 'AI Analysis requires a Pro plan or higher',
+    }
+  }
+
+  const service = createServiceClient()
+  const month = getCurrentMonth()
+  const minute = getCurrentMinute()
+  const now = new Date().toISOString()
+
+  const [{ data: monthly }, { data: minuteUsage }] = await Promise.all([
+    service
+      .from('ai_analysis_usage')
+      .select('analysis_count, comment_count')
+      .eq('user_id', userId)
+      .eq('month', month)
+      .maybeSingle(),
+    service
+      .from('ai_analysis_rate_limits')
+      .select('request_count')
+      .eq('user_id', userId)
+      .eq('minute', minute)
+      .maybeSingle(),
+  ])
+
+  const monthlyAnalyses = monthly?.analysis_count ?? 0
+  const monthlyComments = monthly?.comment_count ?? 0
+  const minuteRequests = minuteUsage?.request_count ?? 0
+
+  if (minuteRequests >= limits.requestsPerMinute) {
+    return {
+      allowed: false,
+      status: 429,
+      error: 'Too many AI analysis requests. Please wait a minute and try again.',
+    }
+  }
+
+  if (monthlyAnalyses + 1 > limits.analysesPerMonth || monthlyComments + commentCount > limits.commentsPerMonth) {
+    return {
+      allowed: false,
+      status: 429,
+      error: 'Monthly AI analysis limit reached. Upgrade your plan or wait until next month.',
+    }
+  }
+
+  const [{ error: monthlyError }, { error: minuteError }] = await Promise.all([
+    service.from('ai_analysis_usage').upsert(
+      {
+        user_id: userId,
+        month,
+        analysis_count: monthlyAnalyses + 1,
+        comment_count: monthlyComments + commentCount,
+        updated_at: now,
+      },
+      { onConflict: 'user_id,month' }
+    ),
+    service.from('ai_analysis_rate_limits').upsert(
+      {
+        user_id: userId,
+        minute,
+        request_count: minuteRequests + 1,
+        updated_at: now,
+      },
+      { onConflict: 'user_id,minute' }
+    ),
+  ])
+
+  if (monthlyError || minuteError) {
+    console.error('[ai-analysis] usage reservation failed:', monthlyError?.message ?? minuteError?.message)
+    return {
+      allowed: false,
+      status: 503,
+      error: 'AI analysis temporarily unavailable',
+    }
+  }
+
+  return { allowed: true, status: 200, error: null }
+}
+
+async function createAnalysisCompletion(
+  client: OpenAI,
+  analysisType: AnalysisType,
+  prompt: string,
+  maxTokens = 4000
+) {
+  const completion = await client.chat.completions.create({
+    model: MODEL,
+    max_tokens: maxTokens,
+    messages: [
+      {
+        role: 'system',
+        content: 'Return data that exactly matches the provided JSON schema. Use empty arrays or empty strings for unavailable signals instead of omitting fields.',
+      },
+      { role: 'user', content: prompt },
+    ],
+    response_format: ANALYSIS_RESPONSE_FORMATS[analysisType],
+  })
+
+  const raw = completion.choices[0]?.message?.content ?? ''
+  const cleaned = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
+  return JSON.parse(cleaned)
+}
+
+async function reduceAnalysisPartials(
+  client: OpenAI,
+  analysisType: AnalysisType,
+  partials: PartialAnalysis[]
+): Promise<PartialAnalysis> {
+  if (partials.length === 1) return partials[0]
+
+  const batches = createMergeBatches(partials)
+  const reduced = await mapWithConcurrency(batches, CHUNK_CONCURRENCY, async (batch) => {
+    const commentCount = batch.reduce((sum, partial) => sum + partial.commentCount, 0)
+    const result = await createAnalysisCompletion(
+      client,
+      analysisType,
+      mergePrompt(analysisType, batch, commentCount),
+      4000
+    )
+
+    return { commentCount, result }
+  })
+
+  return reduceAnalysisPartials(client, analysisType, reduced)
+}
+
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.OPENAI_API_KEY
@@ -161,7 +579,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { comments, analysisType } = await req.json() as {
-      comments: Array<{ author: string; text: string; likes: number; date: string }>,
+      comments: AnalysisComment[],
       analysisType: AnalysisType,
     }
 
@@ -171,30 +589,21 @@ export async function POST(req: NextRequest) {
     const limit = TIER_LIMITS[plan] ?? TIER_LIMITS.pro
     const sample = comments.slice(0, limit)
 
-    // Format comments for the prompt — include likes for weighting
-    const formatted = sample
-      .map((c, i) => `[${i + 1}] ${c.author} (${c.likes} likes): ${c.text}`)
-      .join('\n')
+    const usage = await checkAndReserveAiUsage(user.id, plan, sample.length)
+    if (!usage.allowed) {
+      return NextResponse.json({ error: usage.error }, { status: usage.status })
+    }
 
-    const prompt = PROMPTS[analysisType](formatted, sample.length)
-
-    const OpenAI = (await import('openai')).default
     const client = new OpenAI({ apiKey })
-
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
+    const chunks = createCommentChunks(sample)
+    const partials = await mapWithConcurrency(chunks, CHUNK_CONCURRENCY, async (chunk) => {
+      const result = await createAnalysisCompletion(client, analysisType, PROMPTS[analysisType](chunk.comments, chunk.count), 3000)
+      return { commentCount: chunk.count, result }
     })
 
-    const raw = completion.choices[0]?.message?.content ?? ''
+    const result = (await reduceAnalysisPartials(client, analysisType, partials)).result
 
-    // Strip markdown code fences if model wraps in ```json```
-    const cleaned = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
-    const result = JSON.parse(cleaned)
-
-    return NextResponse.json({ result, analysisType, commentCount: sample.length })
+    return NextResponse.json({ result, analysisType, commentCount: sample.length, chunks: chunks.length })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Analysis failed'
     return NextResponse.json({ error: msg }, { status: 500 })

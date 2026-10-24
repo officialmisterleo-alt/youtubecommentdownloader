@@ -23,7 +23,7 @@ export default function YouTubeCommentDownloader() {
       toc={toc}
     >
       <p>
-        A YouTube comment downloader is exactly what it sounds like: a tool that pulls every comment from a YouTube video (or channel, or playlist) and saves them in a file you can actually work with. Instead of scrolling through thousands of comments in a browser, you get a structured dataset you can search, filter, sort, and analyze.
+        A YouTube comment downloader retrieves available comments from a public video and saves them in a file you can work with. Business and Enterprise plans also support playlist and channel workflows. Instead of scrolling through thousands of comments, you get a structured dataset you can search, filter, sort, and analyze.
       </p>
       <p>
         This tool does that. Paste a URL, pick a format, click export. Your comments are ready in seconds — no code, no API keys, no account required for the basics.
@@ -42,7 +42,7 @@ export default function YouTubeCommentDownloader() {
         <li><strong>Like count</strong> — how many people liked the comment</li>
         <li><strong>Date posted</strong> — when the comment was published</li>
         <li><strong>Reply count</strong> — how many replies the top-level comment received</li>
-        <li><strong>Replies</strong> — the full reply thread (if you enable that option)</li>
+        <li><strong>Replies</strong> — available replies when you enable that option on Pro or higher</li>
       </ul>
 
       <Callout variant="insight" title="Video, playlist, or channel">
@@ -94,7 +94,7 @@ export default function YouTubeCommentDownloader() {
           <strong>Paste your YouTube URL.</strong> Works with any standard YouTube video URL (youtube.com/watch?v=...), short URLs (youtu.be/...), channel URLs (@handle or /channel/), and playlist URLs.
         </li>
         <li>
-          <strong>Set your options.</strong> Choose how many comments to fetch (free tier: up to 100), whether to include replies, and how to sort (Top comments, Newest, or Oldest).
+          <strong>Set your options.</strong> Choose how many comments to fetch (up to 50 without an account or 100 with a free account), whether to include replies on Pro or higher, and how to sort (Top or Newest).
         </li>
         <li>
           <strong>Pick an export format.</strong> TXT is available without sign-in. CSV, Excel, and JSON require a free account.
@@ -147,7 +147,7 @@ export default function YouTubeCommentDownloader() {
 
       <h3 className="font-jakarta">Is this YouTube comment downloader free?</h3>
       <p>
-        Yes. The free tier lets you export up to 100 comments per video in TXT or HTML format without creating an account. For CSV, Excel, and JSON exports — or higher comment limits — you need a free account. Paid plans unlock bulk channel/playlist exports and higher monthly quotas.
+        Yes. Without an account, you can request up to 50 comments per video in TXT or HTML. A free account raises the per-download limit to 100 comments and unlocks CSV, Excel, and JSON within a 100-comment monthly quota. Pro raises limits and adds replies; Business adds channel and playlist exports.
       </p>
 
       <h3 className="font-jakarta">Does it work on private or age-restricted videos?</h3>
@@ -162,16 +162,16 @@ export default function YouTubeCommentDownloader() {
 
       <h3 className="font-jakarta">Does it download comment replies?</h3>
       <p>
-        Yes, with the &ldquo;Include Replies&rdquo; toggle enabled (Pro plan and above). Each top-level comment comes with its full reply thread nested in the export.
+        Pro and higher can enable &ldquo;Include Replies.&rdquo; The tool requests replies for returned top-level comments, but YouTube API availability and reply pagination can limit completeness.
       </p>
 
       <h3 className="font-jakarta">{"What's the rate limit?"}</h3>
       <p>
-        The tool processes approximately 5,000 comments per minute. For videos with tens of thousands of comments, this still completes in a matter of minutes. There&apos;s no queue — your export runs immediately when you click Export.
+        Export time varies with the number of comments, YouTube API response times, and whether replies are requested. There is no fixed comments-per-minute guarantee.
       </p>
 
       <KeyTakeaway>
-        The YouTube comment downloader handles the data collection so you can focus on what the data means. Paste a URL, export in seconds, and start analyzing — whether that&apos;s in a spreadsheet, a Python notebook, or a client report.
+        The YouTube comment downloader collects available comments so you can analyze them in a spreadsheet, Python notebook, or client report. Choose a comment limit and allow time for larger exports.
       </KeyTakeaway>
     </BlogPostLayout>
   )

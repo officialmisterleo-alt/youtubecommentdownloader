@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { toolFaqs } from '@/lib/tool-faqs'
 
 export const metadata: Metadata = {
   title: 'YouTube Comment Downloader Tool – Export to CSV, JSON, Excel',
@@ -8,6 +9,14 @@ export const metadata: Metadata = {
     title: 'YouTube Comment Downloader Tool – Export to CSV, JSON, Excel',
     description: 'Download and export YouTube comments to CSV, JSON, Excel, TXT, or HTML. Fast, free YouTube comments extractor.',
     url: 'https://www.youtubecommentdownloader.com/tool',
+    type: 'website',
+    images: [{ url: '/opengraph-image.jpg', width: 1200, height: 675 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'YouTube Comment Downloader Tool – Export to CSV, JSON, Excel',
+    description: 'Download and export YouTube comments to CSV, JSON, Excel, TXT, or HTML.',
+    images: ['/opengraph-image.jpg'],
   },
 }
 
@@ -26,12 +35,29 @@ const webAppJsonLd = {
   },
 }
 
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: toolFaqs.map((faq) => ({
+    '@type': 'Question',
+    name: faq.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.answer,
+    },
+  })),
+}
+
 export default function ToolLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       {children}
     </>

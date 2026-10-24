@@ -83,6 +83,17 @@ export default function BlogPostLayout({
         >
           Try the tool free
         </Link>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[#555]">
+          <Link href="/export-youtube-comments-to-csv" className="hover:text-red-300 transition-colors">
+            Export YouTube comments to CSV
+          </Link>
+          <Link href="/youtube-comment-scraper" className="hover:text-red-300 transition-colors">
+            YouTube comment scraper
+          </Link>
+          <Link href="/youtube-comment-sentiment-analysis" className="hover:text-red-300 transition-colors">
+            Comment sentiment analysis
+          </Link>
+        </div>
       </div>
     </main>
   )

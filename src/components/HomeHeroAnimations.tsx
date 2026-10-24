@@ -35,8 +35,8 @@ export default function HomeHeroAnimations() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: skipEntrance ? 0 : 0.5, ease: 'easeOut', delay: skipEntrance ? 0 : 0.1 }}
       >
-        Download YouTube<br />
-        <span className="text-white/90">Comments in Seconds.</span>
+        YouTube Comment<br />
+        <span className="text-white/90">Downloader</span>
       </motion.h1>
 
       <motion.p
@@ -46,7 +46,7 @@ export default function HomeHeroAnimations() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: skipEntrance ? 0 : 0.5, ease: 'easeOut', delay: skipEntrance ? 0 : 0.2 }}
       >
-        The ultimate tool for creators, researchers, and marketers. Extract insights, export data, and understand your audience better than ever.
+        Download comments from YouTube videos and Shorts, or export across playlists and channels on Business or Enterprise. Choose CSV, Excel, JSON, TXT, or HTML for research and reporting.
       </motion.p>
 
       <motion.div

@@ -19,3 +19,16 @@ export function getPlanFromPriceId(priceId: string): string {
   add(process.env.STRIPE_PRICE_LIFETIME, 'lifetime')
   return map[priceId] ?? 'free'
 }
+
+/**
+ * Billing period end as an ISO string. Newer Stripe API versions moved
+ * current_period_end from the subscription onto each subscription item,
+ * so check both (webhook payloads follow the endpoint's API version).
+ */
+export function getSubscriptionPeriodEnd(sub: {
+  current_period_end?: number
+  items?: { data?: Array<{ current_period_end?: number }> }
+}): string | null {
+  const ts = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end
+  return typeof ts === 'number' ? new Date(ts * 1000).toISOString() : null
+}

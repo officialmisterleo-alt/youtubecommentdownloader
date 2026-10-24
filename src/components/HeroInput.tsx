@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function HeroInput() {
   const [url, setUrl] = useState('')
@@ -32,8 +33,19 @@ export default function HeroInput() {
         </button>
       </div>
       <p className="text-xs text-[#555555] text-center">
-        Works with any public YouTube video, playlist, or channel URL
+        Public videos and Shorts work on the free tool. Playlist and channel exports require Business or Enterprise.
       </p>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[#666666]">
+        <Link href="/sample-youtube-comment-export" className="hover:text-red-300 transition-colors">
+          View sample export
+        </Link>
+        <Link href="/free-youtube-tools" className="hover:text-red-300 transition-colors">
+          Free YouTube tools
+        </Link>
+        <Link href="/youtube-comment-analysis-tool" className="hover:text-red-300 transition-colors">
+          Analyze comments
+        </Link>
+      </div>
     </form>
   )
 }
