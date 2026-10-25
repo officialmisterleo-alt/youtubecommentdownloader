@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { createHmac, timingSafeEqual } from 'crypto'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getEffectivePlan } from '@/lib/teams'
 
@@ -376,7 +375,7 @@ function mergePrompt(analysisType: AnalysisType, partials: PartialAnalysis[], sa
 
 Rules:
 - Deduplicate repeated themes, topics, phrases, quotes, and recommendations.
-- Weight percentages by each partial result's commentCount.
+- Weight percentages by each partial result's commentCount, then round every percentage to a whole number.
 - Preserve specific evidence and representative comments when useful.
 - Return one cohesive final JSON object matching the schema.
 
@@ -438,77 +437,28 @@ async function checkAndReserveAiUsage(userId: string, plan: string, commentCount
     }
   }
 
-  const service = createServiceClient()
-  const month = getCurrentMonth()
-  const minute = getCurrentMinute()
-  const now = new Date().toISOString()
+  // One locked Postgres call checks the per-minute and monthly limits and records the
+  // analysis, so parallel requests can't both pass on the same stale count
+  const { data, error } = await createServiceClient().rpc('reserve_ai_analysis', {
+    p_user_id: userId,
+    p_month: getCurrentMonth(),
+    p_minute: getCurrentMinute(),
+    p_comments: commentCount,
+    p_max_analyses: limits.analysesPerMonth,
+    p_max_comments: limits.commentsPerMonth,
+    p_max_per_minute: limits.requestsPerMinute,
+  })
 
-  const [{ data: monthly }, { data: minuteUsage }] = await Promise.all([
-    service
-      .from('ai_analysis_usage')
-      .select('analysis_count, comment_count')
-      .eq('user_id', userId)
-      .eq('month', month)
-      .maybeSingle(),
-    service
-      .from('ai_analysis_rate_limits')
-      .select('request_count')
-      .eq('user_id', userId)
-      .eq('minute', minute)
-      .maybeSingle(),
-  ])
-
-  const monthlyAnalyses = monthly?.analysis_count ?? 0
-  const monthlyComments = monthly?.comment_count ?? 0
-  const minuteRequests = minuteUsage?.request_count ?? 0
-
-  if (minuteRequests >= limits.requestsPerMinute) {
-    return {
-      allowed: false,
-      status: 429,
-      error: 'Too many AI analysis requests. Please wait a minute and try again.',
-    }
+  if (error) {
+    console.error('[ai-analysis] usage reservation failed:', error.message)
+    return { allowed: false, status: 503, error: 'AI analysis temporarily unavailable' }
   }
-
-  if (monthlyAnalyses + 1 > limits.analysesPerMonth || monthlyComments + commentCount > limits.commentsPerMonth) {
-    return {
-      allowed: false,
-      status: 429,
-      error: 'Monthly AI analysis limit reached. Upgrade your plan or wait until next month.',
-    }
+  if (data === 'rate_limited') {
+    return { allowed: false, status: 429, error: 'Too many AI analysis requests. Please wait a minute and try again.' }
   }
-
-  const [{ error: monthlyError }, { error: minuteError }] = await Promise.all([
-    service.from('ai_analysis_usage').upsert(
-      {
-        user_id: userId,
-        month,
-        analysis_count: monthlyAnalyses + 1,
-        comment_count: monthlyComments + commentCount,
-        updated_at: now,
-      },
-      { onConflict: 'user_id,month' }
-    ),
-    service.from('ai_analysis_rate_limits').upsert(
-      {
-        user_id: userId,
-        minute,
-        request_count: minuteRequests + 1,
-        updated_at: now,
-      },
-      { onConflict: 'user_id,minute' }
-    ),
-  ])
-
-  if (monthlyError || minuteError) {
-    console.error('[ai-analysis] usage reservation failed:', monthlyError?.message ?? minuteError?.message)
-    return {
-      allowed: false,
-      status: 503,
-      error: 'AI analysis temporarily unavailable',
-    }
+  if (data === 'monthly_limit') {
+    return { allowed: false, status: 429, error: 'Monthly AI analysis limit reached. Upgrade your plan or wait until next month.' }
   }
-
   return { allowed: true, status: 200, error: null }
 }
 
@@ -561,55 +511,54 @@ async function reduceAnalysisPartials(
 
 // ── Staged analysis ─────────────────────────────────────────────────────────
 // Large analyses don't fit one 60s request (each chunk is one OpenAI call), so the
-// client runs them in steps: 'start' reserves usage and returns a signed token,
-// then each 'chunk' and 'merge' call does one OpenAI call against that token.
+// client runs them in steps: 'start' reserves usage and opens a session, then each
+// 'chunk' and 'merge' call does one OpenAI call, spending from that session's budget.
 
-const STAGE_TOKEN_TTL_MS = 30 * 60_000
-// Caps chunk/merge calls per user per minute; total spend is also bounded by the monthly comment limit
-const STAGE_CALLS_PER_MINUTE = 30
+const SESSION_TTL_MS = 30 * 60_000
 const MAX_COMMENT_CHARS = 2_000
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-type StageToken = { u: string; t: AnalysisType; exp: number }
-
-function stageSecret() {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-}
-
-function signStageToken(payload: StageToken): string {
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
-  const sig = createHmac('sha256', stageSecret()).update(body).digest('base64url')
-  return `${body}.${sig}`
-}
-
-function verifyStageToken(token: unknown, userId: string, analysisType: AnalysisType): boolean {
-  if (typeof token !== 'string' || !token.includes('.')) return false
-  const [body, sig] = token.split('.')
-  const expected = createHmac('sha256', stageSecret()).update(body).digest('base64url')
-  if (sig.length !== expected.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false
-  try {
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString()) as StageToken
-    return payload.u === userId && payload.t === analysisType && payload.exp > Date.now()
-  } catch {
-    return false
-  }
-}
-
-async function allowStageCall(userId: string): Promise<boolean> {
+async function openAnalysisSession(userId: string, analysisType: AnalysisType, commentCount: number): Promise<string | null> {
   const service = createServiceClient()
-  const minute = `${getCurrentMinute()}:stage`
-  const { data } = await service
-    .from('ai_analysis_rate_limits')
-    .select('request_count')
-    .eq('user_id', userId)
-    .eq('minute', minute)
-    .maybeSingle()
-  const count = data?.request_count ?? 0
-  if (count >= STAGE_CALLS_PER_MINUTE) return false
-  await service.from('ai_analysis_rate_limits').upsert(
-    { user_id: userId, minute, request_count: count + 1, updated_at: new Date().toISOString() },
-    { onConflict: 'user_id,minute' }
-  )
-  return true
+  // Housekeeping: drop this user's expired sessions
+  await service.from('ai_analysis_sessions').delete().eq('user_id', userId).lt('expires_at', new Date().toISOString())
+  const { data, error } = await service
+    .from('ai_analysis_sessions')
+    .insert({
+      user_id: userId,
+      analysis_type: analysisType,
+      remaining_comments: commentCount,
+      // Generous cap: real runs need roughly one merge per 7 chunks
+      remaining_merges: 5 + Math.ceil(commentCount / 1000),
+      expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
+    })
+    .select('id')
+    .single()
+  if (error) {
+    console.error('[ai-analysis] session insert failed:', error.message)
+    return null
+  }
+  return data.id as string
+}
+
+/** Spends `comments` (chunk) or one merge from the session; false if not allowed. */
+async function consumeAnalysisSession(
+  token: unknown,
+  userId: string,
+  analysisType: AnalysisType,
+  comments: number,
+  merge: boolean,
+): Promise<boolean> {
+  if (typeof token !== 'string' || !UUID_RE.test(token)) return false
+  const { data, error } = await createServiceClient().rpc('consume_ai_session', {
+    p_session_id: token,
+    p_user_id: userId,
+    p_analysis_type: analysisType,
+    p_comments: comments,
+    p_merge: merge,
+  })
+  if (error) console.error('[ai-analysis] session consume failed:', error.message)
+  return data === true
 }
 
 function sanitizeComments(raw: unknown): AnalysisComment[] {
@@ -662,23 +611,20 @@ export async function POST(req: NextRequest) {
       if (commentCount === 0) return NextResponse.json({ error: 'No comments provided' }, { status: 400 })
       const usage = await checkAndReserveAiUsage(user.id, plan, commentCount)
       if (!usage.allowed) return NextResponse.json({ error: usage.error }, { status: usage.status })
-      const token = signStageToken({ u: user.id, t: analysisType, exp: Date.now() + STAGE_TOKEN_TTL_MS })
+      const token = await openAnalysisSession(user.id, analysisType, commentCount)
+      if (!token) return NextResponse.json({ error: 'AI analysis temporarily unavailable' }, { status: 503 })
       return NextResponse.json({ token, commentCount, chunkCharLimit: CHUNK_CHAR_LIMIT, mergeCharLimit: MERGE_CHAR_LIMIT })
     }
 
     if (body.stage === 'chunk' || body.stage === 'merge') {
-      if (!verifyStageToken(body.token, user.id, analysisType)) {
-        return NextResponse.json({ error: 'Analysis session expired. Please run it again.' }, { status: 401 })
-      }
-      if (!(await allowStageCall(user.id))) {
-        return NextResponse.json({ error: 'Too many AI analysis requests. Please wait a minute and try again.' }, { status: 429 })
-      }
+      const sessionError = NextResponse.json({ error: 'Analysis session expired. Please run it again.' }, { status: 401 })
       const client = new OpenAI({ apiKey })
 
       if (body.stage === 'chunk') {
         const chunkComments = sanitizeComments(body.comments)
         const chunks = createCommentChunks(chunkComments)
         if (chunks.length !== 1) return NextResponse.json({ error: 'Chunk too large' }, { status: 413 })
+        if (!(await consumeAnalysisSession(body.token, user.id, analysisType, chunks[0].count, false))) return sessionError
         const result = await createAnalysisCompletion(client, analysisType, PROMPTS[analysisType](chunks[0].comments, chunks[0].count), 3000)
         return NextResponse.json({ partial: { commentCount: chunks[0].count, result } })
       }
@@ -687,6 +633,7 @@ export async function POST(req: NextRequest) {
       if (partials.length < 2 || JSON.stringify(partials).length > MERGE_CHAR_LIMIT) {
         return NextResponse.json({ error: 'Invalid merge batch' }, { status: 413 })
       }
+      if (!(await consumeAnalysisSession(body.token, user.id, analysisType, 0, true))) return sessionError
       const commentCount = partials.reduce((sum, p) => sum + (Number(p.commentCount) || 0), 0)
       const result = await createAnalysisCompletion(client, analysisType, mergePrompt(analysisType, partials, commentCount), 4000)
       return NextResponse.json({ partial: { commentCount, result } })

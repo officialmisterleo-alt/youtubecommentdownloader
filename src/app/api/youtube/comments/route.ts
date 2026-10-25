@@ -164,15 +164,18 @@ export async function POST(req: NextRequest) {
       // Fetch video title and channel name
       let videoTitle = ''
       let channelName = ''
+      // Total comments + replies YouTube reports for the video; lets the UI explain short "Top" exports
+      let videoCommentCount: number | null = null
       try {
         const { data: metaData, keyIndex, attemptsLog } = await fetchWithKeyRotation(
-          (key) => `https://www.googleapis.com/youtube/v3/videos?${new URLSearchParams({ part: 'snippet', id: videoId, key })}`
+          (key) => `https://www.googleapis.com/youtube/v3/videos?${new URLSearchParams({ part: 'snippet,statistics', id: videoId, key })}`
         )
         collectFailedKeys(attemptsLog).forEach(k => allFailedKeys.add(k))
         lastSuccessKey = keyIndex
-        const snippet = (metaData as { items?: { snippet?: { title?: string; channelTitle?: string } }[] })?.items?.[0]?.snippet
-        videoTitle = snippet?.title ?? ''
-        channelName = snippet?.channelTitle ?? ''
+        const item = (metaData as { items?: { snippet?: { title?: string; channelTitle?: string }; statistics?: { commentCount?: string } }[] })?.items?.[0]
+        videoTitle = item?.snippet?.title ?? ''
+        channelName = item?.snippet?.channelTitle ?? ''
+        if (item?.statistics?.commentCount) videoCommentCount = Number(item.statistics.commentCount)
       } catch { /* non-fatal — metadata is best-effort */ }
 
       const comments: Comment[] = []
@@ -308,7 +311,7 @@ export async function POST(req: NextRequest) {
         }).catch(() => {})
       }
 
-      return NextResponse.json({ comments, total: comments.length, nextCursor: cursor, done: cursor === null, mock: false })
+      return NextResponse.json({ comments, total: comments.length, nextCursor: cursor, done: cursor === null, videoCommentCount, mock: false })
     } finally {
       const unused = granted - used
       if (unused > 0) await reserve(-unused).catch(() => {})

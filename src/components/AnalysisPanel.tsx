@@ -8,6 +8,11 @@ type Comment = { id: string; author: string; text: string; likes: number; date: 
 
 type AnalysisType = 'sentiment' | 'audience' | 'topics' | 'feedback' | 'trends'
 
+// Merged results can come back as weighted averages like 38.41463414634146 — show whole numbers
+function pct(value: unknown): number {
+  return Math.round(Number(value) || 0)
+}
+
 const ANALYSIS_TYPES: { id: AnalysisType; label: string; description: string; icon: string }[] = [
   { id: 'sentiment', label: 'Sentiment', description: 'Positive/negative breakdown, emotional drivers & notable quotes', icon: '😊' },
   { id: 'audience', label: 'Audience', description: 'Distinct audience segments, demographics & recommendations', icon: '👥' },
@@ -57,7 +62,7 @@ function SentimentResult({ data }: { data: SentimentData }) {
             <div className="flex-1 bg-[#0a0a0a] rounded-full h-2 overflow-hidden">
               <div className={`${b.color} h-full rounded-full transition-all duration-700`} style={{ width: `${b.value}%` }} />
             </div>
-            <span className="text-xs text-white font-medium w-8 text-right">{b.value}%</span>
+            <span className="text-xs text-white font-medium w-8 text-right">{pct(b.value)}%</span>
           </div>
         ))}
       </div>
@@ -148,7 +153,7 @@ function AudienceResult({ data }: { data: AudienceData }) {
                   <span className="text-xl leading-none">{seg.emoji}</span>
                   <span className="text-white text-sm font-medium">{seg.name}</span>
                 </div>
-                <span className="text-[#888888] text-xs font-medium">{seg.percentage}%</span>
+                <span className="text-[#888888] text-xs font-medium">{pct(seg.percentage)}%</span>
               </div>
               <div className="bg-[#171717] rounded-full h-1.5 mb-3 overflow-hidden">
                 <div className="bg-red-600 h-full rounded-full transition-all duration-700" style={{ width: `${seg.percentage}%` }} />
@@ -259,7 +264,7 @@ function TopicsResult({ data }: { data: TopicsData }) {
                 <span className={`text-xs px-2 py-0.5 rounded-full border ${sentimentBadgeClass(t.sentiment)}`}>{t.sentiment}</span>
               )}
             </div>
-            <span className="text-[#888888] text-xs font-medium shrink-0 ml-2">{t.percentage}%</span>
+            <span className="text-[#888888] text-xs font-medium shrink-0 ml-2">{pct(t.percentage)}%</span>
           </div>
           <div className="bg-[#171717] rounded-full h-1.5 mb-3 overflow-hidden">
             <div className="bg-red-600 h-full rounded-full transition-all duration-700" style={{ width: `${t.percentage}%` }} />
@@ -665,7 +670,7 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
         : (d.negative ?? 0) >= (d.neutral ?? 0) ? 'Negative' : 'Mixed'
       bodyContent = `
         ${renderSection('Overall Sentiment', dominant)}
-        ${renderSection('Breakdown', `Positive: ${d.positive}% &nbsp;|&nbsp; Neutral: ${d.neutral}% &nbsp;|&nbsp; Negative: ${d.negative}%`)}
+        ${renderSection('Breakdown', `Positive: ${pct(d.positive)}% &nbsp;|&nbsp; Neutral: ${pct(d.neutral)}% &nbsp;|&nbsp; Negative: ${pct(d.negative)}%`)}
         ${d.themes?.length ? renderSection('Emotional themes', d.themes.join(', ')) : ''}
         ${d.emotionalDrivers?.positive?.length ? renderSection('What drives positivity', d.emotionalDrivers.positive.join('<br>• ')) : ''}
         ${d.emotionalDrivers?.negative?.length ? renderSection('What triggers negativity', d.emotionalDrivers.negative.join('<br>• ')) : ''}
@@ -677,7 +682,7 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
       if (d.segments) {
         bodyContent = `
           ${d.audienceSummary ? renderSection('Audience Overview', d.audienceSummary) : ''}
-          ${d.segments.map(s => renderSection(`${s.emoji} ${s.name} (${s.percentage}%)`, `${s.description}${s.typicalComment ? `<br><em>"${s.typicalComment}"</em>` : ''}`)).join('')}
+          ${d.segments.map(s => renderSection(`${s.emoji} ${s.name} (${pct(s.percentage)}%)`, `${s.description}${s.typicalComment ? `<br><em>"${s.typicalComment}"</em>` : ''}`)).join('')}
           ${d.geographicSignals ? renderSection('Geographic signals', d.geographicSignals) : ''}
           ${d.ageSignals ? renderSection('Age signals', d.ageSignals) : ''}
           ${d.loyaltySignal ? renderSection('Viewer loyalty', d.loyaltySignal) : ''}
@@ -693,7 +698,7 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
     } else if (resultType === 'topics') {
       const d = result as TopicsData
       bodyContent = (d.topics ?? []).map(t =>
-        renderSection(`${t.topic ?? t.name} (${t.percentage}%)${t.sentiment ? ` — ${t.sentiment}` : ''}`, `${t.description}${t.representativeComments?.length ? `<br><em>"${t.representativeComments[0]}"</em>` : t.example ? `<br><em>"${t.example}"</em>` : ''}`)
+        renderSection(`${t.topic ?? t.name} (${pct(t.percentage)}%)${t.sentiment ? ` — ${t.sentiment}` : ''}`, `${t.description}${t.representativeComments?.length ? `<br><em>"${t.representativeComments[0]}"</em>` : t.example ? `<br><em>"${t.example}"</em>` : ''}`)
       ).join('')
         + renderSection('Summary', d.topicSummary ?? d.summary ?? '')
         + (d.contentGaps?.length ? renderSection('Content gaps', d.contentGaps.join('<br>• ')) : '')

@@ -49,6 +49,8 @@ type VideoFetchResult = {
   skippedReason?: string
   // Set when the monthly quota / signed-out daily limit ran out partway through
   quotaMessage?: string
+  // Comments + replies YouTube reports for the video
+  videoCommentCount?: number | null
 }
 
 /**
@@ -62,6 +64,7 @@ async function fetchVideoComments(
 ): Promise<VideoFetchResult> {
   const comments: Comment[] = []
   let cursor: unknown = null
+  let videoCommentCount: number | null = null
   do {
     const res = await fetch('/api/youtube/comments', {
       method: 'POST',
@@ -80,11 +83,21 @@ async function fetchVideoComments(
     }
     const batch: Comment[] = data.comments ?? []
     comments.push(...batch)
+    videoCommentCount = data.videoCommentCount ?? videoCommentCount
     onProgress?.(comments.length)
     // Guard against a cursor that makes no progress
     cursor = batch.length > 0 ? data.nextCursor : null
   } while (cursor)
-  return { comments }
+  return { comments, videoCommentCount }
+}
+
+// YouTube's "Top" (relevance) order stops after a limited set of threads. Flag a video
+// when it returned well short of what was asked for while YouTube reports many more.
+function endedEarlyInTopOrder(result: VideoFetchResult, requested: number, sortBy: SortBy): boolean {
+  if (sortBy !== 'top' || result.skippedReason || result.quotaMessage) return false
+  const got = result.comments.length
+  const target = requested > 0 ? requested : Infinity
+  return got >= 200 && got < target && (result.videoCommentCount ?? 0) > got * 2
 }
 
 function ToolPageContent() {
@@ -97,6 +110,8 @@ function ToolPageContent() {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [statusMsg, setStatusMsg] = useState('')
+  // Shown after an export finishes when something needs explaining (skips, limits, short Top order)
+  const [completionNote, setCompletionNote] = useState('')
   const [exportError, setExportError] = useState('')
   const [comments, setComments] = useState<Comment[]>([])
   const [done, setDone] = useState(false)
@@ -299,12 +314,14 @@ function ToolPageContent() {
         }
         content = sections.join('\n\n')
       } else {
-        const rows = ['Type,VideoTitle,Channel,Author,Comment,Likes,Date']
+        // Same columns as the multi-video CSV and Excel export; every text field is quote-escaped
+        const q = (s: string) => `"${s.replace(/"/g, '""')}"`
+        const rows = ['Type,VideoTitle,VideoURL,Channel,Author,Comment,Likes,Date']
         for (const c of comments) {
-          const vt = c.videoTitle ?? ''; const ch = c.channelName ?? ''
-          rows.push(`comment,"${vt.replace(/"/g, '""')}","${ch.replace(/"/g, '""')}","${c.author}","${c.text.replace(/"/g, '""')}",${c.likes},"${c.date}"`)
+          const vt = c.videoTitle ?? ''; const vu = c.videoUrl ?? ''; const ch = c.channelName ?? ''
+          rows.push(`comment,${q(vt)},${q(vu)},${q(ch)},${q(c.author)},${q(c.text)},${c.likes},${q(c.date)}`)
           for (const r of c.replyList ?? []) {
-            rows.push(`reply,"${vt.replace(/"/g, '""')}","${ch.replace(/"/g, '""')}","${r.author}","${r.text.replace(/"/g, '""')}",${r.likes},"${r.date}"`)
+            rows.push(`reply,${q(vt)},${q(vu)},${q(ch)},${q(r.author)},${q(r.text)},${r.likes},${q(r.date)}`)
           }
         }
         content = rows.join('\n')
@@ -560,7 +577,7 @@ ${commentRows}
       has_bulk_url: hasBulkUrl,
     })
 
-    setLoading(true); setDone(false); setProgress(0); setComments([]); setVideosMeta([]); setExportError('')
+    setLoading(true); setDone(false); setProgress(0); setComments([]); setVideosMeta([]); setExportError(''); setCompletionNote('')
     const allComments: Comment[] = []
     const collectedVideosMeta: VideoMeta[] = []
     let pendingMeta: SourceMeta | null = null
@@ -569,6 +586,7 @@ ${commentRows}
     let quotaMessage = ''
     let videosProcessed = 0
     let videosSkipped = 0
+    let topEndedEarly = false
 
     try {
       for (let i = 0; i < parsedUrls.length; i++) {
@@ -615,6 +633,7 @@ ${commentRows}
               setStatusMsg(`Video ${j + 1} of ${total} — ${n.toLocaleString()} comments…`))
             // Comments turned off / private video: skip it and keep going
             if (result.skippedReason) videosSkipped++
+            if (endedEarlyInTopOrder(result, maxCommentsParsed, sortBy)) topEndedEarly = true
             if (result.quotaMessage) quotaMessage = result.quotaMessage
             if (result.comments.length > 0) {
               const videoComments = result.comments
@@ -650,6 +669,7 @@ ${commentRows}
             if (parsedUrls.length === 1) throw new Error(result.skippedReason)
             videosSkipped++
           }
+          if (endedEarlyInTopOrder(result, maxCommentsParsed, sortBy)) topEndedEarly = true
           if (result.quotaMessage) quotaMessage = result.quotaMessage
           if (result.comments.length > 0) {
             const videoComments: Comment[] = result.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
@@ -714,6 +734,12 @@ ${commentRows}
       } else {
         setStatusMsg(`Processed ${allComments.length.toLocaleString()} comments${skippedNote}`)
       }
+      // statusMsg only shows while loading, so anything worth explaining goes in a note that stays
+      const notes: string[] = []
+      if (quotaMessage) notes.push(`Limit reached after ${allComments.length.toLocaleString()} comments: ${quotaMessage}`)
+      if (videosSkipped > 0) notes.push(`${videosSkipped} video${videosSkipped !== 1 ? 's were' : ' was'} skipped because comments are turned off or the video is unavailable.`)
+      if (topEndedEarly) notes.push(`YouTube's "Top" order returns a limited set of comments. Switch Sort By to "Newest" to export more.`)
+      setCompletionNote(notes.join(' '))
       setComments(allComments)
       if (allComments.length > 0) {
         setDone(true)
@@ -977,6 +1003,12 @@ ${commentRows}
               <div className="bg-red-600 h-full rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
           </div>
+        )}
+
+        {!loading && completionNote && (
+          <p role="status" className="mt-3 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100">
+            {completionNote}
+          </p>
         )}
 
         {done && comments.length > 0 && (
