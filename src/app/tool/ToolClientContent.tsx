@@ -910,12 +910,19 @@ ${commentRows}
                       <div className="flex items-start gap-2">
                         <BadgePercent className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
                         <div>
-                          <p className="text-sm font-semibold text-white">Free quota used for this month</p>
-                          <p className="mt-1 text-xs leading-5 text-[#aaaaaa]">
-                            Upgrade to Pro for a 100,000-comment monthly quota and larger downloads.
+                          {/* Point each plan at the next tier up, not always at Pro */}
+                          <p className="text-sm font-semibold text-white">
+                            {userPlan === 'free' ? 'Free quota used for this month' : 'Monthly quota used'}
                           </p>
-                          <Link href="/pricing" onClick={() => trackEvent('upgrade_cta_click', { location: 'tool_monthly_quota_empty', plan: userPlan })} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-red-500">
-                            Upgrade to Pro
+                          <p className="mt-1 text-xs leading-5 text-[#aaaaaa]">
+                            {userPlan === 'free'
+                              ? 'Upgrade to Pro for a 100,000-comment monthly quota and larger downloads.'
+                              : userPlan === 'pro'
+                                ? 'Your quota resets on the 1st. Upgrade to Business for a 1,000,000-comment monthly quota and channel exports.'
+                                : 'Your quota resets on the 1st. Enterprise has an unlimited monthly quota.'}
+                          </p>
+                          <Link href={userPlan === 'business' ? '/contact' : '/pricing'} onClick={() => trackEvent('upgrade_cta_click', { location: 'tool_monthly_quota_empty', plan: userPlan })} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-red-500">
+                            {userPlan === 'free' ? 'Upgrade to Pro' : userPlan === 'pro' ? 'Upgrade to Business' : 'Contact Sales'}
                             <ArrowRight className="h-3.5 w-3.5" />
                           </Link>
                         </div>
