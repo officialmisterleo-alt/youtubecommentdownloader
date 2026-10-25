@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient, getUserTeam, getEffectivePlan } from '@/lib/teams'
+import { createServiceClient, getUserTeam, getEffectivePlan, syncOwnedTeamPlan } from '@/lib/teams'
 import { getPlanFromPriceId, getSubscriptionPeriodEnd } from '@/lib/stripe-prices'
 import { Plus, Users, ExternalLink, FileText, ShieldCheck, Building2, BarChart3 } from 'lucide-react'
 import QuotaBar from '@/components/QuotaBar'
@@ -278,22 +278,50 @@ async function syncFromCheckoutSession(sessionId: string, userId: string) {
     if (session.payment_status !== 'paid' && session.status !== 'complete') return
     if (session.metadata?.user_id !== userId) return
 
-    const priceId = session.line_items?.data?.[0]?.price?.id
-    const plan = priceId ? getPlanFromPriceId(priceId) : 'pro'
-    const isLifetime = plan === 'lifetime'
-
-    const subscription = typeof session.subscription === 'string' ? null : session.subscription as Stripe.Subscription | null
-
     const supabase = createServiceClient()
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+
+    if (session.mode === 'payment') {
+      // Lifetime deal — permanent, so replaying the success URL is harmless.
+      // Keep any live subscription linked and just add the flag.
+      const { data: existing } = await supabase
+        .from('subscriptions')
+        .select('stripe_subscription_id, status')
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (existing?.stripe_subscription_id && existing.status === 'active') {
+        await supabase.from('subscriptions').update({ lifetime: true }).eq('user_id', userId)
+      } else {
+        await supabase.from('subscriptions').upsert({
+          user_id: userId,
+          plan: 'pro',
+          status: 'active',
+          lifetime: true,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: null,
+          current_period_end: null,
+        }, { onConflict: 'user_id' })
+      }
+      return
+    }
+
+    // Use the subscription's live state, not the session's, so reopening an old success
+    // URL after cancelling can't restore the plan.
+    const subscription = typeof session.subscription === 'string' ? null : session.subscription as Stripe.Subscription | null
+    if (!subscription || !['active', 'trialing'].includes(subscription.status)) return
+    const priceId = subscription.items.data[0]?.price?.id
+    const plan = priceId ? getPlanFromPriceId(priceId) : 'free'
+
     await supabase.from('subscriptions').upsert({
       user_id: userId,
-      plan: isLifetime ? 'pro' : plan,
+      plan,
       status: 'active',
-      lifetime: isLifetime,
-      stripe_customer_id: typeof session.customer === 'string' ? session.customer : session.customer?.id,
-      stripe_subscription_id: typeof session.subscription === 'string' ? session.subscription : subscription?.id ?? null,
-      current_period_end: subscription ? getSubscriptionPeriodEnd(subscription) : null,
+      // lifetime is left as-is so a lifetime member who subscribes keeps it
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscription.id,
+      current_period_end: getSubscriptionPeriodEnd(subscription),
     }, { onConflict: 'user_id' })
+    await syncOwnedTeamPlan(userId)
   } catch (e) {
     console.error('syncFromCheckoutSession error:', e)
   }

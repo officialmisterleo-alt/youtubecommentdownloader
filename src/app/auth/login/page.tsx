@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { trackEvent } from '@/lib/analytics'
+import { safeNextPath } from '@/lib/safe-redirect'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -11,7 +12,7 @@ function LoginForm() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') || '/dashboard'
+  const next = safeNextPath(searchParams.get('next'))
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

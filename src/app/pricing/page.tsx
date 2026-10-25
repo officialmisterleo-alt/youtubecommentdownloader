@@ -32,7 +32,7 @@ const plans: Plan[] = [
   {
     name: 'Pro', monthlyPrice: 19, annualPrice: 16,
     desc: 'For individual power users',
-    features: ['10,000 comments per download', '100,000 comments/month', 'All export formats', 'Reply thread capture', 'Email support', 'Priority processing', 'Basic sorting & filtering', 'AI Analysis (up to 10,000 comments)'],
+    features: ['10,000 comments per download', '100,000 comments/month', 'All export formats', 'Reply thread capture', 'Email support', 'Basic sorting & filtering', 'AI Analysis (up to 10,000 comments)'],
     notIncluded: ['Bulk channel exports', 'REST API access', 'Team seats', 'Scheduled exports'],
     cta: 'Get Started', href: null, checkoutPlan: 'pro', highlight: true, badge: 'Most Popular', note: null,
   },
@@ -40,13 +40,13 @@ const plans: Plan[] = [
     name: 'Business', monthlyPrice: 49, annualPrice: 41,
     desc: 'For agencies and growing teams',
     features: ['100,000 comments per download', '1,000,000 comments/month', 'All export formats', 'Reply thread capture', 'Bulk channel/playlist', '3 team seats', 'Priority email support', 'AI Analysis (up to 50,000 comments)'],
-    notIncluded: ['Scheduled exports', 'REST API access', 'White-label', 'Dedicated API quota'],
+    notIncluded: ['Scheduled exports', 'REST API access', 'White-label'],
     cta: 'Get Started', href: null, checkoutPlan: 'business', highlight: false, badge: null, note: null,
   },
   {
     name: 'Enterprise', monthlyPrice: null, annualPrice: null,
     desc: 'For large teams and enterprise use',
-    features: ['1,000,000 comments per download', 'Unlimited monthly quota', 'Dedicated API quota', 'Reply thread capture', '10 team seats', 'Custom seat count', 'Priority email support', 'Dedicated onboarding call', 'All export formats', 'AI Analysis (up to 100,000 comments)', 'Custom onboarding'],
+    features: ['1,000,000 comments per download', 'Unlimited monthly quota', 'REST API access', 'Reply thread capture', '10 team seats', 'Custom seat count', 'Priority email support', 'Dedicated onboarding call', 'All export formats', 'AI Analysis (up to 100,000 comments)', 'Custom onboarding'],
     notIncluded: [],
     cta: 'Contact Sales', href: '/contact', checkoutPlan: null, highlight: false, badge: null, note: 'Contact us for a quote.',
   },
@@ -64,8 +64,8 @@ const comparisonFeatures = [
 ]
 
 const faqs = [
-  { q: 'What counts toward the comment quota?', a: 'The current quota counts top-level comments returned by an export. Reply capture is available on Pro and higher, and replies may be incomplete if YouTube does not return them.' },
-  { q: 'Can I upgrade or downgrade my plan at any time?', a: 'Absolutely. You can change your plan at any time from your dashboard. Upgrades take effect immediately. Downgrades take effect at the end of your billing cycle.' },
+  { q: 'What counts toward the comment quota?', a: 'Every comment returned by an export counts toward the quota, including replies. Reply capture is available on Pro and higher, and replies may be incomplete if YouTube does not return them.' },
+  { q: 'Can I upgrade or downgrade my plan at any time?', a: 'Absolutely. You can change your plan at any time from your dashboard. Switching between paid plans (upgrade or downgrade) takes effect immediately and is prorated: any extra cost is charged right away, and unused time becomes credit on your next invoice. Downgrading to Free cancels your subscription, which takes effect at the end of your billing period.' },
   { q: 'Is a YouTube API key required?', a: 'No key is needed to use the web tool. Programmatic access requires an Enterprise plan and an API key generated for your account.' },
   { q: 'Do you offer refunds?', a: 'Refunds are considered only within 48 hours of initial purchase, and only if the tool demonstrably failed to function as described. Usage fees for successfully completed exports are non-refundable. We strongly recommend testing the free tier before upgrading.' },
 ]

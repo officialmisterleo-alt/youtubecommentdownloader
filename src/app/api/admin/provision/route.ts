@@ -70,6 +70,17 @@ export async function POST(req: NextRequest) {
     const periodEnd = new Date()
     periodEnd.setFullYear(periodEnd.getFullYear() + 1)
 
+    // Snapshot the existing row so a failure below can restore it instead of deleting it
+    const { data: previousSub } = await service
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle()
+    const restoreSubscription = async () => {
+      if (previousSub) await service.from('subscriptions').upsert(previousSub, { onConflict: 'user_id' })
+      else await service.from('subscriptions').delete().eq('user_id', userId)
+    }
+
     const { error: subError } = await service
       .from('subscriptions')
       .upsert(
@@ -78,6 +89,8 @@ export async function POST(req: NextRequest) {
           plan: 'enterprise',
           status: 'active',
           current_period_end: periodEnd.toISOString(),
+          // Detach any Stripe subscription so its renewal webhooks can't overwrite Enterprise
+          stripe_subscription_id: null,
         },
         { onConflict: 'user_id' }
       )
@@ -101,7 +114,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (teamError || !team) {
-      await service.from('subscriptions').delete().eq('user_id', userId)
+      await restoreSubscription()
       return NextResponse.json(
         { error: `Failed to create team: ${teamError?.message ?? 'Unknown error'}` },
         { status: 500 }
@@ -121,7 +134,7 @@ export async function POST(req: NextRequest) {
 
     if (memberError) {
       await service.from('teams').delete().eq('id', team.id)
-      await service.from('subscriptions').delete().eq('user_id', userId)
+      await restoreSubscription()
       return NextResponse.json(
         { error: `Failed to add team member: ${memberError.message}` },
         { status: 500 }
@@ -133,7 +146,9 @@ export async function POST(req: NextRequest) {
       isPending: false,
       userId,
       teamId: team.id,
-      message: `Enterprise activated for ${normalizedEmail}.`,
+      message: previousSub?.stripe_subscription_id && previousSub.status === 'active'
+        ? `Enterprise activated for ${normalizedEmail}. They also had an active Stripe subscription (${previousSub.stripe_subscription_id}) — cancel it in Stripe so they aren't double-billed.`
+        : `Enterprise activated for ${normalizedEmail}.`,
     })
   }
 

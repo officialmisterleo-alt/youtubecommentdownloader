@@ -63,7 +63,7 @@ export const seoPages: SeoLandingPage[] = [
       },
       {
         question: 'Can I scrape comments from a full channel?',
-        answer: 'Yes. Paid plans can export comments across channel and playlist URLs, with source video metadata preserved in the file.',
+        answer: 'Yes. Business and Enterprise plans can export comments across channel and playlist URLs, with source video metadata preserved in the file.',
       },
       {
         question: 'Do I need to write code?',
@@ -259,7 +259,7 @@ export const seoPages: SeoLandingPage[] = [
     faq: [
       {
         question: 'Can I export comments from an entire YouTube channel?',
-        answer: 'Yes, paid plans support bulk channel workflows subject to plan and monthly quota limits.',
+        answer: 'Yes, Business and Enterprise plans support bulk channel workflows subject to plan and monthly quota limits.',
       },
       {
         question: 'Can I export comments from a playlist?',
@@ -339,7 +339,7 @@ export const seoPages: SeoLandingPage[] = [
     faq: [
       {
         question: 'Can I export comments from every video in a playlist?',
-        answer: 'Yes. Playlist exports are supported on paid plans, subject to plan limits and monthly quota.',
+        answer: 'Yes. Playlist exports are supported on Business and Enterprise plans, subject to plan limits and monthly quota.',
       },
       {
         question: 'Does the export show which video each comment came from?',
@@ -379,7 +379,7 @@ export const seoPages: SeoLandingPage[] = [
     faq: [
       {
         question: 'Can I export comments from an entire YouTube channel?',
-        answer: 'Yes. Channel exports are available on paid plans subject to plan limits and monthly quota.',
+        answer: 'Yes. Channel exports are available on Business and Enterprise plans subject to plan limits and monthly quota.',
       },
       {
         question: 'Can I use a YouTube handle URL?',
@@ -427,7 +427,7 @@ export const seoPages: SeoLandingPage[] = [
       },
       {
         question: 'Can I extract comments from playlists or channels?',
-        answer: 'Yes. Paid plans support bulk workflows for playlists and channels.',
+        answer: 'Yes. Business and Enterprise plans support bulk workflows for playlists and channels.',
       },
     ],
     related: ['youtube-comment-scraper', 'download-youtube-comments', 'youtube-comment-exporter'],
@@ -467,7 +467,7 @@ export const seoPages: SeoLandingPage[] = [
       },
       {
         question: 'Can I export comments in bulk?',
-        answer: 'Yes. Paid plans support bulk exports across playlists and channels.',
+        answer: 'Yes. Business and Enterprise plans support bulk exports across playlists and channels.',
       },
     ],
     related: ['extract-youtube-comments', 'export-youtube-comments-to-csv', 'youtube-comments-to-excel'],

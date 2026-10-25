@@ -81,7 +81,7 @@ export default function TermsPage() {
               The Service is offered on a free tier and on paid subscription plans billed monthly or annually. Subscription fees are charged in advance. By subscribing you authorise us (via our payment processor, Stripe) to charge your payment method on a recurring basis until you cancel.
             </p>
             <p className="text-[#888888] leading-relaxed mb-3">
-              Annual plans are billed as a single charge covering twelve months. You may cancel your subscription at any time from your account dashboard. Cancellation takes effect at the end of your current billing period; you will retain access to paid features until that date.
+              Annual plans are billed as a single charge covering twelve months. You may cancel your subscription at any time from your account dashboard. Cancellation takes effect at the end of your current billing period; you will retain access to paid features until that date. Moving from a paid plan to the free tier is treated as a cancellation. Switching between paid plans (upgrading or downgrading) takes effect immediately and is prorated: any additional cost for the remainder of the current billing period is charged right away, and unused time on your previous plan is credited to your next invoice.
             </p>
             <p className="text-[#888888] leading-relaxed">
               We reserve the right to change pricing with at least 30 days&apos; notice. Continued use of the Service after a price change constitutes acceptance of the new pricing.

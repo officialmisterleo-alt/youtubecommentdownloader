@@ -7,9 +7,12 @@ export const MONTHLY_LIMITS: Record<string, number> = {
   enterprise: -1,  // -1 = unlimited
 }
 
+// Comments a signed-out visitor can export per day (per hashed IP)
+export const ANON_DAILY_LIMIT = 500
+
+// UTC, matching the webhook's month key
 export function getCurrentMonth(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  return new Date().toISOString().slice(0, 7)
 }
 
 export async function getMonthlyUsage(userId: string, plan: string) {
@@ -29,25 +32,31 @@ export async function getMonthlyUsage(userId: string, plan: string) {
   return { used, limit, remaining, month }
 }
 
-export async function checkAndIncrementUsage(
-  userId: string,
-  plan: string,
-  count: number
-): Promise<{ allowed: boolean; used: number; limit: number }> {
-  const { used, limit } = await getMonthlyUsage(userId, plan)
+/**
+ * Atomically reserves up to `requested` comments of this month's quota and
+ * returns how many were granted (0 when used up). Pass a negative number to
+ * refund an unused reservation. Locked in Postgres, so parallel requests
+ * can't overshoot the limit.
+ */
+export async function reserveMonthlyUsage(userId: string, plan: string, requested: number): Promise<number> {
+  const { data, error } = await createServiceClient().rpc('reserve_monthly_usage', {
+    p_user_id: userId,
+    p_month: getCurrentMonth(),
+    p_requested: requested,
+    p_limit: MONTHLY_LIMITS[plan] ?? 100,
+  })
+  if (error) throw new Error(`reserve_monthly_usage failed: ${error.message}`)
+  return data as number
+}
 
-  if (limit !== -1 && used + count > limit) {
-    return { allowed: false, used, limit }
-  }
-
-  // Use the service role client so writes bypass RLS — this is server-side only code
-  const serviceClient = createServiceClient()
-  const month = getCurrentMonth()
-
-  await serviceClient.from('monthly_usage').upsert(
-    { user_id: userId, month, comment_count: (used + count), updated_at: new Date().toISOString() },
-    { onConflict: 'user_id,month' }
-  )
-
-  return { allowed: true, used: used + count, limit }
+/** Same as reserveMonthlyUsage, for signed-out visitors keyed by hashed IP per UTC day. */
+export async function reserveAnonUsage(ipHash: string, requested: number): Promise<number> {
+  const { data, error } = await createServiceClient().rpc('reserve_anon_usage', {
+    p_ip_hash: ipHash,
+    p_day: new Date().toISOString().slice(0, 10),
+    p_requested: requested,
+    p_limit: ANON_DAILY_LIMIT,
+  })
+  if (error) throw new Error(`reserve_anon_usage failed: ${error.message}`)
+  return data as number
 }

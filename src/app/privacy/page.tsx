@@ -62,7 +62,7 @@ export default function PrivacyPage() {
           <section className="mb-8">
             <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-3 pb-2 border-b border-white/[0.07]">3. Data Retention</h2>
             <p className="text-[#888888] leading-relaxed mb-3">
-              We retain your account information and export history for as long as your account is active. If you delete your account we will delete your personal data within 30 days, except where we are required to retain it for legal, tax, or accounting purposes (typically up to 7 years for billing records).
+              We retain your account information and export history for as long as your account is active. You can request deletion of your account by <Link href="/contact" className="text-red-600 hover:underline">contacting support</Link>; we will delete your personal data within 30 days of your request, except where we are required to retain it for legal, tax, or accounting purposes (typically up to 7 years for billing records).
             </p>
             <p className="text-[#888888] leading-relaxed">
               Server logs containing IP addresses and technical data are retained for up to 90 days and then deleted.
@@ -77,6 +77,7 @@ export default function PrivacyPage() {
               <li><strong>Stripe</strong> — payment processing. Stripe stores your payment method details under PCI DSS compliance. We receive only tokenised references to your payment method.</li>
               <li><strong>Vercel</strong> — website hosting and serverless functions. Your requests are processed on Vercel&apos;s infrastructure. Vercel is SOC 2 Type II certified.</li>
               <li><strong>YouTube Data API v3</strong> — comment retrieval. When you submit a YouTube URL, we make requests to the YouTube Data API on your behalf. This is subject to <a href="https://policies.google.com/privacy" className="text-red-600 hover:underline" target="_blank" rel="noopener noreferrer">Google&apos;s Privacy Policy</a>.</li>
+              <li><strong>OpenAI</strong> — AI Analysis. When you run AI Analysis, the exported comments being analysed (comment text, author display names, and like counts) are sent to OpenAI&apos;s API to generate the analysis. This data is processed under OpenAI&apos;s API data usage policies.</li>
             </ul>
             <p className="text-[#888888] leading-relaxed mt-3">
               We do not sell your personal data to any third party. We share data with third-party services only to the extent necessary to operate the Service.

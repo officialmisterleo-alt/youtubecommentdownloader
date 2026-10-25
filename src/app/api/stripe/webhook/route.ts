@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPlanFromPriceId, getSubscriptionPeriodEnd } from '@/lib/stripe-prices'
+import { syncOwnedTeamPlan } from '@/lib/teams'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,16 +59,26 @@ export async function POST(req: NextRequest) {
         }
 
         if (session.mode === 'payment') {
-          // Lifetime deal — one-time payment
-          await supabase.from('subscriptions').upsert({
-            user_id: userId,
-            stripe_customer_id: session.customer,
-            stripe_subscription_id: null,
-            plan: 'pro',
-            status: 'active',
-            lifetime: true,
-            current_period_end: null,
-          }, { onConflict: 'user_id' })
+          // Lifetime deal — one-time payment. If they also have a live subscription, keep it
+          // linked (so its webhooks still match) and just add the lifetime flag.
+          const { data: existing } = await supabase
+            .from('subscriptions')
+            .select('stripe_subscription_id, status')
+            .eq('user_id', userId)
+            .maybeSingle()
+          if (existing?.stripe_subscription_id && existing.status === 'active') {
+            await supabase.from('subscriptions').update({ lifetime: true }).eq('user_id', userId)
+          } else {
+            await supabase.from('subscriptions').upsert({
+              user_id: userId,
+              stripe_customer_id: session.customer,
+              stripe_subscription_id: null,
+              plan: 'pro',
+              status: 'active',
+              lifetime: true,
+              current_period_end: null,
+            }, { onConflict: 'user_id' })
+          }
         } else if (session.mode === 'subscription' && session.subscription) {
           // Recurring subscription — fetch full object to get price & period
           const sub = await stripe.subscriptions.retrieve(session.subscription as string)
@@ -85,9 +96,10 @@ export async function POST(req: NextRequest) {
             stripe_subscription_id: subData.id,
             plan,
             status: subData.status,
-            lifetime: false,
+            // lifetime is left as-is so a lifetime member who subscribes keeps it
             current_period_end: getSubscriptionPeriodEnd(subData),
           }, { onConflict: 'user_id' })
+          await syncOwnedTeamPlan(userId)
         }
         break
       }
@@ -106,27 +118,27 @@ export async function POST(req: NextRequest) {
         const oldPriceId = previousAttrs?.items?.data?.[0]?.price?.id
 
         const newPlan = newPriceId ? getPlanFromPriceId(newPriceId) : 'free'
-        const oldPlan = oldPriceId ? getPlanFromPriceId(oldPriceId) : 'free'
 
-        await supabase.from('subscriptions')
+        const { data: subRow } = await supabase
+          .from('subscriptions')
           .update({
             plan: newPlan,
             status: sub.status,
             current_period_end: getSubscriptionPeriodEnd(sub),
           })
           .eq('stripe_subscription_id', sub.id)
+          .select('user_id')
+          .maybeSingle()
+        if (!subRow?.user_id) break
 
-        // On upgrade: reset monthly usage so the user immediately gets their new quota
-        const newLimit = PLAN_MONTHLY_LIMITS[newPlan] ?? 100
-        const oldLimit = PLAN_MONTHLY_LIMITS[oldPlan] ?? 100
-        if (newLimit > oldLimit || (newLimit === -1 && oldLimit !== -1)) {
-          // Look up user_id from the subscription record
-          const { data: subRow } = await supabase
-            .from('subscriptions')
-            .select('user_id')
-            .eq('stripe_subscription_id', sub.id)
-            .single()
-          if (subRow?.user_id) {
+        // On a real upgrade (the price changed to a higher-quota plan), reset monthly usage so
+        // the user immediately gets their new quota. Renewals, cancel toggles and other updates
+        // don't include the old price, so they never reset usage.
+        const oldPlan = oldPriceId ? getPlanFromPriceId(oldPriceId) : null
+        if (oldPlan && oldPriceId !== newPriceId) {
+          const newLimit = PLAN_MONTHLY_LIMITS[newPlan] ?? 100
+          const oldLimit = PLAN_MONTHLY_LIMITS[oldPlan] ?? 100
+          if (oldLimit !== -1 && (newLimit === -1 || newLimit > oldLimit)) {
             const month = new Date().toISOString().slice(0, 7)
             await supabase
               .from('monthly_usage')
@@ -136,14 +148,25 @@ export async function POST(req: NextRequest) {
               )
           }
         }
+        await syncOwnedTeamPlan(subRow.user_id)
         break
       }
 
       case 'customer.subscription.deleted': {
         const sub = event.data.object as { id: string }
-        await supabase.from('subscriptions')
-          .update({ status: 'canceled', plan: 'free', current_period_end: null })
+        const { data: subRow } = await supabase
+          .from('subscriptions')
+          .select('user_id, lifetime')
           .eq('stripe_subscription_id', sub.id)
+          .maybeSingle()
+        if (!subRow) break
+        // Lifetime members fall back to their lifetime Pro access
+        await supabase.from('subscriptions')
+          .update(subRow.lifetime
+            ? { status: 'active', plan: 'pro', current_period_end: null }
+            : { status: 'canceled', plan: 'free', current_period_end: null })
+          .eq('stripe_subscription_id', sub.id)
+        await syncOwnedTeamPlan(subRow.user_id)
         break
       }
 
@@ -155,9 +178,12 @@ export async function POST(req: NextRequest) {
         }
         const subscriptionId = invoice.subscription ?? invoice.parent?.subscription_details?.subscription
         if (subscriptionId) {
-          await supabase.from('subscriptions')
+          const { data: subRow } = await supabase.from('subscriptions')
             .update({ status: 'past_due' })
             .eq('stripe_subscription_id', subscriptionId)
+            .select('user_id')
+            .maybeSingle()
+          if (subRow?.user_id) await syncOwnedTeamPlan(subRow.user_id)
         }
         break
       }

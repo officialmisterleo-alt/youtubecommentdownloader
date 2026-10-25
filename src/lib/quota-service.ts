@@ -5,7 +5,7 @@
  * and never touch the cookie store.
  */
 import { createServiceClient } from '@/lib/supabase/server'
-import { MONTHLY_LIMITS, getCurrentMonth } from '@/lib/quota'
+import { MONTHLY_LIMITS, getCurrentMonth, reserveMonthlyUsage } from '@/lib/quota'
 
 export type MonthlyUsage = {
   used: number
@@ -39,28 +39,10 @@ export async function checkAndIncrementUsageService(
   plan: string,
   count: number,
 ): Promise<{ allowed: boolean; used: number; limit: number; remaining: number }> {
-  const { used, limit, remaining } = await getMonthlyUsageService(userId, plan)
-
-  if (limit !== -1 && remaining <= 0) {
-    return { allowed: false, used, limit, remaining: 0 }
-  }
-
-  const service = createServiceClient()
-  const month = getCurrentMonth()
-  const newUsed = used + count
-
-  await service.from('monthly_usage').upsert(
-    {
-      user_id: userId,
-      month,
-      comment_count: newUsed,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'user_id,month' },
-  )
-
-  const newRemaining = limit === -1 ? -1 : Math.max(0, limit - newUsed)
-  return { allowed: true, used: newUsed, limit, remaining: newRemaining }
+  const limit = MONTHLY_LIMITS[plan] ?? 100
+  const granted = await reserveMonthlyUsage(userId, plan, count)
+  const { used, remaining } = await getMonthlyUsageService(userId, plan)
+  return { allowed: granted > 0 || count === 0, used, limit, remaining }
 }
 
 /** Returns ISO string for the first day of next month at 00:00:00Z */

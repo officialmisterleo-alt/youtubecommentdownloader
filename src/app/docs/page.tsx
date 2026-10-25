@@ -160,7 +160,7 @@ function EndpointBadge({ method, path }: { method: string; path: string }) {
 const commentsParams: ParamRow[] = [
   { param: 'url', type: 'string', required: true, defaultVal: '', description: 'YouTube video URL (any standard format, including youtu.be short links and /shorts/).' },
   { param: 'maxComments', type: 'integer', required: false, defaultVal: '100', description: 'Maximum number of comments to return. Capped at 10,000 per request.' },
-  { param: 'includeReplies', type: 'boolean', required: false, defaultVal: 'false', description: 'When true, available replies are requested and included in replyList. The current quota counts returned top-level comments.' },
+  { param: 'includeReplies', type: 'boolean', required: false, defaultVal: 'false', description: 'When true, available replies are requested and included in replyList. Each returned reply counts toward your monthly quota.' },
   { param: 'sortBy', type: 'string', required: false, defaultVal: '"top"', description: 'Use "top" (relevance) or "newest" (time order). The legacy "oldest" value is accepted but does not return chronological oldest-first results.' },
 ]
 
@@ -229,8 +229,8 @@ const commentsResponse = `{
   "totalFetched": 50,
   "quota": {
     "used": 150,
-    "remaining": 999850,
-    "limit": 1000000
+    "remaining": -1,
+    "limit": -1
   }
 }`
 
@@ -271,8 +271,8 @@ const channelResponse = `{
   "totalVideos": 25,
   "quota": {
     "used": 150,
-    "remaining": 999850,
-    "limit": 1000000
+    "remaining": -1,
+    "limit": -1
   }
 }`
 
@@ -289,13 +289,13 @@ const quotaRequestJs = `const response = await fetch(
 );
 
 const data = await response.json();
-console.log(\`Used \${data.used} of \${data.limit} comments this month.\`);`
+console.log(\`Used \${data.used} comments this month (limit: \${data.limit === -1 ? "unlimited" : data.limit}).\`);`
 
 const quotaResponse = `{
   "plan": "enterprise",
   "used": 42817,
-  "remaining": 957183,
-  "limit": 1000000,
+  "remaining": -1,
+  "limit": -1,
   "resetsAt": "2026-06-01T00:00:00.000Z"
 }`
 
@@ -482,7 +482,7 @@ export default function DocsPage() {
             <EndpointBadge method="GET" path="/api/v1/comments" />
             <p className="text-[#888888] text-sm leading-relaxed mb-6">
               Fetch comments from a YouTube video. Returns up to 10,000 top-level comments per request, sorted by your chosen order.
-              The current monthly quota counts returned top-level comments; available replies can be included separately.
+              Returned top-level comments and replies both count toward your monthly quota.
             </p>
 
             <div className="text-xs text-[#555555] font-semibold uppercase tracking-widest mb-3">Query parameters</div>
@@ -522,7 +522,7 @@ export default function DocsPage() {
             <EndpointBadge method="GET" path="/api/v1/quota" />
             <p className="text-[#888888] text-sm leading-relaxed mb-6">
               Check your current quota usage. Returns your plan, the number of comments used this month, how many remain, your total
-              limit, and the timestamp when quota resets.
+              limit, and the timestamp when quota resets. For unlimited plans, limit and remaining are returned as -1.
             </p>
 
             <div className="text-xs text-[#555555] font-semibold uppercase tracking-widest mb-3">No parameters</div>
@@ -558,10 +558,10 @@ export default function DocsPage() {
           <div className="w-12 h-px bg-white/[0.07] mb-5" />
           <div className="space-y-3">
             {[
-              ['Monthly limit', 'Enterprise accounts receive 1,000,000 comments per month.'],
+              ['Monthly limit', 'Enterprise accounts have an unlimited monthly comment quota. The quota endpoint reports limit and remaining as -1.'],
               ['Reset schedule', 'Quota resets on the 1st of each calendar month at midnight UTC.'],
               ['What counts', 'Each top-level comment counts as 1. When includeReplies=true, each reply also counts as 1.'],
-              ['Per-request cap', 'maxComments is capped at 10,000 per request. Make multiple requests to collect more.'],
+              ['Per-request cap', 'maxComments is capped at 10,000 per API request (the web tool allows up to 1,000,000 comments per Enterprise download). Make multiple requests to collect more.'],
               ['Monitor usage', 'Call GET /api/v1/quota at any time to check your used, remaining, and resetsAt values.'],
             ].map(([label, text]) => (
               <div key={label} className="bg-[#171717] border border-white/[0.07] rounded-xl p-4 flex gap-4">

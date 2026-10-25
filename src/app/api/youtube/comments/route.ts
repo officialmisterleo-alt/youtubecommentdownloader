@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createHash } from 'crypto'
+import { createClient } from '@/lib/supabase/server'
 import { getEffectivePlan } from '@/lib/teams'
-import { checkAndIncrementUsage, getMonthlyUsage, MONTHLY_LIMITS } from '@/lib/quota'
-import { getApiKeys, fetchWithKeyRotation, AttemptLog } from '@/lib/youtube-api'
+import { ANON_DAILY_LIMIT, reserveAnonUsage, reserveMonthlyUsage } from '@/lib/quota'
+import { getApiKeys, fetchWithKeyRotation, getYouTubeErrorReason, AttemptLog } from '@/lib/youtube-api'
 import { sendApiAlert } from '@/lib/alerts'
 
 // YouTube's textDisplay is HTML-encoded — decode before storing so all export formats get clean text
@@ -64,31 +65,27 @@ const MOCK_COMMENTS: Comment[] = [
   { id: '10', author: '@digitalmarketer', text: 'The bulk channel download is incredible. Downloaded an entire competitor channel overnight.', likes: 43, date: '2 weeks ago', replies: 0, replyList: [] },
 ]
 
-async function incrementLegacyUsage(userId: string, commentsCount: number) {
-  const serviceClient = createServiceClient()
-  const month = new Date().toISOString().slice(0, 7) // 'YYYY-MM'
+// Each call returns one batch; the client keeps calling with nextCursor until done.
+// Keeps every response well inside Vercel's time limit and 4.5MB body limit.
+export const maxDuration = 60
+const BATCH_UNITS = 2000              // comments + replies per call
+const BATCH_UNITS_WITH_REPLIES = 500
+const TIME_BUDGET_MS = 40_000
 
-  const { data: existing } = await serviceClient
-    .from('usage')
-    .select('id, exports_count, comments_count')
-    .eq('user_id', userId)
-    .eq('month', month)
-    .single()
+// Where the next batch starts: a YouTube page plus how many of its threads were already returned
+type Cursor = { pageToken: string; skip: number }
 
-  if (existing) {
-    await serviceClient
-      .from('usage')
-      .update({
-        exports_count: (existing.exports_count ?? 0) + 1,
-        comments_count: (existing.comments_count ?? 0) + commentsCount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', existing.id)
-  } else {
-    await serviceClient
-      .from('usage')
-      .insert({ user_id: userId, month, exports_count: 1, comments_count: commentsCount })
+function parseCursor(raw: unknown): Cursor {
+  const c = raw as Partial<Cursor> | null
+  return {
+    pageToken: typeof c?.pageToken === 'string' ? c.pageToken : '',
+    skip: Number.isInteger(c?.skip) && (c?.skip ?? 0) > 0 ? (c!.skip as number) : 0,
   }
+}
+
+function hashIp(req: NextRequest): string {
+  const ip = req.headers.get('x-real-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  return createHash('sha256').update(`ycd-anon:${ip}`).digest('hex')
 }
 
 function collectFailedKeys(log: AttemptLog[]): number[] {
@@ -97,41 +94,29 @@ function collectFailedKeys(log: AttemptLog[]): number[] {
 
 export async function POST(req: NextRequest) {
   try {
-    const { url, maxComments = 100, includeReplies = false, sortBy = 'top' } = await req.json()
+    const body = await req.json()
+    const { url, maxComments = 100, includeReplies: wantsReplies = false, sortBy = 'top', fetchedSoFar = 0 } = body
     if (!url) return NextResponse.json({ error: 'URL required' }, { status: 400 })
 
     // Determine user and plan
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    let planMaxComments: number
-    let effectivePlan = 'free'
-    if (!user) {
-      planMaxComments = 50 // unauthenticated limit
-    } else {
-      // Use effective plan — checks personal subscription and team membership
-      effectivePlan = await getEffectivePlan(user.id)
-      planMaxComments = PLAN_LIMITS[effectivePlan]?.maxComments ?? PLAN_LIMITS.free.maxComments
-    }
+    // Use effective plan — checks personal subscription and team membership
+    const effectivePlan = user ? await getEffectivePlan(user.id) : 'free'
+    const planMaxComments = user
+      ? (PLAN_LIMITS[effectivePlan]?.maxComments ?? PLAN_LIMITS.free.maxComments)
+      : 50 // unauthenticated limit
+    // Reply capture is a paid feature
+    const includeReplies = Boolean(wantsReplies) && !!user && effectivePlan !== 'free'
 
-    // Check monthly quota before any API calls
-    if (user) {
-      const { remaining } = await getMonthlyUsage(user.id, effectivePlan)
-      const planMonthlyMax = MONTHLY_LIMITS[effectivePlan] ?? 100
-      if (planMonthlyMax !== -1 && remaining <= 0) {
-        return NextResponse.json(
-          { error: 'Monthly quota exceeded. Resets on the 1st of next month.' },
-          { status: 429 }
-        )
-      }
-      // Clamp per-download limit to remaining monthly quota
-      if (planMonthlyMax !== -1 && remaining < planMaxComments) {
-        planMaxComments = remaining
-      }
+    // Per-download cap across every batch of this download; 0 / missing = plan max
+    const requested = Number(maxComments) > 0 ? Number(maxComments) : planMaxComments
+    const alreadyFetched = Math.max(0, Number(fetchedSoFar) || 0)
+    const downloadRemaining = Math.max(0, Math.min(requested, planMaxComments) - alreadyFetched)
+    if (downloadRemaining === 0) {
+      return NextResponse.json({ comments: [], total: 0, nextCursor: null, done: true, mock: false })
     }
-
-    // Enforce plan per-download limit — client-requested value cannot exceed plan max
-    const effectiveMax = Math.min(maxComments, planMaxComments)
 
     // Use mock mode when no real keys are configured
     const configuredKeys = getApiKeys()
@@ -149,138 +134,187 @@ export async function POST(req: NextRequest) {
         channelName: 'CreatorChannel',
         videoUrl: url,
       }))
-      const mockResult = mockWithMeta.slice(0, effectiveMax)
-      if (user) {
-        await checkAndIncrementUsage(user.id, effectivePlan, mockResult.length).catch(() => {})
-        await incrementLegacyUsage(user.id, mockResult.length).catch(() => {})
-      }
-      return NextResponse.json({ comments: mockResult, total: mockResult.length, mock: true })
+      const mockResult = mockWithMeta.slice(0, downloadRemaining)
+      return NextResponse.json({ comments: mockResult, total: mockResult.length, nextCursor: null, done: true, mock: true })
     }
 
     const videoIdMatch = url.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/)
     if (!videoIdMatch) return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 })
     const videoId = videoIdMatch[1]
 
-    // Track all failed key indices across this entire request for alerting
-    const allFailedKeys = new Set<number>()
-    let lastSuccessKey: number | undefined
+    // Reserve this batch's quota atomically up front; whatever isn't used is refunded below
+    const batchUnits = includeReplies ? BATCH_UNITS_WITH_REPLIES : Math.min(BATCH_UNITS, downloadRemaining)
+    const ipHash = user ? '' : hashIp(req)
+    const reserve = (n: number) => user ? reserveMonthlyUsage(user.id, effectivePlan, n) : reserveAnonUsage(ipHash, n)
+    const granted = await reserve(batchUnits)
+    if (granted <= 0) {
+      return user
+        ? NextResponse.json({ error: 'Monthly quota exceeded. Resets on the 1st of next month.', code: 'quota_exceeded' }, { status: 429 })
+        : NextResponse.json({ error: `You've reached the free limit of ${ANON_DAILY_LIMIT.toLocaleString()} comments per day without an account. Sign up free to keep exporting.`, code: 'anon_limit' }, { status: 429 })
+    }
+    // Less than a full batch means the quota is nearly used up — keep what fits
+    const quotaLimited = granted < batchUnits
+    let used = 0
 
-    // Fetch video title and channel name
-    let videoTitle = ''
-    let channelName = ''
     try {
-      const { data: metaData, keyIndex, attemptsLog } = await fetchWithKeyRotation(
-        (key) => `https://www.googleapis.com/youtube/v3/videos?${new URLSearchParams({ part: 'snippet', id: videoId, key })}`
-      )
-      collectFailedKeys(attemptsLog).forEach(k => allFailedKeys.add(k))
-      lastSuccessKey = keyIndex
-      const snippet = (metaData as { items?: { snippet?: { title?: string; channelTitle?: string } }[] })?.items?.[0]?.snippet
-      videoTitle = snippet?.title ?? ''
-      channelName = snippet?.channelTitle ?? ''
-    } catch { /* non-fatal — metadata is best-effort */ }
+      // Track all failed key indices across this entire request for alerting
+      const allFailedKeys = new Set<number>()
+      let lastSuccessKey: number | undefined
 
-    const comments: Comment[] = []
-    let pageToken = ''
-    const order = sortBy === 'newest' ? 'time' : 'relevance'
-
-    while (comments.length < effectiveMax) {
-      let threadData: { items?: unknown[]; nextPageToken?: string; error?: { message: string } }
+      // Fetch video title and channel name
+      let videoTitle = ''
+      let channelName = ''
       try {
-        const { data, keyIndex, attemptsLog } = await fetchWithKeyRotation(
-          (key) => `https://www.googleapis.com/youtube/v3/commentThreads?${new URLSearchParams({ part: 'snippet', videoId, maxResults: '100', order, key, ...(pageToken ? { pageToken } : {}) })}`
+        const { data: metaData, keyIndex, attemptsLog } = await fetchWithKeyRotation(
+          (key) => `https://www.googleapis.com/youtube/v3/videos?${new URLSearchParams({ part: 'snippet', id: videoId, key })}`
         )
         collectFailedKeys(attemptsLog).forEach(k => allFailedKeys.add(k))
         lastSuccessKey = keyIndex
-        threadData = data as typeof threadData
-      } catch {
-        // All keys exhausted — alert and return 503
-        const failedKeys = Array.from(allFailedKeys)
-        await sendApiAlert({
-          event: 'api_pool_exhausted',
-          message: `All ${configuredKeys.length} YouTube API keys exhausted fetching comment threads`,
-          failedKeys,
+        const snippet = (metaData as { items?: { snippet?: { title?: string; channelTitle?: string } }[] })?.items?.[0]?.snippet
+        videoTitle = snippet?.title ?? ''
+        channelName = snippet?.channelTitle ?? ''
+      } catch { /* non-fatal — metadata is best-effort */ }
+
+      const comments: Comment[] = []
+      const order = sortBy === 'newest' ? 'time' : 'relevance'
+      // Smaller pages when fetching replies, so one page's reply calls stay quick
+      const pageSize = includeReplies ? '20' : '100'
+      const started = Date.now()
+      let cursor: Cursor | null = parseCursor(body.cursor)
+
+      while (cursor) {
+        let threadData: { items?: unknown[]; nextPageToken?: string; error?: { message?: string } }
+        try {
+          const pageToken = cursor.pageToken
+          const { data, keyIndex, attemptsLog } = await fetchWithKeyRotation(
+            (key) => `https://www.googleapis.com/youtube/v3/commentThreads?${new URLSearchParams({ part: 'snippet', videoId, maxResults: pageSize, order, key, ...(pageToken ? { pageToken } : {}) })}`
+          )
+          collectFailedKeys(attemptsLog).forEach(k => allFailedKeys.add(k))
+          lastSuccessKey = keyIndex
+          threadData = data as typeof threadData
+        } catch {
+          // All keys exhausted — alert and return 503
+          await sendApiAlert({
+            event: 'api_pool_exhausted',
+            message: `All ${configuredKeys.length} YouTube API keys exhausted fetching comment threads`,
+            failedKeys: Array.from(allFailedKeys),
+            endpoint: '/api/youtube/comments',
+            timestamp: new Date().toISOString(),
+          })
+          return NextResponse.json({ error: 'YouTube API quota exhausted. Please try again later.', code: 'youtube_quota' }, { status: 503 })
+        }
+
+        if (threadData.error) {
+          // Per-video problems get their own codes so bulk exports can skip the video and carry on
+          const reason = getYouTubeErrorReason(threadData)
+          if (reason === 'commentsDisabled') {
+            return NextResponse.json({ error: 'Comments are turned off for this video.', code: 'comments_disabled' }, { status: 422 })
+          }
+          if (reason === 'videoNotFound' || reason === 'forbidden') {
+            return NextResponse.json({ error: 'This video is private, deleted, or unavailable.', code: 'video_unavailable' }, { status: 422 })
+          }
+          return NextResponse.json({ error: threadData.error.message ?? 'YouTube returned an error.', code: 'youtube_error' }, { status: 502 })
+        }
+
+        const items = threadData.items ?? []
+        let stopAt: number | null = null
+        let downloadFull = false
+
+        for (let idx = cursor.skip; idx < items.length; idx++) {
+          if (comments.length >= downloadRemaining) { downloadFull = true; break }
+          if (used >= granted) { stopAt = idx; break }
+
+          const typedItem = items[idx] as {
+            id: string
+            snippet: {
+              topLevelComment: { snippet: { authorDisplayName: string; textDisplay: string; likeCount: number; publishedAt: string } }
+              totalReplyCount?: number
+            }
+          }
+          const s = typedItem.snippet.topLevelComment.snippet
+          const replyCount: number = typedItem.snippet.totalReplyCount ?? 0
+          let replyList: Reply[] = []
+
+          if (includeReplies && replyCount > 0) {
+            try {
+              const { data: rData, keyIndex, attemptsLog } = await fetchWithKeyRotation(
+                (key) => `https://www.googleapis.com/youtube/v3/comments?${new URLSearchParams({ part: 'snippet', parentId: typedItem.id, maxResults: '100', key })}`
+              )
+              collectFailedKeys(attemptsLog).forEach(k => allFailedKeys.add(k))
+              lastSuccessKey = keyIndex
+              const rTyped = rData as { items?: unknown[]; error?: unknown }
+              if (!rTyped.error) {
+                replyList = (rTyped.items ?? []).map((r) => {
+                  const rr = r as { id: string; snippet: { authorDisplayName: string; textDisplay: string; likeCount: number; publishedAt: string } }
+                  return {
+                    id: rr.id,
+                    author: rr.snippet.authorDisplayName,
+                    text: decodeHtml(rr.snippet.textDisplay),
+                    likes: rr.snippet.likeCount,
+                    date: new Date(rr.snippet.publishedAt).toLocaleDateString(),
+                    dateRaw: rr.snippet.publishedAt,
+                  }
+                })
+              }
+            } catch { /* non-fatal — replies are best-effort */ }
+          }
+
+          // Replies count toward quota. If this thread doesn't fit the batch, start the next batch with it,
+          // unless the quota itself is nearly out — then keep as many replies as fit.
+          if (used + 1 + replyList.length > granted) {
+            if (!quotaLimited && used > 0) { stopAt = idx; break }
+            replyList = replyList.slice(0, Math.max(0, granted - used - 1))
+          }
+
+          comments.push({
+            id: typedItem.id,
+            author: s.authorDisplayName,
+            text: decodeHtml(s.textDisplay),
+            likes: s.likeCount,
+            date: new Date(s.publishedAt).toLocaleDateString(),
+            dateRaw: s.publishedAt,
+            replies: replyCount,
+            replyList,
+            videoTitle,
+            channelName,
+            videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
+          })
+          used += 1 + replyList.length
+        }
+
+        if (downloadFull || comments.length >= downloadRemaining) {
+          cursor = null
+        } else if (stopAt !== null) {
+          // Batch budget used up mid-page — resume from this thread next call
+          cursor = { pageToken: cursor.pageToken, skip: stopAt }
+          break
+        } else if (!threadData.nextPageToken) {
+          cursor = null
+        } else {
+          cursor = { pageToken: threadData.nextPageToken, skip: 0 }
+          if (used >= granted || Date.now() - started > TIME_BUDGET_MS) break
+        }
+      }
+
+      // Fire-and-forget quota warning when 3+ keys failed (but at least one succeeded)
+      if (allFailedKeys.size >= 3) {
+        sendApiAlert({
+          event: 'quota_warning',
+          message: `${allFailedKeys.size} YouTube API keys failed in a single request`,
+          failedKeys: Array.from(allFailedKeys),
+          successKey: lastSuccessKey,
           endpoint: '/api/youtube/comments',
           timestamp: new Date().toISOString(),
-        })
-        return NextResponse.json({ error: 'YouTube API quota exhausted. Please try again later.' }, { status: 503 })
+        }).catch(() => {})
       }
 
-      if (threadData.error) return NextResponse.json({ error: threadData.error.message }, { status: 400 })
-
-      for (const item of threadData.items ?? []) {
-        const typedItem = item as {
-          id: string
-          snippet: {
-            topLevelComment: { snippet: { authorDisplayName: string; textDisplay: string; likeCount: number; publishedAt: string } }
-            totalReplyCount?: number
-          }
-        }
-        const s = typedItem.snippet.topLevelComment.snippet
-        const replyCount: number = typedItem.snippet.totalReplyCount ?? 0
-        let replyList: Reply[] = []
-
-        if (includeReplies && replyCount > 0) {
-          try {
-            const { data: rData, keyIndex, attemptsLog } = await fetchWithKeyRotation(
-              (key) => `https://www.googleapis.com/youtube/v3/comments?${new URLSearchParams({ part: 'snippet', parentId: typedItem.id, maxResults: '100', key })}`
-            )
-            collectFailedKeys(attemptsLog).forEach(k => allFailedKeys.add(k))
-            lastSuccessKey = keyIndex
-            const rTyped = rData as { items?: unknown[]; error?: unknown }
-            if (!rTyped.error) {
-              replyList = (rTyped.items ?? []).map((r) => {
-                const rr = r as { id: string; snippet: { authorDisplayName: string; textDisplay: string; likeCount: number; publishedAt: string } }
-                return {
-                  id: rr.id,
-                  author: rr.snippet.authorDisplayName,
-                  text: decodeHtml(rr.snippet.textDisplay),
-                  likes: rr.snippet.likeCount,
-                  date: new Date(rr.snippet.publishedAt).toLocaleDateString(),
-                  dateRaw: rr.snippet.publishedAt,
-                }
-              })
-            }
-          } catch { /* non-fatal — replies are best-effort */ }
-        }
-
-        comments.push({
-          id: typedItem.id,
-          author: s.authorDisplayName,
-          text: decodeHtml(s.textDisplay),
-          likes: s.likeCount,
-          date: new Date(s.publishedAt).toLocaleDateString(),
-          dateRaw: s.publishedAt,
-          replies: replyCount,
-          replyList,
-          videoTitle,
-          channelName,
-          videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
-        })
-        if (comments.length >= effectiveMax) break
-      }
-      if (!threadData.nextPageToken) break
-      pageToken = threadData.nextPageToken
+      return NextResponse.json({ comments, total: comments.length, nextCursor: cursor, done: cursor === null, mock: false })
+    } finally {
+      const unused = granted - used
+      if (unused > 0) await reserve(-unused).catch(() => {})
     }
-
-    // Fire-and-forget quota warning when 3+ keys failed (but at least one succeeded)
-    if (allFailedKeys.size >= 3) {
-      sendApiAlert({
-        event: 'quota_warning',
-        message: `${allFailedKeys.size} YouTube API keys failed in a single request`,
-        failedKeys: Array.from(allFailedKeys),
-        successKey: lastSuccessKey,
-        endpoint: '/api/youtube/comments',
-        timestamp: new Date().toISOString(),
-      }).catch(() => {})
-    }
-
-    if (user) {
-      await checkAndIncrementUsage(user.id, effectivePlan, comments.length).catch(() => {})
-      await incrementLegacyUsage(user.id, comments.length).catch(() => {})
-    }
-
-    return NextResponse.json({ comments, total: comments.length, mock: false })
-  } catch {
+  } catch (e) {
+    console.error('comments route error:', e)
     return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 })
   }
 }

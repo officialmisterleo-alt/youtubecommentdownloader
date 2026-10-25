@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseServiceClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
+import { safeNextPath } from '@/lib/safe-redirect'
 
 /** Claim any pending enterprise provision for this user. Non-blocking — never throws. */
 async function claimEnterpriseProvision(userId: string, email: string): Promise<void> {
@@ -32,6 +33,8 @@ async function claimEnterpriseProvision(userId: string, email: string): Promise<
           plan: 'enterprise',
           status: 'active',
           current_period_end: periodEnd.toISOString(),
+          // Detach any Stripe subscription so its renewal webhooks can't overwrite Enterprise
+          stripe_subscription_id: null,
         },
         { onConflict: 'user_id' }
       )
@@ -99,9 +102,9 @@ export async function GET(request: NextRequest) {
 
   // Read next destination: cookie (set before OAuth) takes priority over query param
   const cookieNext = request.cookies.get('auth_next')?.value
-  const next = cookieNext
+  const next = safeNextPath(cookieNext
     ? decodeURIComponent(cookieNext)
-    : (searchParams.get('next') ?? '/dashboard')
+    : searchParams.get('next'))
 
   if (code) {
     const response = NextResponse.redirect(`${origin}${next}`)

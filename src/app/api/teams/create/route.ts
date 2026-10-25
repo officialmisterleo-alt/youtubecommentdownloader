@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/teams'
-
-const PLAN_MAX_SEATS: Record<string, number> = {
-  business: 3,
-  enterprise: 10,
-}
+import { createServiceClient, PLAN_MAX_SEATS } from '@/lib/teams'
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +34,16 @@ export async function POST(req: NextRequest) {
 
     if (existing) {
       return NextResponse.json({ error: 'You are already part of a team' }, { status: 409 })
+    }
+
+    // One team per subscription: an owner who left their team (e.g. after handing admin to
+    // someone else) can't create another one and multiply seats
+    const { count: ownedTeams } = await serviceClient
+      .from('teams')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', user.id)
+    if ((ownedTeams ?? 0) > 0) {
+      return NextResponse.json({ error: 'You already own a team. Contact support if you need to move it.' }, { status: 409 })
     }
 
     const { name } = await req.json() as { name?: string }
@@ -82,7 +87,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ team })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Unknown error'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    // Log the real error; don't send internal details to the browser
+    console.error('/api/teams/create error:', e)
+    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 })
   }
 }

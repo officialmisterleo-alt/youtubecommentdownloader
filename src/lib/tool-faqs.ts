@@ -9,7 +9,7 @@ export const toolFaqs = [
   },
   {
     question: 'Can I download comments from playlists and channels?',
-    answer: 'Yes. Paid plans support bulk exports from YouTube playlists and channels, with source video metadata included in the export.',
+    answer: 'Yes. Business and Enterprise plans support bulk exports from YouTube playlists and channels, with source video metadata included in the export.',
   },
   {
     question: 'Does the tool support YouTube comment analysis?',

@@ -43,12 +43,48 @@ const PLAN_LIMIT: Record<string, number> = {
   enterprise: 0,
 }
 
-// Monthly comment quota per plan (0 = unlimited). Enforced during bulk exports.
-const MONTHLY_LIMITS: Record<string, number> = {
-  free: 100,
-  pro: 100000,
-  business: 1000000,
-  enterprise: 0,
+type VideoFetchResult = {
+  comments: Comment[]
+  // Set when YouTube won't return comments for this video (turned off, private, deleted)
+  skippedReason?: string
+  // Set when the monthly quota / signed-out daily limit ran out partway through
+  quotaMessage?: string
+}
+
+/**
+ * Fetches one video's comments. The API returns them in batches, so keep
+ * calling with the returned cursor until it reports done.
+ */
+async function fetchVideoComments(
+  url: string,
+  opts: { maxComments: number; includeReplies: boolean; sortBy: SortBy },
+  onProgress?: (fetched: number) => void,
+): Promise<VideoFetchResult> {
+  const comments: Comment[] = []
+  let cursor: unknown = null
+  do {
+    const res = await fetch('/api/youtube/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, ...opts, cursor, fetchedSoFar: comments.length }),
+    })
+    const data = await res.json()
+    if (!res.ok || data.error) {
+      if (data.code === 'comments_disabled' || data.code === 'video_unavailable') {
+        return { comments, skippedReason: data.error }
+      }
+      if (data.code === 'quota_exceeded' || data.code === 'anon_limit') {
+        return { comments, quotaMessage: data.error }
+      }
+      throw new Error(data.error ?? 'Unable to fetch comments.')
+    }
+    const batch: Comment[] = data.comments ?? []
+    comments.push(...batch)
+    onProgress?.(comments.length)
+    // Guard against a cursor that makes no progress
+    cursor = batch.length > 0 ? data.nextCursor : null
+  } while (cursor)
+  return { comments }
 }
 
 function ToolPageContent() {
@@ -501,7 +537,10 @@ ${commentRows}
     // Parse all URLs upfront
     const parsedUrls = activeUrls.map(u => ({ url: u, parsed: parseYouTubeUrl(u) }))
     const hasBulkUrl = parsedUrls.some(({ parsed }) => isBulkUrl(parsed))
-    const maxCommentsParsed = parseInt(maxComments) || 100
+    // 0 = "Unlimited" (the server applies the plan's per-download max)
+    const parsedMax = parseInt(maxComments)
+    const maxCommentsParsed = Number.isNaN(parsedMax) ? 100 : parsedMax
+    const fetchOpts = { maxComments: maxCommentsParsed, includeReplies, sortBy }
 
     // Gate bulk (channel/playlist) to Business+ users
     if (hasBulkUrl && !isBusiness) {
@@ -526,29 +565,14 @@ ${commentRows}
     const collectedVideosMeta: VideoMeta[] = []
     let pendingMeta: SourceMeta | null = null
 
-    // For bulk exports: fetch current month's usage so we can enforce quota
-    let monthlyUsed = 0
-    if (isSignedIn && hasBulkUrl && userId) {
-      try {
-        const supabase = createClient()
-        const month = new Date().toISOString().slice(0, 7)
-        const { data: usage } = await supabase
-          .from('usage')
-          .select('comments_count')
-          .eq('user_id', userId)
-          .eq('month', month)
-          .single()
-        monthlyUsed = usage?.comments_count ?? 0
-      } catch { /* non-fatal */ }
-    }
-    const monthlyLimit = MONTHLY_LIMITS[userPlan] ?? 0 // 0 = unlimited
-
-    let quotaExceeded = false
+    // The server enforces the monthly quota; it tells us when it runs out
+    let quotaMessage = ''
     let videosProcessed = 0
+    let videosSkipped = 0
 
     try {
       for (let i = 0; i < parsedUrls.length; i++) {
-        if (quotaExceeded) break
+        if (quotaMessage) break
         const { url, parsed } = parsedUrls[i]
 
         if (parsed.type === 'channel' || parsed.type === 'playlist') {
@@ -583,28 +607,17 @@ ${commentRows}
           }
 
           for (let j = 0; j < videos.length; j++) {
-            // Check monthly quota before fetching each video
-            if (monthlyLimit > 0) {
-              const remaining = monthlyLimit - monthlyUsed - allComments.length
-              if (remaining <= 0) {
-                quotaExceeded = true
-                break
-              }
-            }
-
             const video = videos[j]
             setStatusMsg(`Video ${j + 1} of ${total} — fetching comments…`)
             setProgress(Math.round(5 + ((j / total) * 85)))
 
-            const res = await fetch('/api/youtube/comments', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url: video.videoUrl, maxComments: maxCommentsParsed, includeReplies, sortBy }),
-            })
-            const data = await res.json()
-            if (!res.ok || data.error) throw new Error(data.error ?? 'Unable to fetch comments.')
-            if (data.comments) {
-              const videoComments: Comment[] = data.comments
+            const result = await fetchVideoComments(video.videoUrl, fetchOpts, n =>
+              setStatusMsg(`Video ${j + 1} of ${total} — ${n.toLocaleString()} comments…`))
+            // Comments turned off / private video: skip it and keep going
+            if (result.skippedReason) videosSkipped++
+            if (result.quotaMessage) quotaMessage = result.quotaMessage
+            if (result.comments.length > 0) {
+              const videoComments = result.comments
               allComments.push(...videoComments)
               videosProcessed++
               if (isSignedIn && videoComments.length > 0) {
@@ -621,6 +634,7 @@ ${commentRows}
                 }).catch(() => {})
               }
             }
+            if (quotaMessage) break
           }
 
         } else if (isVideoUrl(parsed)) {
@@ -630,15 +644,15 @@ ${commentRows}
 
           // Use canonical URL so the server-side parser always succeeds
           const canonicalUrl = `https://www.youtube.com/watch?v=${parsed.id}`
-          const res = await fetch('/api/youtube/comments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: canonicalUrl, maxComments: maxCommentsParsed, includeReplies, sortBy }),
-          })
-          const data = await res.json()
-          if (!res.ok || data.error) throw new Error(data.error ?? 'Unable to fetch comments.')
-          if (data.comments) {
-            const videoComments: Comment[] = data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
+          const result = await fetchVideoComments(canonicalUrl, fetchOpts, n =>
+            setStatusMsg(`Video ${i + 1} of ${parsedUrls.length} — ${n.toLocaleString()} comments…`))
+          if (result.skippedReason) {
+            if (parsedUrls.length === 1) throw new Error(result.skippedReason)
+            videosSkipped++
+          }
+          if (result.quotaMessage) quotaMessage = result.quotaMessage
+          if (result.comments.length > 0) {
+            const videoComments: Comment[] = result.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
             allComments.push(...videoComments)
             videosProcessed++
             if (videoComments[0]) {
@@ -680,24 +694,25 @@ ${commentRows}
           // Unknown URL — fall back to passing the raw URL; the API will return an error
           setStatusMsg(`Fetching comments from video ${i + 1} of ${parsedUrls.length}…`)
           setProgress(Math.round((i / parsedUrls.length) * 90))
-          const res = await fetch('/api/youtube/comments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url, maxComments: maxCommentsParsed, includeReplies, sortBy }),
-          })
-          const data = await res.json()
-          if (!res.ok || data.error) throw new Error(data.error ?? 'Unable to fetch comments.')
-          if (data.comments) {
-            allComments.push(...data.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` })))
+          const result = await fetchVideoComments(url, fetchOpts)
+          if (result.skippedReason) throw new Error(result.skippedReason)
+          if (result.quotaMessage) quotaMessage = result.quotaMessage
+          if (result.comments.length > 0) {
+            allComments.push(...result.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` })))
             videosProcessed++
           }
         }
       }
 
-      if (quotaExceeded) {
-        setStatusMsg(`Monthly quota reached — ${videosProcessed} video${videosProcessed !== 1 ? 's' : ''} processed, ${allComments.length.toLocaleString()} comments fetched`)
+      if (quotaMessage && allComments.length === 0) throw new Error(quotaMessage)
+
+      const skippedNote = videosSkipped > 0
+        ? ` (${videosSkipped} video${videosSkipped !== 1 ? 's' : ''} skipped — comments off or unavailable)`
+        : ''
+      if (quotaMessage) {
+        setStatusMsg(`Limit reached — ${videosProcessed} video${videosProcessed !== 1 ? 's' : ''} processed, ${allComments.length.toLocaleString()} comments fetched${skippedNote}`)
       } else {
-        setStatusMsg(`Processed ${allComments.length.toLocaleString()} comments`)
+        setStatusMsg(`Processed ${allComments.length.toLocaleString()} comments${skippedNote}`)
       }
       setComments(allComments)
       if (allComments.length > 0) {
@@ -710,7 +725,8 @@ ${commentRows}
         signed_in: isSignedIn,
         comment_count: allComments.length,
         videos_processed: videosProcessed,
-        quota_exceeded: quotaExceeded,
+        quota_exceeded: Boolean(quotaMessage),
+        videos_skipped: videosSkipped,
         has_bulk_url: hasBulkUrl,
       })
       setSourceMeta(pendingMeta)

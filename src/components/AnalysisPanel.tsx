@@ -535,9 +535,66 @@ function TrendsResult({ data }: { data: TrendsData }) {
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
+type AnalysisInput = { author: string; text: string; likes: number; date: string }
+type PartialResult = { commentCount: number; result: unknown }
+
+// Mirrors the server's chunk formatting/truncation, with headroom so each chunk
+// is accepted as a single server-side chunk
+function chunkByChars(items: AnalysisInput[], charLimit: number): AnalysisInput[][] {
+  const target = Math.floor(charLimit * 0.9)
+  const chunks: AnalysisInput[][] = []
+  let current: AnalysisInput[] = []
+  let length = 0
+  items.forEach(c => {
+    const lineLength = `[${current.length + 1}] ${c.author.slice(0, 100)} (${c.likes} likes): ${c.text.slice(0, 2000)}`.length + 1
+    if (current.length > 0 && length + lineLength > target) {
+      chunks.push(current)
+      current = []
+      length = 0
+    }
+    current.push(c)
+    length += lineLength
+  })
+  if (current.length > 0) chunks.push(current)
+  return chunks
+}
+
+// Groups partial results for merging; always pairs at least two so merging makes progress
+function batchByChars(partials: PartialResult[], charLimit: number): PartialResult[][] {
+  const batches: PartialResult[][] = []
+  let current: PartialResult[] = []
+  let length = 2
+  for (const p of partials) {
+    const size = JSON.stringify(p).length + 1
+    if (current.length >= 2 && length + size > charLimit) {
+      batches.push(current)
+      current = []
+      length = 2
+    }
+    current.push(p)
+    length += size
+  }
+  if (current.length > 0) batches.push(current)
+  return batches
+}
+
+async function mapWithLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
+
 export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comment[]; isSignedIn: boolean }) {
   const [activeType, setActiveType] = useState<AnalysisType>('sentiment')
   const [loading, setLoading] = useState(false)
+  const [progressMsg, setProgressMsg] = useState('')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
   const [resultType, setResultType] = useState<AnalysisType | null>(null)
   const [error, setError] = useState('')
@@ -724,28 +781,55 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
     URL.revokeObjectURL(url)
   }
 
+  async function postAnalyze(body: Record<string, unknown>) {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json()
+    if (!res.ok || data.error) throw new Error(data.error ?? 'Analysis failed. Please try again.')
+    return data
+  }
+
+  // Large analyses run in steps so each request finishes inside the server's time limit:
+  // reserve usage, analyze each chunk, then merge partial results until one remains.
   async function runAnalysis() {
     setLoading(true)
     setError('')
     setResult(null)
     try {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          comments: comments.slice(0, sampleSize).map(c => ({ author: c.author, text: c.text, likes: c.likes, date: c.date })),
-          analysisType: activeType,
-          tier,
-        }),
+      const sample = comments.slice(0, sampleSize).map(c => ({ author: c.author, text: c.text, likes: c.likes, date: c.date }))
+      const start = await postAnalyze({ stage: 'start', analysisType: activeType, commentCount: sample.length })
+      const { token, chunkCharLimit, mergeCharLimit } = start as { token: string; commentCount: number; chunkCharLimit: number; mergeCharLimit: number }
+
+      const chunks = chunkByChars(sample.slice(0, start.commentCount), chunkCharLimit)
+      let done = 0
+      setProgressMsg(`Analyzing part 1 of ${chunks.length}…`)
+      let partials: PartialResult[] = await mapWithLimit(chunks, 3, async chunk => {
+        const data = await postAnalyze({ stage: 'chunk', token, analysisType: activeType, comments: chunk })
+        done++
+        setProgressMsg(`Analyzed ${done} of ${chunks.length} parts…`)
+        return data.partial as PartialResult
       })
-      const data = await res.json()
-      if (data.error) { setError(data.error); return }
-      setResult(data.result)
+
+      while (partials.length > 1) {
+        setProgressMsg('Combining results…')
+        const batches = batchByChars(partials, mergeCharLimit)
+        partials = await mapWithLimit(batches, 3, async batch => {
+          if (batch.length === 1) return batch[0]
+          const data = await postAnalyze({ stage: 'merge', token, analysisType: activeType, partials: batch })
+          return data.partial as PartialResult
+        })
+      }
+
+      setResult(partials[0].result as Record<string, unknown>)
       setResultType(activeType)
-    } catch {
-      setError('Analysis failed. Please try again.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Analysis failed. Please try again.')
     } finally {
       setLoading(false)
+      setProgressMsg('')
     }
   }
 
@@ -815,7 +899,7 @@ export default function AnalysisPanel({ comments, isSignedIn }: { comments: Comm
                 className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors min-h-[40px]"
               >
                 {loading
-                  ? <><RefreshCw className="w-4 h-4 animate-spin" /> Analyzing…</>
+                  ? <><RefreshCw className="w-4 h-4 animate-spin" /> {progressMsg || 'Analyzing…'}</>
                   : <><Sparkles className="w-4 h-4" /> Run Analysis</>
                 }
               </button>

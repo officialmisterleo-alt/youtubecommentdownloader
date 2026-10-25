@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/teams'
 
+export const dynamic = 'force-dynamic'
+
 // GET — list pending invitations for the current user's team (admin only)
 export async function GET() {
   try {
@@ -39,7 +41,8 @@ export async function GET() {
 
     return NextResponse.json({ invitations: enriched })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Unknown error'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    // Log the real error; don't send internal details to the browser
+    console.error('/api/teams/invitations error:', e)
+    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 })
   }
 }

@@ -44,6 +44,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'This invitation has expired' }, { status: 410 })
     }
 
+    // Invitations are personal — a forwarded link can't be used by another account
+    if (invitation.email?.toLowerCase() !== user.email?.toLowerCase()) {
+      return NextResponse.json(
+        { error: `This invitation was sent to ${invitation.email}. Sign in with that email to accept it.` },
+        { status: 403 }
+      )
+    }
+
     const team = invitation.teams as { id: string; name: string; plan: string; max_seats: number }
 
     // Check user isn't already in a team
@@ -100,7 +108,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ team: { id: team.id, name: team.name, plan: team.plan } })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Unknown error'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    // Log the real error; don't send internal details to the browser
+    console.error('/api/teams/join error:', e)
+    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 })
   }
 }

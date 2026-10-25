@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Failed to log export'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    // Log the real error; don't send internal details to the browser
+    console.error('/api/exports/log error:', e)
+    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 })
   }
 }

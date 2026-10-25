@@ -19,6 +19,34 @@ export function getApiKeys(): KeyEntry[] {
   return keys
 }
 
+// Errors that mean "this key can't be used right now". Anything else on a 403
+// (e.g. commentsDisabled, forbidden on a private video) is about the request
+// itself, so it's returned to the caller instead of burning through every key.
+const KEY_ERROR_REASONS = new Set([
+  'quotaExceeded',
+  'dailyLimitExceeded',
+  'rateLimitExceeded',
+  'userRateLimitExceeded',
+  'accessNotConfigured',
+  'keyInvalid',
+  'keyExpired',
+  'ipRefererBlocked',
+])
+
+/** First error reason from a YouTube API error body, e.g. 'commentsDisabled'. */
+export function getYouTubeErrorReason(data: unknown): string | undefined {
+  return (data as { error?: { errors?: { reason?: string }[] } })?.error?.errors?.[0]?.reason
+}
+
+function shouldRotateKey(status: number, data: unknown): boolean {
+  if (status === 429) return true
+  if (status !== 403 && status !== 400) return false
+  const reason = getYouTubeErrorReason(data)
+  // A 403 with no reason is ambiguous — keep the old behaviour and rotate
+  if (!reason) return status === 403
+  return KEY_ERROR_REASONS.has(reason)
+}
+
 export async function fetchWithKeyRotation(
   buildUrl: (apiKey: string) => string,
   options?: RequestInit
@@ -37,8 +65,8 @@ export async function fetchWithKeyRotation(
       const res = await fetch(url, options)
       const data = await res.json()
 
-      if (res.status === 403 || res.status === 429) {
-        // Quota exceeded or rate limited — try next key
+      if (shouldRotateKey(res.status, data)) {
+        // Quota exceeded, rate limited, or a bad key — try next key
         const msg = (data as { error?: { message?: string } })?.error?.message ?? `HTTP ${res.status}`
         attemptsLog.push({ keyIndex, error: msg })
         continue

@@ -230,15 +230,16 @@ export async function GET(req: NextRequest) {
     }).catch(() => {})
   }
 
-  // 9. Deduct quota
+  // 9. Deduct quota — replies count too
+  const billable = comments.reduce((n, c) => n + 1 + c.replyList.length, 0)
   const { used: usedAfter, remaining: remainingAfter } = await checkAndIncrementUsageService(
     userId,
     plan,
-    comments.length,
+    billable,
   ).catch(() => ({
-    used: usedBefore + comments.length,
+    used: usedBefore + billable,
     limit,
-    remaining: limit === -1 ? -1 : Math.max(0, remaining - comments.length),
+    remaining: limit === -1 ? -1 : Math.max(0, remaining - billable),
     allowed: true,
   }))
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/teams'
+import { createServiceClient, syncOwnedTeamPlan } from '@/lib/teams'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,9 +56,16 @@ export async function POST(req: NextRequest) {
 
     // One subscription per account: if the user already has a live subscription,
     // switch it to the new price instead of creating a second one via Checkout.
-    if (!isLifetime && existingSub?.stripe_subscription_id && !existingSub.lifetime) {
+    if (existingSub?.stripe_subscription_id) {
       const current = await stripe.subscriptions.retrieve(existingSub.stripe_subscription_id)
-      if (['active', 'trialing', 'past_due'].includes(current.status)) {
+      const live = ['active', 'trialing', 'past_due'].includes(current.status)
+      if (live && isLifetime) {
+        return NextResponse.json({
+          error: 'You already have an active subscription. Cancel it under Manage Billing first, then buy Lifetime, so you are not charged twice.',
+          code: 'has_subscription',
+        }, { status: 409 })
+      }
+      if (live && !isLifetime) {
         const item = current.items.data[0]
         if (item?.price.id === priceId) {
           return NextResponse.json({ error: `You're already on this plan.`, code: 'already_subscribed' }, { status: 409 })
@@ -91,6 +98,7 @@ export async function POST(req: NextRequest) {
           .from('subscriptions')
           .update({ plan, status: updated.status })
           .eq('user_id', user.id)
+        await syncOwnedTeamPlan(user.id)
 
         return NextResponse.json({ url: `${appUrl}/dashboard?upgraded=true` })
       }
@@ -110,7 +118,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url })
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Unknown error'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    console.error('checkout error:', e)
+    // Card declines are safe and useful to show; anything else stays in the logs
+    const declined = (e as { type?: string })?.type === 'StripeCardError'
+    const msg = declined && e instanceof Error ? e.message : 'Something went wrong starting checkout. Please try again or contact support.'
+    return NextResponse.json({ error: msg }, { status: declined ? 402 : 500 })
   }
 }
