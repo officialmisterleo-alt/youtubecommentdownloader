@@ -29,6 +29,7 @@ type CustomerBreakdown = {
   pastDue: number
   cancelled: number
   comped: number                    // the admin's own account
+  free: number                      // signed-up users who aren't paying (includes cancelled)
 }
 
 type AdminStats = {
@@ -158,7 +159,7 @@ async function fetchAdminStats(): Promise<AdminStats | null> {
       }
     }
 
-    const customers: CustomerBreakdown = { recurring: {}, lifetime: 0, manualEnterprise: 0, pastDue: 0, cancelled: 0, comped: 0 }
+    const customers: CustomerBreakdown = { recurring: {}, lifetime: 0, manualEnterprise: 0, pastDue: 0, cancelled: 0, comped: 0, free: 0 }
     const payingUserIds = new Set<string>()
     type SubRow = { user_id: string; plan: string | null; status: string | null; lifetime: boolean | null; stripe_subscription_id: string | null }
     for (const row of (subscriptionsRes.data ?? []) as SubRow[]) {
@@ -180,6 +181,8 @@ async function fetchAdminStats(): Promise<AdminStats | null> {
         payingUserIds.add(row.user_id)
       }
     }
+    // Most free users have no subscription row, so derive it from the user total
+    customers.free = Math.max(0, totalUsers - payingUserIds.size - customers.pastDue - customers.comped)
 
     return {
       totalUsers,
@@ -441,6 +444,7 @@ async function TopStatsSection() {
         </div>
         <span className="hidden sm:block h-4 w-px bg-white/[0.07]" />
         <div className="flex flex-wrap items-center gap-4">
+          <BreakdownStat value={c.free} label="Free" color="text-[#555555]" />
           {c.pastDue > 0 && <BreakdownStat value={c.pastDue} label="Past due" color="text-orange-400" />}
           <BreakdownStat value={c.cancelled} label="Cancelled" color="text-[#888888]" />
           {c.comped > 0 && <BreakdownStat value={c.comped} label="Comped (you)" color="text-[#888888]" />}
