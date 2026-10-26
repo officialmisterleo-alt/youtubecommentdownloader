@@ -20,7 +20,16 @@ import AdminCompAccessButton from '@/app/dashboard/AdminCompAccessButton'
 
 // ── Admin types ────────────────────────────────────────────────────────────
 
-type PlanBreakdown = Record<string, number>
+// Who is paying and how. Lifetime buyers are stored as plan 'pro' with lifetime=true,
+// so counting by plan alone hides them; the admin's own comped account isn't a customer.
+type CustomerBreakdown = {
+  recurring: Record<string, number> // live Stripe subscriptions, by plan
+  lifetime: number                  // one-time lifetime purchases
+  manualEnterprise: number          // Enterprise set up by hand (no Stripe subscription)
+  pastDue: number
+  cancelled: number
+  comped: number                    // the admin's own account
+}
 
 type AdminStats = {
   totalUsers: number
@@ -29,8 +38,8 @@ type AdminStats = {
   totalExports: number
   exportsThisMonth: number
   totalComments: number
-  activeSubscriptions: number
-  planBreakdown: PlanBreakdown
+  payingCustomers: number
+  customers: CustomerBreakdown
   lastUpdated: string
 }
 
@@ -112,16 +121,14 @@ async function fetchAdminStats(): Promise<AdminStats | null> {
       exportsThisMonthRes,
       totalCommentsRes,
       activeUsersRes,
-      activeSubsRes,
-      planBreakdownRes,
+      subscriptionsRes,
       usersRes,
     ] = await Promise.all([
       service.from('exports').select('*', { count: 'exact', head: true }),
       service.from('exports').select('*', { count: 'exact', head: true }).gte('created_at', startOfMonth),
       service.from('exports').select('comment_count'),
       service.from('exports').select('user_id').gte('created_at', startOfMonth),
-      service.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-      service.from('subscriptions').select('plan').eq('status', 'active'),
+      service.from('subscriptions').select('user_id, plan, status, lifetime, stripe_subscription_id'),
       service.auth.admin.listUsers({ perPage: 1, page: 1 }),
     ])
 
@@ -131,12 +138,6 @@ async function fetchAdminStats(): Promise<AdminStats | null> {
     )
 
     const activeUserIds = new Set((activeUsersRes.data ?? []).map((r: { user_id: string }) => r.user_id))
-
-    const planCounts: PlanBreakdown = {}
-    for (const row of planBreakdownRes.data ?? []) {
-      const plan = (row as { plan?: string }).plan ?? 'unknown'
-      planCounts[plan] = (planCounts[plan] ?? 0) + 1
-    }
 
     const totalUsers = (usersRes.data as any)?.total ?? (usersRes.data?.users?.length ?? 0)
 
@@ -149,9 +150,34 @@ async function fetchAdminStats(): Promise<AdminStats | null> {
       pagePromises.push(service.auth.admin.listUsers({ perPage: pageSize, page: p }))
     }
     const pages = await Promise.all(pagePromises)
+    let adminUserId: string | null = null
     for (const page of pages) {
       for (const u of page.data?.users ?? []) {
         if (new Date(u.created_at).getTime() >= startMs) newUsersThisMonth++
+        if (u.email && u.email === process.env.ADMIN_EMAIL) adminUserId = u.id
+      }
+    }
+
+    const customers: CustomerBreakdown = { recurring: {}, lifetime: 0, manualEnterprise: 0, pastDue: 0, cancelled: 0, comped: 0 }
+    const payingUserIds = new Set<string>()
+    type SubRow = { user_id: string; plan: string | null; status: string | null; lifetime: boolean | null; stripe_subscription_id: string | null }
+    for (const row of (subscriptionsRes.data ?? []) as SubRow[]) {
+      if (row.user_id === adminUserId) { customers.comped++; continue }
+      if (row.lifetime) { customers.lifetime++; payingUserIds.add(row.user_id) }
+      if (row.stripe_subscription_id) {
+        // A lifetime member can also hold a subscription; count that separately
+        if (row.status === 'active' || row.status === 'trialing') {
+          const plan = row.plan ?? 'unknown'
+          customers.recurring[plan] = (customers.recurring[plan] ?? 0) + 1
+          payingUserIds.add(row.user_id)
+        } else if (row.status === 'past_due') {
+          customers.pastDue++
+        } else if (row.status === 'canceled' && !row.lifetime) {
+          customers.cancelled++
+        }
+      } else if (row.plan === 'enterprise' && row.status === 'active' && !row.lifetime) {
+        customers.manualEnterprise++
+        payingUserIds.add(row.user_id)
       }
     }
 
@@ -162,8 +188,8 @@ async function fetchAdminStats(): Promise<AdminStats | null> {
       totalExports: totalExportsRes.count ?? 0,
       exportsThisMonth: exportsThisMonthRes.count ?? 0,
       totalComments,
-      activeSubscriptions: activeSubsRes.count ?? 0,
-      planBreakdown: planCounts,
+      payingCustomers: payingUserIds.size,
+      customers,
       lastUpdated: now.toISOString().slice(0, 10),
     }
   } catch {
@@ -351,13 +377,20 @@ function AdminStatCardSkeleton() {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  free: 'text-[#888888]',
   pro: 'text-blue-400',
   business: 'text-purple-400',
   enterprise: 'text-yellow-400',
-  lifetime: 'text-green-400',
 }
-const PLAN_ORDER = ['free', 'pro', 'business', 'enterprise', 'lifetime']
+const PAID_PLAN_ORDER = ['pro', 'business', 'enterprise']
+
+function BreakdownStat({ value, label, color = 'text-white' }: { value: number; label: string; color?: string }) {
+  return (
+    <div className="flex items-baseline gap-1">
+      <span className={`text-sm font-bold ${color}`}>{value}</span>
+      <span className="text-[#555555] text-xs">{label}</span>
+    </div>
+  )
+}
 
 async function TopStatsSection() {
   const stats = await fetchAdminStats()
@@ -370,47 +403,50 @@ async function TopStatsSection() {
     )
   }
 
-  const planSummary = PLAN_ORDER
-    .filter(p => (stats.planBreakdown[p] ?? 0) > 0)
-    .map(p => `${stats.planBreakdown[p]} ${p}`)
-    .join(' · ')
+  const c = stats.customers
+  const recurringTotal = Object.values(c.recurring).reduce((a, b) => a + b, 0)
+  const recurringPlans = [
+    ...PAID_PLAN_ORDER.filter(p => (c.recurring[p] ?? 0) > 0),
+    ...Object.keys(c.recurring).filter(p => !PAID_PLAN_ORDER.includes(p)),
+  ]
+  const payingSummary = [
+    recurringTotal > 0 && `${recurringTotal} recurring`,
+    c.lifetime > 0 && `${c.lifetime} lifetime`,
+    c.manualEnterprise > 0 && `${c.manualEnterprise} manual enterprise`,
+  ].filter(Boolean).join(' · ')
 
   return (
     <div className="mb-8">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         <AdminStatCard label="Total Users" value={stats.totalUsers} sub={`+${stats.newUsersThisMonth} this month`} />
-        <AdminStatCard
-          label="Active Subscriptions"
-          value={stats.activeSubscriptions}
-          sub={planSummary || undefined}
-        />
+        <AdminStatCard label="Paying Customers" value={stats.payingCustomers} sub={payingSummary || undefined} />
         <AdminStatCard label="Exports This Month" value={stats.exportsThisMonth} sub={`${stats.totalExports.toLocaleString()} all-time`} />
         <AdminStatCard label="Comments Downloaded" value={stats.totalComments} />
       </div>
 
-      {/* Plan breakdown row */}
-      {Object.keys(stats.planBreakdown).length > 0 && (
-        <div className="bg-[#171717] border border-white/[0.07] rounded-xl px-5 py-4 flex flex-wrap items-center gap-5">
-          <span className="text-[#888888] text-xs font-medium">Plan Breakdown</span>
-          {PLAN_ORDER.filter(p => (stats.planBreakdown[p] ?? 0) > 0).map(plan => (
-            <div key={plan} className="flex items-baseline gap-1">
-              <span className={`text-sm font-bold ${PLAN_COLORS[plan] ?? 'text-white'}`}>
-                {stats.planBreakdown[plan]}
-              </span>
-              <span className="text-[#555555] text-xs capitalize">{plan}</span>
-            </div>
-          ))}
-          {Object.keys(stats.planBreakdown)
-            .filter(p => !PLAN_ORDER.includes(p))
-            .map(plan => (
-              <div key={plan} className="flex items-baseline gap-1">
-                <span className="text-sm font-bold text-white">{stats.planBreakdown[plan]}</span>
-                <span className="text-[#555555] text-xs capitalize">{plan}</span>
-              </div>
+      {/* Customer breakdown: recurring by plan, lifetime, then the non-paying states */}
+      <div className="bg-[#171717] border border-white/[0.07] rounded-xl px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="text-[#888888] text-xs font-medium">Recurring</span>
+          {recurringPlans.length === 0
+            ? <span className="text-[#555555] text-xs">none</span>
+            : recurringPlans.map(plan => (
+              <BreakdownStat key={plan} value={c.recurring[plan]} label={plan.charAt(0).toUpperCase() + plan.slice(1)} color={PLAN_COLORS[plan]} />
             ))}
-          <span className="ml-auto text-[#444444] text-xs">Updated {stats.lastUpdated}</span>
         </div>
-      )}
+        <span className="hidden sm:block h-4 w-px bg-white/[0.07]" />
+        <div className="flex flex-wrap items-center gap-4">
+          <BreakdownStat value={c.lifetime} label="Lifetime (one-time)" color="text-green-400" />
+          {c.manualEnterprise > 0 && <BreakdownStat value={c.manualEnterprise} label="Enterprise (manual)" color="text-yellow-400" />}
+        </div>
+        <span className="hidden sm:block h-4 w-px bg-white/[0.07]" />
+        <div className="flex flex-wrap items-center gap-4">
+          {c.pastDue > 0 && <BreakdownStat value={c.pastDue} label="Past due" color="text-orange-400" />}
+          <BreakdownStat value={c.cancelled} label="Cancelled" color="text-[#888888]" />
+          {c.comped > 0 && <BreakdownStat value={c.comped} label="Comped (you)" color="text-[#888888]" />}
+        </div>
+        <span className="ml-auto text-[#444444] text-xs">Updated {stats.lastUpdated}</span>
+      </div>
     </div>
   )
 }
