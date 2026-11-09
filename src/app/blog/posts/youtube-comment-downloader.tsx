@@ -94,7 +94,7 @@ export default function YouTubeCommentDownloader() {
           <strong>Paste your YouTube URL.</strong> Works with any standard YouTube video URL (youtube.com/watch?v=...), short URLs (youtu.be/...), channel URLs (@handle or /channel/), and playlist URLs.
         </li>
         <li>
-          <strong>Set your options.</strong> Choose how many comments to fetch (up to 50 without an account or 100 with a free account), whether to include replies on Pro or higher, and how to sort (Top or Newest).
+          <strong>Set your options.</strong> Choose how many comments to fetch (up to 50 without an account or 500 with a free account), whether to include replies on Pro or higher, and how to sort (Top or Newest).
         </li>
         <li>
           <strong>Pick an export format.</strong> TXT is available without sign-in. CSV, Excel, and JSON require a free account.
@@ -147,7 +147,7 @@ export default function YouTubeCommentDownloader() {
 
       <h3 className="font-jakarta">Is this YouTube comment downloader free?</h3>
       <p>
-        Yes. Without an account, you can request up to 50 comments per video in TXT or HTML. A free account raises the per-download limit to 100 comments and unlocks CSV, Excel, and JSON within a 100-comment monthly quota. Pro raises limits and adds replies; Business adds channel and playlist exports.
+        Yes. Without an account, you can request up to 50 comments per video in TXT or HTML. A free account raises the per-download limit to 500 comments and unlocks CSV, Excel, and JSON within a 1,000-comment monthly quota. Pro raises limits and adds replies; Business adds channel and playlist exports.
       </p>
 
       <h3 className="font-jakarta">Does it work on private or age-restricted videos?</h3>

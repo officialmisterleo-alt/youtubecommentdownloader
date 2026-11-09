@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPlanFromPriceId, getSubscriptionPeriodEnd, isLinkedToOtherLiveSubscription } from '@/lib/stripe-prices'
 import { syncOwnedTeamPlan } from '@/lib/teams'
+import { MONTHLY_LIMITS } from '@/lib/quota'
 
 export const dynamic = 'force-dynamic'
-
-const PLAN_MONTHLY_LIMITS: Record<string, number> = {
-  free: 100,
-  pro: 100_000,
-  business: 1_000_000,
-  enterprise: -1,
-}
 
 export async function POST(req: NextRequest) {
   const stripeKey = process.env.STRIPE_SECRET_KEY
@@ -146,8 +140,8 @@ export async function POST(req: NextRequest) {
         // don't include the old price, so they never reset usage.
         const oldPlan = oldPriceId ? getPlanFromPriceId(oldPriceId) : null
         if (oldPlan && oldPriceId !== newPriceId) {
-          const newLimit = PLAN_MONTHLY_LIMITS[newPlan] ?? 100
-          const oldLimit = PLAN_MONTHLY_LIMITS[oldPlan] ?? 100
+          const newLimit = MONTHLY_LIMITS[newPlan] ?? MONTHLY_LIMITS.free
+          const oldLimit = MONTHLY_LIMITS[oldPlan] ?? MONTHLY_LIMITS.free
           if (oldLimit !== -1 && (newLimit === -1 || newLimit > oldLimit)) {
             const month = new Date().toISOString().slice(0, 7)
             await supabase

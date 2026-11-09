@@ -110,47 +110,7 @@ export const seoPages: SeoLandingPage[] = [
         answer: 'Yes. Enable replies before exporting to include reply threads in the downloaded dataset.',
       },
     ],
-    related: ['export-youtube-comments-to-csv', 'youtube-comments-to-excel', 'youtube-comment-scraper'],
-  },
-  {
-    slug: 'export-youtube-comments-to-csv',
-    title: 'Export YouTube Comments to CSV',
-    metaTitle: 'Export YouTube Comments to CSV - Free No-Code Tool',
-    description: 'Export YouTube comments to CSV for Google Sheets, Excel, reporting, research, sentiment analysis, and moderation review.',
-    eyebrow: 'Spreadsheet-ready exports',
-    primaryCta: 'Export to CSV',
-    secondaryCta: 'Read the CSV guide',
-    heroPoints: ['Clean columns for comment text and metadata', 'Open in Google Sheets, Excel, Airtable, or BI tools', 'Great for filtering questions, complaints, and keywords'],
-    sections: [
-      {
-        title: 'CSV is the fastest path to analysis',
-        body: 'A CSV export turns a comment section into rows and columns. Sort by likes, filter by keywords, search for questions, or merge data across multiple videos.',
-      },
-      {
-        title: 'Built for reporting workflows',
-        body: 'Agencies and brands can hand CSV files to analysts, clients, or content teams without requiring custom scripts or API access.',
-      },
-      {
-        title: 'Preserve source metadata',
-        body: 'Multi-video exports keep source video information attached to each row, making it easier to compare videos, channels, or campaigns.',
-      },
-    ],
-    steps: ['Paste the YouTube URL into the tool.', 'Choose CSV as the export format.', 'Open the downloaded file in Excel, Google Sheets, or your analytics stack.'],
-    faq: [
-      {
-        question: 'Can I export YouTube comments to CSV for free?',
-        answer: 'You can try the tool for free. CSV exports and higher limits require a free account or paid plan depending on volume.',
-      },
-      {
-        question: 'What columns are included in the CSV?',
-        answer: 'Exports include comment text, author, likes, date, reply counts, and source video metadata when available.',
-      },
-      {
-        question: 'Can I export playlist or channel comments to one CSV?',
-        answer: 'Yes. Bulk exports combine comments across videos and keep source metadata so you can filter by video later.',
-      },
-    ],
-    related: ['youtube-comments-to-excel', 'download-youtube-comments', 'bulk-youtube-comment-export'],
+    related: ['youtube-comments-to-excel', 'youtube-comment-scraper'],
   },
   {
     slug: 'youtube-comments-to-excel',
@@ -190,7 +150,7 @@ export const seoPages: SeoLandingPage[] = [
         answer: 'Excel can handle large files, but very large exports may be easier to work with in CSV, databases, or analytics tools.',
       },
     ],
-    related: ['export-youtube-comments-to-csv', 'download-youtube-comments', 'youtube-comment-sentiment-analysis'],
+    related: ['download-youtube-comments', 'youtube-comment-analysis-tool'],
   },
   {
     slug: 'youtube-comment-api',
@@ -270,7 +230,7 @@ export const seoPages: SeoLandingPage[] = [
         answer: 'Bulk exports preserve source metadata so you can filter or group comments by video after download.',
       },
     ],
-    related: ['youtube-comment-api', 'export-youtube-comments-to-csv', 'youtube-comment-scraper'],
+    related: ['youtube-comment-api', 'youtube-comment-scraper'],
   },
   {
     slug: 'download-youtube-shorts-comments',
@@ -310,7 +270,7 @@ export const seoPages: SeoLandingPage[] = [
         answer: 'Yes. Pro and higher plans can run AI-assisted analysis after comments are exported.',
       },
     ],
-    related: ['download-youtube-comments', 'youtube-comment-sentiment-analysis', 'export-youtube-comments-to-csv'],
+    related: ['download-youtube-comments', 'youtube-comment-analysis-tool'],
   },
   {
     slug: 'youtube-playlist-comment-export',
@@ -350,7 +310,7 @@ export const seoPages: SeoLandingPage[] = [
         answer: 'Yes. CSV is useful for filtering playlist comments by video, keyword, date, likes, or author.',
       },
     ],
-    related: ['bulk-youtube-comment-export', 'export-youtube-comments-to-csv', 'youtube-comment-api'],
+    related: ['bulk-youtube-comment-export', 'youtube-comment-api'],
   },
   {
     slug: 'youtube-channel-comment-export',
@@ -470,7 +430,7 @@ export const seoPages: SeoLandingPage[] = [
         answer: 'Yes. Business and Enterprise plans support bulk exports across playlists and channels.',
       },
     ],
-    related: ['extract-youtube-comments', 'export-youtube-comments-to-csv', 'youtube-comments-to-excel'],
+    related: ['extract-youtube-comments', 'youtube-comments-to-excel'],
   },
   {
     slug: 'youtube-comment-downloader-alternative',
@@ -623,7 +583,7 @@ export const seoPages: SeoLandingPage[] = [
         { criterion: 'Repeat analysis', first: 'Designed to be reused in spreadsheets or AI tools', second: 'Usually not designed for deeper analysis' },
       ],
     },
-    related: ['download-youtube-comments', 'export-youtube-comments-to-csv', 'sample-youtube-comment-export'],
+    related: ['download-youtube-comments', 'sample-youtube-comment-export'],
   },
   {
     slug: 'best-youtube-comment-downloader',
@@ -725,47 +685,7 @@ export const seoPages: SeoLandingPage[] = [
         { criterion: 'Analysis path', first: 'CSV/Excel/JSON plus AI summaries on supported plans', second: 'Analysis handled entirely in external tools' },
       ],
     },
-    related: ['sample-youtube-comment-export', 'youtube-comment-api', 'youtube-comment-sentiment-analysis'],
-  },
-  {
-    slug: 'youtube-comment-sentiment-analysis',
-    title: 'YouTube Comment Sentiment Analysis',
-    metaTitle: 'YouTube Comment Sentiment Analysis - Analyze Audience Feedback',
-    description: 'Run AI-assisted sentiment, topic, audience, feedback, and trend analysis on exported YouTube comments.',
-    eyebrow: 'AI comment insights',
-    primaryCta: 'Analyze comments',
-    secondaryCta: 'Export comments first',
-    heroPoints: ['Sentiment, topics, audience segments, feedback, and trends', 'Works after comment export', 'Built for creators, marketers, and researchers'],
-    sections: [
-      {
-        title: 'Go beyond downloading comments',
-        body: 'Exports give you the raw data. AI analysis helps summarize audience sentiment, recurring questions, content gaps, viral phrases, and actionable feedback.',
-      },
-      {
-        title: 'Useful for marketing and research teams',
-        body: 'Use comment analysis to understand what viewers praise, what they complain about, what they want next, and which topics drive engagement.',
-      },
-      {
-        title: 'Designed for large comment sets',
-        body: 'The analysis workflow chunks large datasets and merges partial results into one structured report for supported plans.',
-      },
-    ],
-    steps: ['Export comments from a video, playlist, or channel.', 'Open AI Comment Analysis in the tool.', 'Choose sentiment, topics, audience, feedback, or trends and run the report.'],
-    faq: [
-      {
-        question: 'Can I run sentiment analysis on YouTube comments?',
-        answer: 'Yes. Pro and higher plans can run AI-assisted sentiment analysis on exported comments.',
-      },
-      {
-        question: 'What types of analysis are available?',
-        answer: 'The tool supports sentiment, audience segments, topics, actionable feedback, and trend analysis.',
-      },
-      {
-        question: 'Can large comment sets be analyzed?',
-        answer: 'Yes. The backend chunks large datasets and combines partial analyses into a final structured report, subject to plan and usage limits.',
-      },
-    ],
-    related: ['download-youtube-comments', 'export-youtube-comments-to-csv', 'bulk-youtube-comment-export'],
+    related: ['sample-youtube-comment-export', 'youtube-comment-api', 'youtube-comment-analysis-tool'],
   },
 ]
 

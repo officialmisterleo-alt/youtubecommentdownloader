@@ -35,7 +35,7 @@ export default function HowToDownloadYouTubeComments() {
 
       <h3 className="font-jakarta">Step 2: Go to the tool</h3>
       <p>
-        Open <a href="/tool" className="text-red-400 hover:text-red-300">the tool page</a>. No account is required for a basic export — paste your URL and go. Create a free account if you want CSV, Excel, or JSON output, or need more than 100 comments.
+        Open <a href="/tool" className="text-red-400 hover:text-red-300">the tool page</a>. No account is required for a basic export — paste your URL and go. Create a free account if you want CSV, Excel, or JSON output, or need more than 50 comments.
       </p>
 
       <h3 className="font-jakarta">Step 3: Paste the URL</h3>

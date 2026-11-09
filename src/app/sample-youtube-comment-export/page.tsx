@@ -106,9 +106,9 @@ export default function SampleExportPage() {
               Create your export
             </TrackedLink>
             <TrackedLink
-              href="/export-youtube-comments-to-csv"
+              href="/blog/export-youtube-comments-csv"
               eventName="sample_export_cta_click"
-              eventProperties={{ destination: '/export-youtube-comments-to-csv' }}
+              eventProperties={{ destination: '/blog/export-youtube-comments-csv' }}
               className="inline-flex items-center justify-center rounded-lg border border-white/[0.12] px-6 py-3 text-sm font-medium text-[#888888] transition-colors hover:border-white/25 hover:text-white"
             >
               CSV export guide
@@ -175,7 +175,7 @@ export default function SampleExportPage() {
             {[
               ['/download-youtube-comments', 'Download comments'],
               ['/youtube-comments-to-excel', 'Excel export'],
-              ['/youtube-comment-sentiment-analysis', 'AI analysis'],
+              ['/youtube-comment-analysis-tool', 'AI analysis'],
             ].map(([href, label]) => (
               <Link key={href} href={href} className="border border-white/[0.07] bg-[#131313] p-5 text-sm font-medium text-[#aaaaaa] transition-colors hover:border-white/[0.15] hover:text-white">
                 {label}

@@ -112,7 +112,7 @@ export default function YouTubeCommentScraperFree() {
       </ol>
 
       <p>
-        Without an account, you can export up to 50 comments in TXT or HTML. A free account unlocks CSV, Excel, and JSON with up to 100 comments per download and a 100-comment monthly quota. Higher limits need Pro; channel and playlist exports need Business or Enterprise.
+        Without an account, you can export up to 50 comments in TXT or HTML. A free account unlocks CSV, Excel, and JSON with up to 500 comments per download and a 1,000-comment monthly quota. Higher limits need Pro; channel and playlist exports need Business or Enterprise.
       </p>
 
       <h2 className="font-jakarta" id="api-limitations">Limitations of the YouTube API (What Any Honest Scraper Will Tell You)</h2>

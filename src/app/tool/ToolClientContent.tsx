@@ -37,7 +37,7 @@ const ALL_COMMENT_OPTIONS = [
 ]
 
 const PLAN_LIMIT: Record<string, number> = {
-  free: 100,
+  free: 500,
   pro: 10000,
   business: 100000,
   enterprise: 0,
@@ -168,7 +168,7 @@ function ToolPageContent() {
 
   // Reset maxComments if it exceeds plan limit
   useEffect(() => {
-    const limit = isSignedIn ? (PLAN_LIMIT[userPlan] ?? 100) : 50
+    const limit = isSignedIn ? (PLAN_LIMIT[userPlan] ?? PLAN_LIMIT.free) : 50
     const current = parseInt(maxComments) || 0
     if (limit !== 0 && (current === 0 || current > limit)) {
       setMaxComments(String(limit))
@@ -176,7 +176,7 @@ function ToolPageContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userPlan, isSignedIn])
 
-  const effectiveLimit = isSignedIn ? (PLAN_LIMIT[userPlan] ?? 100) : 50
+  const effectiveLimit = isSignedIn ? (PLAN_LIMIT[userPlan] ?? PLAN_LIMIT.free) : 50
 
   const availableOptions = effectiveLimit === 0
     ? ALL_COMMENT_OPTIONS
@@ -880,7 +880,7 @@ ${commentRows}
               ) : userPlan === 'pro' ? (
                 'Pro plan'
               ) : (
-                <>Free plan · 100 comment max · <Link href="/pricing" onClick={() => trackEvent('upgrade_cta_click', { location: 'tool_quota_hint', plan: userPlan })} className="text-[#888888] hover:text-white underline">Upgrade for more</Link></>
+                <>Free plan · 500 per download, 1,000 a month · <Link href="/pricing" onClick={() => trackEvent('upgrade_cta_click', { location: 'tool_quota_hint', plan: userPlan })} className="text-[#888888] hover:text-white underline">Upgrade for more</Link></>
               )}
             </p>
           </div>

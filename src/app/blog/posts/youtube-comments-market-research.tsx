@@ -53,7 +53,7 @@ export default function YouTubeCommentsMarketResearch() {
         Turn the analysis into a short list of audience phrases, common objections, feature requests, competitor comparisons, and recommended content topics. Those deliverables are directly useful for landing pages, ads, sales calls, product messaging, and editorial calendars.
       </p>
       <p>
-        For a starting point, see the <a href="/youtube-comment-research-tool" className="text-red-400 hover:text-red-300">YouTube comment research tool</a> page or review a <a href="/sample-youtube-comment-export" className="text-red-400 hover:text-red-300">sample comment export</a>.
+        For a starting point, see the <a href="/youtube-comment-downloader-for-researchers" className="text-red-400 hover:text-red-300">YouTube comment research tool</a> page or review a <a href="/sample-youtube-comment-export" className="text-red-400 hover:text-red-300">sample comment export</a>.
       </p>
     </BlogPostLayout>
   )

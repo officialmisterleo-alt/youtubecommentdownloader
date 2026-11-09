@@ -23,7 +23,7 @@ type Reply = { id: string; author: string; text: string; likes: number; date: st
 type Comment = { id: string; author: string; text: string; likes: number; date: string; dateRaw?: string; replies: number; replyList: Reply[]; videoTitle?: string; channelName?: string; videoUrl?: string }
 
 const PLAN_LIMITS: Record<string, { maxComments: number }> = {
-  free: { maxComments: 100 },
+  free: { maxComments: 500 },
   pro: { maxComments: 10000 },
   business: { maxComments: 100000 },
   enterprise: { maxComments: 1000000 },

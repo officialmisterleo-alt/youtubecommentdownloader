@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     // Monthly quota check — fail fast before pagination
     const { remaining } = await getMonthlyUsage(user.id, plan)
-    const monthlyMax = MONTHLY_LIMITS[plan] ?? 100
+    const monthlyMax = MONTHLY_LIMITS[plan] ?? MONTHLY_LIMITS.free
     if (monthlyMax !== -1 && remaining <= 0) {
       return NextResponse.json(
         { error: 'Monthly quota exceeded. Resets on the 1st of next month.' },

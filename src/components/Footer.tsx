@@ -23,12 +23,11 @@ export default function Footer() {
               <Link href="/youtube-comment-scraper" className="hover:text-white transition-colors">Comment Scraper</Link>
               <Link href="/download-youtube-comments" className="hover:text-white transition-colors">Download Comments</Link>
               <Link href="/youtube-comment-analysis-tool" className="hover:text-white transition-colors">Analysis Tool</Link>
-              <Link href="/export-youtube-comments-to-csv" className="hover:text-white transition-colors">Export to CSV</Link>
+              <Link href="/blog/export-youtube-comments-csv" className="hover:text-white transition-colors">Export to CSV</Link>
               <Link href="/youtube-comments-to-excel" className="hover:text-white transition-colors">Excel Export</Link>
             </div>
             <div className="flex flex-col gap-3">
               <Link href="/bulk-youtube-comment-export" className="hover:text-white transition-colors">Bulk Export</Link>
-              <Link href="/youtube-comment-sentiment-analysis" className="hover:text-white transition-colors">Sentiment Analysis</Link>
               <Link href="/sample-youtube-comment-export" className="hover:text-white transition-colors">Sample Export</Link>
               <Link href="/youtube-comments-to-google-sheets" className="hover:text-white transition-colors">Google Sheets</Link>
             </div>

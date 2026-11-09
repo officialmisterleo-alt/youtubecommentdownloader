@@ -22,7 +22,7 @@ const pageExamples: Record<string, {
     fields: ['Comment text', 'Author', 'Likes', 'Date', 'Reply count', 'Source video'],
     result: 'You get structured comment data that can be reviewed in a spreadsheet or passed into a research workflow without browser scraping scripts.',
     links: [
-      { href: '/export-youtube-comments-to-csv', label: 'CSV exports' },
+      { href: '/blog/export-youtube-comments-csv', label: 'CSV exports' },
       { href: '/youtube-comment-api', label: 'API access' },
       { href: '/blog/youtube-comment-scraper-free', label: 'Scraper guide' },
     ],
@@ -37,22 +37,12 @@ const pageExamples: Record<string, {
       { href: '/blog/how-to-download-youtube-comments', label: 'Download guide' },
     ],
   },
-  'export-youtube-comments-to-csv': {
-    scenario: 'Export a video comment section to CSV, open it in Google Sheets, then sort by likes and filter for question marks or keywords.',
-    fields: ['Type', 'Video title', 'Author', 'Comment', 'Likes', 'Date'],
-    result: 'You can hand the file to a marketer, analyst, client, or researcher without requiring custom code.',
-    links: [
-      { href: '/youtube-comments-to-excel', label: 'Excel exports' },
-      { href: '/blog/export-youtube-comments-csv', label: 'CSV guide' },
-      { href: '/youtube-comment-sentiment-analysis', label: 'AI analysis' },
-    ],
-  },
   'youtube-comments-to-excel': {
     scenario: 'Move YouTube comments into an Excel workbook so a client or internal team can filter, sort, annotate, and share audience feedback.',
     fields: ['Video title', 'Channel', 'Author', 'Comment', 'Likes', 'Date', 'Replies'],
     result: 'The workbook is ready for review meetings, client reports, and quick manual analysis.',
     links: [
-      { href: '/export-youtube-comments-to-csv', label: 'CSV workflow' },
+      { href: '/blog/export-youtube-comments-csv', label: 'CSV workflow' },
       { href: '/download-youtube-comments', label: 'Download comments' },
       { href: '/pricing', label: 'Compare plans' },
     ],
@@ -74,16 +64,16 @@ const pageExamples: Record<string, {
     links: [
       { href: '/youtube-comment-api', label: 'Automate exports' },
       { href: '/youtube-comment-scraper', label: 'Comment scraper' },
-      { href: '/youtube-comment-sentiment-analysis', label: 'Analyze comments' },
+      { href: '/youtube-comment-analysis-tool', label: 'Analyze comments' },
     ],
   },
-  'youtube-comment-sentiment-analysis': {
+  'youtube-comment-analysis-tool': {
     scenario: 'Run AI analysis after an export to summarize sentiment, repeated objections, content requests, audience segments, and emerging topics.',
     fields: ['Sentiment', 'Topics', 'Audience segments', 'Feedback themes', 'Trends'],
     result: 'The raw comments become a structured report your team can use for content planning, product feedback, and market research.',
     links: [
       { href: '/download-youtube-comments', label: 'Export first' },
-      { href: '/export-youtube-comments-to-csv', label: 'CSV analysis' },
+      { href: '/blog/export-youtube-comments-csv', label: 'CSV analysis' },
       { href: '/pricing', label: 'Analysis limits' },
     ],
   },
@@ -93,7 +83,7 @@ function getSecondaryCtaHref(label: string) {
   if (label === 'View pricing' || label === 'Compare plans') return '/pricing'
   if (label === 'View export formats') return '/blog/youtube-comment-downloader#export-formats'
   if (label === 'Read the CSV guide') return '/blog/export-youtube-comments-csv'
-  if (label === 'Try CSV export') return '/export-youtube-comments-to-csv'
+  if (label === 'Try CSV export') return '/tool'
   if (label === 'Generate an API key') return '/dashboard'
   if (label === 'View API docs') return '/docs'
   if (label === 'Export comments first') return '/download-youtube-comments'

@@ -20,7 +20,7 @@ const bevel = [
 const features = [
   { icon: Download,        title: 'Bulk Export',       desc: 'Export comments across playlist and channel videos on Business or Enterprise plans.' },
   { icon: FileSpreadsheet, title: '5 Export Formats',  desc: 'Download CSV, Excel, JSON, TXT, or HTML. CSV, Excel, and JSON require an account.' },
-  { icon: Zap,             title: 'Choose Your Limit',  desc: 'Start with up to 50 comments without an account, or sign up for a 100-comment monthly free quota.' },
+  { icon: Zap,             title: 'Choose Your Limit',  desc: 'Start with up to 50 comments without an account, or sign up free for 500 per download and 1,000 a month.' },
   { icon: Users,           title: 'Team Access',        desc: 'Business includes three team seats for agencies and research teams.' },
   { icon: Key,             title: 'REST API',           desc: 'Enterprise API access supports automated comment export workflows.' },
   { icon: Shield,          title: 'Plan for Your Scale', desc: 'Move from individual exports to larger downloads, bulk sources, and API access as needed.' },
@@ -30,9 +30,9 @@ const surfaces = ['Video Comments', 'YouTube Shorts', 'Playlists (Business+)', '
 
 const workflows = [
   { href: '/youtube-comment-scraper', title: 'YouTube Comment Scraper', desc: 'Extract structured comment data without brittle browser scraping.' },
-  { href: '/export-youtube-comments-to-csv', title: 'Export Comments to CSV', desc: 'Download spreadsheet-ready CSV files for filtering and analysis.' },
+  { href: '/blog/export-youtube-comments-csv', title: 'Export Comments to CSV', desc: 'Download spreadsheet-ready CSV files for filtering and analysis.' },
   { href: '/bulk-youtube-comment-export', title: 'Bulk Comment Export', desc: 'Export across playlists and channels on Business or Enterprise.' },
-  { href: '/youtube-comment-sentiment-analysis', title: 'Comment Sentiment Analysis', desc: 'Use Pro or higher to turn exported comments into AI-assisted insights.' },
+  { href: '/youtube-comment-analysis-tool', title: 'Comment Sentiment Analysis', desc: 'Use Pro or higher to turn exported comments into AI-assisted insights.' },
 ]
 
 const productJsonLd = {

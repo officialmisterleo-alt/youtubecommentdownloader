@@ -25,7 +25,7 @@ const plans: Plan[] = [
   {
     name: 'Free', monthlyPrice: 0, annualPrice: 0,
     desc: 'Perfect for trying out the tool',
-    features: ['Up to 50 comments per download without an account', 'Up to 100 comments per download with a free account', '100 comments/month with a free account', 'TXT and HTML without an account', 'CSV, Excel, and JSON with a free account', 'Basic sorting'],
+    features: ['Up to 50 comments per download without an account', 'Up to 500 comments per download with a free account', '1,000 comments/month with a free account', 'TXT and HTML without an account', 'CSV, Excel, and JSON with a free account', 'Basic sorting'],
     notIncluded: ['AI Analysis', 'Reply threads', 'Bulk exports', 'API access', 'Team seats', 'Scheduled exports'],
     cta: 'Use Now', href: '/tool', checkoutPlan: null, highlight: false, badge: null, note: 'No credit card required.',
   },
@@ -53,8 +53,8 @@ const plans: Plan[] = [
 ]
 
 const comparisonFeatures = [
-  { label: 'Comments per download', free: '50 anonymous / 100 signed in', pro: '10k', business: '100k', enterprise: '1M' },
-  { label: 'Monthly quota', free: '100 signed in', pro: '100k', business: '1M', enterprise: 'Unlimited' },
+  { label: 'Comments per download', free: '50 anonymous / 500 signed in', pro: '10k', business: '100k', enterprise: '1M' },
+  { label: 'Monthly quota', free: '1,000 signed in', pro: '100k', business: '1M', enterprise: 'Unlimited' },
   { label: 'Export formats', free: '5 (account for CSV, Excel, JSON)', pro: 'All 5', business: 'All 5', enterprise: 'All 5' },
   { label: 'AI Analysis', free: false, pro: '10k comments', business: '50k comments', enterprise: '100k comments' },
   { label: 'Reply threads', free: false, pro: true, business: true, enterprise: true },
@@ -196,7 +196,7 @@ export default function PricingPage() {
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-16">
         <div className="text-center mb-14">
           <h1 className="text-4xl sm:text-5xl font-extrabold font-jakarta text-[#e5e2e1] mb-4">Simple, transparent pricing</h1>
-          <p className="text-[#888888] text-lg mb-3">Start with 50 comments without an account. A free account adds CSV, Excel, and JSON exports plus a 100-comment monthly quota.</p>
+          <p className="text-[#888888] text-lg mb-3">Start with 50 comments without an account. A free account adds CSV, Excel, and JSON exports plus a 1,000-comment monthly quota.</p>
           <p className="text-[#777777] text-sm mb-8">Pro adds larger downloads, replies, filters, and AI analysis. Business adds playlist and channel exports. Enterprise adds the REST API.</p>
           <div className="inline-flex items-center gap-1 bg-[#171717] border border-white/[0.07] rounded-xl p-1">
             <button onClick={() => { trackEvent('pricing_interval_select', { interval: 'monthly' }); setAnnual(false) }} className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${!annual ? 'bg-red-600 text-[#e5e2e1]' : 'text-[#888888] hover:text-white'}`}>Monthly</button>

@@ -1,7 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export const MONTHLY_LIMITS: Record<string, number> = {
-  free:       100,
+  free:       1_000,
   pro:        100_000,
   business:   1_000_000,
   enterprise: -1,  // -1 = unlimited
@@ -18,7 +18,7 @@ export function getCurrentMonth(): string {
 export async function getMonthlyUsage(userId: string, plan: string) {
   const supabase = await createClient()
   const month = getCurrentMonth()
-  const limit = MONTHLY_LIMITS[plan] ?? 100
+  const limit = MONTHLY_LIMITS[plan] ?? MONTHLY_LIMITS.free
 
   const { data } = await supabase
     .from('monthly_usage')
@@ -43,7 +43,7 @@ export async function reserveMonthlyUsage(userId: string, plan: string, requeste
     p_user_id: userId,
     p_month: getCurrentMonth(),
     p_requested: requested,
-    p_limit: MONTHLY_LIMITS[plan] ?? 100,
+    p_limit: MONTHLY_LIMITS[plan] ?? MONTHLY_LIMITS.free,
   })
   if (error) throw new Error(`reserve_monthly_usage failed: ${error.message}`)
   return data as number

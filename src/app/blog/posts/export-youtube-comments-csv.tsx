@@ -58,7 +58,7 @@ export default function ExportYouTubeCommentsCSV() {
           <strong>Paste the YouTube URL.</strong> Video, playlist, or channel URL — all work. For playlists and channels, the tool fetches comments from every video in the source.
         </li>
         <li>
-          <strong>Set your comment limit.</strong> Free accounts: up to 100 comments. Pro: up to 10,000. Business: up to 100,000.
+          <strong>Set your comment limit.</strong> Free accounts: up to 500 comments. Pro: up to 10,000. Business: up to 100,000.
         </li>
         <li>
           <strong>Choose sort order.</strong> &ldquo;Top comments&rdquo; gives you the most-liked comments first (usually most useful for research). &ldquo;Newest&rdquo; is better for real-time monitoring.
@@ -175,7 +175,7 @@ export default function ExportYouTubeCommentsCSV() {
           </thead>
           <tbody className="divide-y divide-white/[0.05]">
             {[
-              ['This tool', 'No code, instant, bulk support', 'Free tier capped at 100 comments'],
+              ['This tool', 'No code, instant, bulk support', 'Free tier capped at 1,000 comments a month'],
               ['YouTube Data API (DIY)', 'Full control, no limits beyond quota', 'Requires coding + API key setup'],
               ['YouTube Studio export', 'Official, easy', 'Only your own videos, no CSV'],
               ['Browser extensions', 'Convenient for small jobs', 'Often break with YouTube updates, few active'],

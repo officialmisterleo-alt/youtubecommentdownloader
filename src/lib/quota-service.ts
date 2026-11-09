@@ -20,7 +20,7 @@ export async function getMonthlyUsageService(
 ): Promise<MonthlyUsage> {
   const service = createServiceClient()
   const month = getCurrentMonth()
-  const limit = MONTHLY_LIMITS[plan] ?? 100
+  const limit = MONTHLY_LIMITS[plan] ?? MONTHLY_LIMITS.free
 
   const { data } = await service
     .from('monthly_usage')
@@ -39,7 +39,7 @@ export async function checkAndIncrementUsageService(
   plan: string,
   count: number,
 ): Promise<{ allowed: boolean; used: number; limit: number; remaining: number }> {
-  const limit = MONTHLY_LIMITS[plan] ?? 100
+  const limit = MONTHLY_LIMITS[plan] ?? MONTHLY_LIMITS.free
   const granted = await reserveMonthlyUsage(userId, plan, count)
   const { used, remaining } = await getMonthlyUsageService(userId, plan)
   return { allowed: granted > 0 || count === 0, used, limit, remaining }
