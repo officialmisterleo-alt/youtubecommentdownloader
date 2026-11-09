@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPlanFromPriceId, getSubscriptionPeriodEnd } from '@/lib/stripe-prices'
+import { getPlanFromPriceId, getSubscriptionPeriodEnd, isLinkedToOtherLiveSubscription } from '@/lib/stripe-prices'
 import { syncOwnedTeamPlan } from '@/lib/teams'
 
 export const dynamic = 'force-dynamic'
@@ -90,6 +90,16 @@ export async function POST(req: NextRequest) {
           }
           const priceId = subData.items.data[0]?.price?.id
           const plan = priceId ? getPlanFromPriceId(priceId) : 'free'
+          // Never replace a different subscription that's still live on this account
+          const { data: linked } = await supabase
+            .from('subscriptions')
+            .select('stripe_subscription_id')
+            .eq('user_id', userId)
+            .maybeSingle()
+          if (await isLinkedToOtherLiveSubscription(stripe, linked?.stripe_subscription_id, subData.id)) {
+            console.error(`checkout.session.completed: ${userId} already has live subscription ${linked?.stripe_subscription_id}; not replacing it with ${subData.id}`)
+            break
+          }
           await supabase.from('subscriptions').upsert({
             user_id: userId,
             stripe_customer_id: session.customer,

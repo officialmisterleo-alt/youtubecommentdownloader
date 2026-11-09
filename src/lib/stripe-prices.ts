@@ -1,3 +1,5 @@
+import type Stripe from 'stripe'
+
 /**
  * Shared Stripe price-ID → plan mapping.
  * Single source of truth used by checkout, webhook, and dashboard.
@@ -31,4 +33,24 @@ export function getSubscriptionPeriodEnd(sub: {
 }): string | null {
   const ts = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end
   return typeof ts === 'number' ? new Date(ts * 1000).toISOString() : null
+}
+
+/**
+ * True when the account is already linked to a different Stripe subscription that is
+ * still live. An older checkout or subscription must not replace it: a superseded plan
+ * that's set to cancel at period end still reports status 'active' until it ends.
+ */
+export async function isLinkedToOtherLiveSubscription(
+  stripe: Stripe,
+  linkedSubscriptionId: string | null | undefined,
+  subscriptionId: string,
+): Promise<boolean> {
+  if (!linkedSubscriptionId || linkedSubscriptionId === subscriptionId) return false
+  try {
+    const linked = await stripe.subscriptions.retrieve(linkedSubscriptionId)
+    return ['active', 'trialing', 'past_due'].includes(linked.status)
+  } catch {
+    // Unknown or deleted subscription — nothing live to protect
+    return false
+  }
 }

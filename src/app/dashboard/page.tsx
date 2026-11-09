@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient, getUserTeam, getEffectivePlan, syncOwnedTeamPlan } from '@/lib/teams'
-import { getPlanFromPriceId, getSubscriptionPeriodEnd } from '@/lib/stripe-prices'
+import { getPlanFromPriceId, getSubscriptionPeriodEnd, isLinkedToOtherLiveSubscription } from '@/lib/stripe-prices'
 import { Plus, Users, ExternalLink, FileText, ShieldCheck, Building2, BarChart3 } from 'lucide-react'
 import QuotaBar from '@/components/QuotaBar'
 import { getApiKeys } from '@/lib/youtube-api'
@@ -340,6 +340,15 @@ async function syncFromCheckoutSession(sessionId: string, userId: string) {
     if (!subscription || !['active', 'trialing'].includes(subscription.status)) return
     const priceId = subscription.items.data[0]?.price?.id
     const plan = priceId ? getPlanFromPriceId(priceId) : 'free'
+
+    // Reopening an older success URL (e.g. for a plan that was later replaced and is set
+    // to cancel) must not take the account away from its current live subscription
+    const { data: linked } = await supabase
+      .from('subscriptions')
+      .select('stripe_subscription_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (await isLinkedToOtherLiveSubscription(stripe, linked?.stripe_subscription_id, subscription.id)) return
 
     await supabase.from('subscriptions').upsert({
       user_id: userId,
