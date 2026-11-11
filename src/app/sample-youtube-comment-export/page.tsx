@@ -65,6 +65,14 @@ const jsonLd = {
   name: 'Sample YouTube Comment Export',
   description: 'Example fields included in YouTube comment CSV, Excel, and JSON exports.',
   url: 'https://www.youtubecommentdownloader.com/sample-youtube-comment-export',
+  // The sample rows are made up, so they're free for anyone to reuse
+  license: 'https://creativecommons.org/publicdomain/zero/1.0/',
+  isAccessibleForFree: true,
+  distribution: {
+    '@type': 'DataDownload',
+    encodingFormat: 'text/csv',
+    contentUrl: 'https://www.youtubecommentdownloader.com/sample-youtube-comments.csv',
+  },
   creator: {
     '@type': 'Organization',
     name: 'YouTube Comment Downloader',
