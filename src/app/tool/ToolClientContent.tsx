@@ -112,6 +112,8 @@ function ToolPageContent() {
   const [statusMsg, setStatusMsg] = useState('')
   // Shown after an export finishes when something needs explaining (skips, limits, short Top order)
   const [completionNote, setCompletionNote] = useState('')
+  // Set when a video had more comments than the plan's per-download cap allowed
+  const [cappedDownload, setCappedDownload] = useState<{ got: number; total: number } | null>(null)
   const [exportError, setExportError] = useState('')
   const [comments, setComments] = useState<Comment[]>([])
   const [done, setDone] = useState(false)
@@ -577,7 +579,7 @@ ${commentRows}
       has_bulk_url: hasBulkUrl,
     })
 
-    setLoading(true); setDone(false); setProgress(0); setComments([]); setVideosMeta([]); setExportError(''); setCompletionNote('')
+    setLoading(true); setDone(false); setProgress(0); setComments([]); setVideosMeta([]); setExportError(''); setCompletionNote(''); setCappedDownload(null)
     const allComments: Comment[] = []
     const collectedVideosMeta: VideoMeta[] = []
     let pendingMeta: SourceMeta | null = null
@@ -587,6 +589,13 @@ ${commentRows}
     let videosProcessed = 0
     let videosSkipped = 0
     let topEndedEarly = false
+    let capped: { got: number; total: number } | null = null
+    const noteCap = (result: VideoFetchResult) => {
+      const total = result.videoCommentCount ?? 0
+      if (result.comments.length >= effectiveLimit && total > result.comments.length && (!capped || total > capped.total)) {
+        capped = { got: result.comments.length, total }
+      }
+    }
 
     try {
       for (let i = 0; i < parsedUrls.length; i++) {
@@ -634,6 +643,7 @@ ${commentRows}
             // Comments turned off / private video: skip it and keep going
             if (result.skippedReason) videosSkipped++
             if (endedEarlyInTopOrder(result, maxCommentsParsed, sortBy)) topEndedEarly = true
+            noteCap(result)
             if (result.quotaMessage) quotaMessage = result.quotaMessage
             if (result.comments.length > 0) {
               const videoComments = result.comments
@@ -670,6 +680,7 @@ ${commentRows}
             videosSkipped++
           }
           if (endedEarlyInTopOrder(result, maxCommentsParsed, sortBy)) topEndedEarly = true
+          noteCap(result)
           if (result.quotaMessage) quotaMessage = result.quotaMessage
           if (result.comments.length > 0) {
             const videoComments: Comment[] = result.comments.map((c: Comment, idx: number) => ({ ...c, id: `${i}-${idx}` }))
@@ -740,6 +751,11 @@ ${commentRows}
       if (videosSkipped > 0) notes.push(`${videosSkipped} video${videosSkipped !== 1 ? 's were' : ' was'} skipped because comments are turned off or the video is unavailable.`)
       if (topEndedEarly) notes.push(`YouTube's "Top" order returns a limited set of comments. Switch Sort By to "Newest" to export more.`)
       setCompletionNote(notes.join(' '))
+      // The monthly-quota panel already covers a quota stop; this is for the per-download cap
+      if (capped && !quotaMessage && effectiveLimit > 0) {
+        setCappedDownload(capped)
+        trackEvent('capped_download_prompt_shown', { plan: isSignedIn ? userPlan : 'anonymous' })
+      }
       setComments(allComments)
       if (allComments.length > 0) {
         setDone(true)
@@ -1017,6 +1033,33 @@ ${commentRows}
             {completionNote}
           </p>
         )}
+
+        {!loading && cappedDownload && (() => {
+          // Point each plan at the next per-download limit up
+          const next = !isSignedIn
+            ? { limit: PLAN_LIMIT.free, cta: 'Sign up free', href: '/auth/signup', name: 'A free account' }
+            : userPlan === 'free'
+              ? { limit: PLAN_LIMIT.pro, cta: 'Upgrade to Pro', href: '/pricing', name: 'Pro' }
+              : userPlan === 'pro'
+                ? { limit: PLAN_LIMIT.business, cta: 'Upgrade to Business', href: '/pricing', name: 'Business' }
+                : null
+          if (!next) return null
+          return (
+            <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
+              <p className="text-sm text-[#e5e2e1]">
+                You got <strong>{cappedDownload.got.toLocaleString()}</strong> comments, but this video has <strong>{cappedDownload.total.toLocaleString()}</strong> including replies.{' '}
+                <span className="text-[#aaaaaa]">{next.name} gets up to {next.limit.toLocaleString()} per download.</span>
+              </p>
+              <Link
+                href={next.href}
+                onClick={() => trackEvent(isSignedIn ? 'upgrade_cta_click' : 'signup_cta_click', { location: 'capped_download', plan: isSignedIn ? userPlan : 'anonymous' })}
+                className="mt-3 inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-red-500 sm:mt-0"
+              >
+                {next.cta} <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          )
+        })()}
 
         {done && comments.length > 0 && (
           <div className="mt-4 sm:mt-6 bg-[#171717] border border-white/[0.07] rounded-2xl overflow-hidden">
