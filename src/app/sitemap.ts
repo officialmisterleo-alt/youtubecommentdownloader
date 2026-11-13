@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { getAllPosts } from '@/lib/blog'
 import { allSeoPages } from '@/lib/seo-pages'
+import { intlPages } from '@/lib/intl-pages'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const posts = getAllPosts()
@@ -66,6 +67,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.65,
     },
+    ...intlPages.map((page) => ({
+      url: `https://www.youtubecommentdownloader.com${page.path}`,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    })),
     ...allSeoPages.map((page) => ({
       url: `https://www.youtubecommentdownloader.com/${page.slug}`,
       changeFrequency: 'monthly' as const,

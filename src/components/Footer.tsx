@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { intlPages } from '@/lib/intl-pages'
 
 export default function Footer() {
   return (
@@ -41,8 +42,15 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        <div className="border-t border-white/[0.07] pt-6 text-[#555555] text-xs">
-          © 2026 YouTubeCommentDownloader.com
+        <div className="border-t border-white/[0.07] pt-6 flex flex-col gap-3 text-[#555555] text-xs sm:flex-row sm:items-center sm:justify-between">
+          <span>© 2026 YouTubeCommentDownloader.com</span>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            {intlPages.map((page) => (
+              <Link key={page.lang} href={page.path} lang={page.hreflang} className="hover:text-white transition-colors">
+                {page.languageName}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </footer>

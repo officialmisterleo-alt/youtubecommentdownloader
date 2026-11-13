@@ -13,21 +13,21 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 export const metadata: Metadata = {
-  title: 'YouTube Comment Downloader - Export Comments to CSV, Excel, JSON',
-  description: 'Download and export YouTube comments from videos, Shorts, playlists, and channels to CSV, Excel, JSON, TXT, and HTML.',
+  title: 'YouTube Comment Downloader – Free, Export to CSV & Excel',
+  description: 'Paste a YouTube link and download its comments in seconds. Free to start, no extension or code. Export to CSV, Excel or JSON for videos, Shorts and more.',
   metadataBase: new URL('https://www.youtubecommentdownloader.com'),
   alternates: { canonical: 'https://www.youtubecommentdownloader.com' },
   openGraph: {
     type: 'website',
     url: 'https://www.youtubecommentdownloader.com',
-    title: 'YouTube Comment Downloader - Export Comments to CSV, Excel, JSON',
-    description: 'Download and export YouTube comments from videos, Shorts, playlists, and channels to CSV, Excel, JSON, TXT, and HTML.',
+    title: 'YouTube Comment Downloader – Free, Export to CSV & Excel',
+    description: 'Paste a YouTube link and download its comments in seconds. Free to start, no extension or code. Export to CSV, Excel or JSON for videos, Shorts and more.',
     siteName: 'YouTube Comment Downloader',
     images: [{ url: '/opengraph-image.jpg', width: 1200, height: 675 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'YouTube Comment Downloader - Export Comments to CSV, Excel, JSON',
+    title: 'YouTube Comment Downloader – Free, Export to CSV & Excel',
     description: 'Download and export YouTube comments from videos, Shorts, playlists, and channels.',
     images: ['/opengraph-image.jpg'],
   },

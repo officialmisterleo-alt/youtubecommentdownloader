@@ -3,11 +3,12 @@ import HowItWorksSection from '@/components/HowItWorksSection'
 import HomeHeroAnimations from '@/components/HomeHeroAnimations'
 import { Download, FileSpreadsheet, Zap, Users, Key, Shield } from 'lucide-react'
 import type { Metadata } from 'next'
+import { languageAlternates } from '@/lib/intl-pages'
 
 export const metadata: Metadata = {
-  title: 'YouTube Comment Downloader - Export Comments to CSV, Excel, JSON',
-  description: 'Download YouTube comments from videos, Shorts, playlists, and channels. Export to CSV, Excel, JSON, TXT, or HTML for research, reporting, and analysis.',
-  alternates: { canonical: 'https://www.youtubecommentdownloader.com' },
+  title: 'YouTube Comment Downloader – Free, Export to CSV & Excel',
+  description: 'Paste a YouTube link and download its comments in seconds. Free to start, no extension or code. Export to CSV, Excel or JSON for videos, Shorts and more.',
+  alternates: { canonical: 'https://www.youtubecommentdownloader.com', languages: languageAlternates },
 }
 
 const bevel = [
