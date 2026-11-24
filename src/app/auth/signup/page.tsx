@@ -1,39 +1,72 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { trackEvent } from '@/lib/analytics'
+import { safeNextPath } from '@/lib/safe-redirect'
 
-export default function SignupPage() {
+const RESEND_WAIT_SECONDS = 60
+
+function SignupForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [resendIn, setResendIn] = useState(0)
+  const [resendNote, setResendNote] = useState('')
+  const searchParams = useSearchParams()
+  // New accounts go back to the downloader unless a page asked for somewhere else
+  const next = safeNextPath(searchParams.get('next'), '/tool')
+  const loginHref = `/auth/login?next=${encodeURIComponent(next)}`
+
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const t = setTimeout(() => setResendIn(resendIn - 1), 1000)
+    return () => clearTimeout(t)
+  }, [resendIn])
+
+  const requestEmail = async (resend: boolean) => {
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(resend ? { email, resend: true, next } : { email, password, name, next }),
+    })
+    const data = await res.json().catch(() => ({}))
+    return { ok: res.ok, error: (data.error as string) || 'Something went wrong. Please try again.' }
+  }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
-    trackEvent('signup_submit', { method: 'email' })
+    trackEvent('signup_submit', { method: 'email', next })
     setLoading(true); setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { full_name: name } }
-    })
-    if (error) {
-      trackEvent('signup_error', { method: 'email', message: error.message })
-      setError(error.message); setLoading(false)
+    const { ok, error } = await requestEmail(false)
+    if (!ok) {
+      trackEvent('signup_error', { method: 'email', message: error })
+      setError(error); setLoading(false)
     }
     else {
-      trackEvent('signup_success', { method: 'email' })
+      trackEvent('signup_success', { method: 'email', next })
       setSuccess(true)
+      setResendIn(RESEND_WAIT_SECONDS)
     }
   }
 
+  const handleResend = async () => {
+    trackEvent('signup_resend_click')
+    setResendNote('')
+    const { ok, error } = await requestEmail(true)
+    setResendNote(ok ? 'Sent. It can take a minute to arrive.' : error)
+    setResendIn(RESEND_WAIT_SECONDS)
+  }
+
   const handleGoogleSignIn = async () => {
-    trackEvent('signup_submit', { method: 'google' })
+    trackEvent('signup_submit', { method: 'google', next })
     const supabase = createClient()
+    // Same as the login page: the callback reads this cookie to send people back
+    document.cookie = `auth_next=${encodeURIComponent(next)}; path=/; max-age=600; SameSite=Lax`
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -41,12 +74,38 @@ export default function SignupPage() {
   }
 
   if (success) {
+    const isGmail = /@(gmail|googlemail)\.com$/i.test(email)
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="border border-white/[0.07] rounded-2xl p-8 w-full max-w-md text-center">
           <div className="text-4xl mb-4">✉️</div>
           <h2 className="text-xl font-bold font-jakarta text-[#e5e2e1] mb-2">Check your email</h2>
-          <p className="text-[#888888] text-sm">We sent a confirmation link to <strong className="text-white">{email}</strong>. Click it to activate your account.</p>
+          <p className="text-[#888888] text-sm">We sent a confirmation link to <strong className="text-white">{email}</strong>. Click it to activate your account and go straight back to the downloader.</p>
+          <p className="text-[#666666] text-xs mt-3">Not there? Check your spam and Promotions folders for an email from noreply@youtubecommentdownloader.com.</p>
+          {isGmail && (
+            <a
+              href="https://mail.google.com/mail/u/0/#search/from%3Anoreply%40youtubecommentdownloader.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent('signup_open_gmail_click')}
+              className="mt-5 block bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+            >
+              Open Gmail
+            </a>
+          )}
+          <button
+            onClick={handleResend}
+            disabled={resendIn > 0}
+            className="mt-3 w-full border border-white/[0.07] hover:border-white/[0.15] disabled:opacity-50 disabled:hover:border-white/[0.07] text-white font-medium py-3 rounded-xl transition-colors text-sm"
+          >
+            {resendIn > 0 ? `Send a new link in ${resendIn}s` : 'Send a new link'}
+          </button>
+          {resendNote && <p className="text-[#888888] text-xs mt-3">{resendNote}</p>}
+          <p className="text-[#666666] text-xs mt-5">
+            Faster:{' '}
+            <button onClick={handleGoogleSignIn} className="text-red-400 hover:text-red-300 underline">continue with Google</button>
+            {' '}instead. No email needed.
+          </p>
         </div>
       </div>
     )
@@ -69,7 +128,14 @@ export default function SignupPage() {
           <div className="flex-1 h-px bg-white/[0.07]" />
         </div>
 
-        {error && <div className="bg-red-950/50 border border-red-900 text-red-400 text-sm rounded-lg px-4 py-3 mb-5">{error}</div>}
+        {error && (
+          <div className="bg-red-950/50 border border-red-900 text-red-400 text-sm rounded-lg px-4 py-3 mb-5">
+            {error}
+            {error.includes('Sign in') && (
+              <> <Link href={loginHref} className="underline hover:text-red-300">Go to sign in</Link></>
+            )}
+          </div>
+        )}
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
             <label className="text-sm text-[#888888] mb-1.5 block">Full Name</label>
@@ -93,9 +159,17 @@ export default function SignupPage() {
         </form>
         <p className="text-center text-[#888888] text-sm mt-6">
           Already have an account?{' '}
-          <Link href="/auth/login" className="text-red-400 hover:text-red-300 transition-colors">Sign in</Link>
+          <Link href={loginHref} className="text-red-400 hover:text-red-300 transition-colors">Sign in</Link>
         </p>
       </div>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-red-600 rounded-full animate-spin" /></div>}>
+      <SignupForm />
+    </Suspense>
   )
 }

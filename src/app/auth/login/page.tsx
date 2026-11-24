@@ -11,8 +11,11 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [unconfirmed, setUnconfirmed] = useState(false)
+  const [resendNote, setResendNote] = useState('')
   const searchParams = useSearchParams()
   const next = safeNextPath(searchParams.get('next'))
+  const notice = searchParams.get('notice')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,12 +25,26 @@ function LoginForm() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       trackEvent('login_error', { method: 'email', message: error.message })
-      setError(error.message); setLoading(false)
+      const notConfirmed = /not confirmed/i.test(error.message)
+      setUnconfirmed(notConfirmed)
+      setResendNote('')
+      setError(notConfirmed ? 'Your email isn’t confirmed yet.' : error.message); setLoading(false)
     }
     else {
       trackEvent('login_success', { method: 'email', next })
       window.location.href = next
     }
+  }
+
+  const handleResend = async () => {
+    trackEvent('login_resend_confirmation_click')
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, resend: true, next }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setResendNote(res.ok ? `We sent a new confirmation link to ${email}. Check your spam and Promotions folders too.` : (data.error || 'Something went wrong. Please try again.'))
   }
 
   const handleGoogleSignIn = async () => {
@@ -70,7 +87,21 @@ function LoginForm() {
           <div className="flex-1 h-px bg-white/[0.07]" />
         </div>
 
-        {error && <div className="bg-red-950/50 border border-red-900 text-red-400 text-sm rounded-lg px-4 py-3 mb-5">{error}</div>}
+        {!error && notice === 'confirmed' && (
+          <div className="bg-green-950/40 border border-green-900 text-green-300 text-sm rounded-lg px-4 py-3 mb-5">Your email is confirmed. Sign in to continue.</div>
+        )}
+        {!error && notice === 'link_expired' && (
+          <div className="bg-yellow-950/40 border border-yellow-900 text-yellow-200 text-sm rounded-lg px-4 py-3 mb-5">That link was already used or has expired. If you confirmed your email, sign in below. If not, try signing in and we’ll offer a new link.</div>
+        )}
+        {error && (
+          <div className="bg-red-950/50 border border-red-900 text-red-400 text-sm rounded-lg px-4 py-3 mb-5">
+            {error}
+            {unconfirmed && !resendNote && (
+              <> <button type="button" onClick={handleResend} className="underline hover:text-red-300">Send a new confirmation link</button></>
+            )}
+            {resendNote && <p className="mt-2 text-[#aaaaaa]">{resendNote}</p>}
+          </div>
+        )}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="text-sm text-[#888888] mb-1.5 block">Email</label>
@@ -89,7 +120,7 @@ function LoginForm() {
         </form>
         <p className="text-center text-[#888888] text-sm mt-6">
           Don&apos;t have an account?{' '}
-          <Link href="/auth/signup" className="text-red-400 hover:text-red-300 transition-colors">Sign up free</Link>
+          <Link href={searchParams.get('next') ? `/auth/signup?next=${encodeURIComponent(next)}` : '/auth/signup'} className="text-red-400 hover:text-red-300 transition-colors">Sign up free</Link>
         </p>
       </div>
     </div>

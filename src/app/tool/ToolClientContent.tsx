@@ -22,6 +22,12 @@ type SortBy = 'top' | 'newest'
 const GATED_FORMATS: Format[] = ['CSV', 'Excel', 'JSON']
 const ALL_FORMATS: Format[] = ['CSV', 'Excel', 'JSON', 'HTML', 'TXT']
 
+// What a signed-out visitor had entered, so signing up brings them straight back to it
+const DRAFT_KEY = 'ycd_tool_draft'
+const DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000
+const SIGNUP_HREF = '/auth/signup?next=/tool'
+const LOGIN_HREF = '/auth/login?next=/tool'
+
 const ALL_COMMENT_OPTIONS = [
   { value: 50, label: '50 comments' },
   { value: 100, label: '100 comments' },
@@ -122,6 +128,9 @@ function ToolPageContent() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userPlan, setUserPlan] = useState<string>('free')
   const [showAuthGate, setShowAuthGate] = useState(false)
+  // The locked format a signed-out visitor picked, restored after they sign up
+  const [wantedFormat, setWantedFormat] = useState<Format | null>(null)
+  const [restoredDraft, setRestoredDraft] = useState(false)
   const [showBulkUpgradeModal, setShowBulkUpgradeModal] = useState(false)
   const [quotaData, setQuotaData] = useState<{ used: number; limit: number; remaining: number; month: string; plan: string } | null>(null)
   const [sourceMeta, setSourceMeta] = useState<SourceMeta | null>(null)
@@ -152,6 +161,33 @@ function ToolPageContent() {
     } catch { /* non-fatal */ }
   }
 
+  const saveDraft = () => {
+    try {
+      const draftUrls = urls.map(u => u.trim()).filter(Boolean)
+      if (draftUrls.length === 0) return
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify({ urls: draftUrls, format: wantedFormat ?? 'CSV', sortBy, savedAt: Date.now() }))
+    } catch { /* storage can be blocked; the draft is only a convenience */ }
+  }
+
+  const restoreDraft = () => {
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      window.localStorage.removeItem(DRAFT_KEY)
+      if (searchParams.get('url')) return
+      const draft = JSON.parse(raw) as { urls?: unknown; format?: unknown; sortBy?: unknown; savedAt?: unknown }
+      const draftUrls = Array.isArray(draft.urls) ? draft.urls.filter((u): u is string => typeof u === 'string' && !!u.trim()).slice(0, 5) : []
+      if (draftUrls.length === 0 || typeof draft.savedAt !== 'number' || Date.now() - draft.savedAt > DRAFT_MAX_AGE_MS) return
+      setUrls(draftUrls)
+      if (ALL_FORMATS.includes(draft.format as Format)) setFormat(draft.format as Format)
+      if (draft.sortBy === 'top' || draft.sortBy === 'newest') setSortBy(draft.sortBy)
+      // Signed-out visitors were capped at 50; start them at the free per-download limit
+      setMaxComments(String(PLAN_LIMIT.free))
+      setRestoredDraft(true)
+      trackEvent('tool_draft_restored', { url_count: draftUrls.length })
+    } catch { /* ignore a malformed draft */ }
+  }
+
   // Check auth status
   useEffect(() => {
     const checkAuth = async () => {
@@ -161,6 +197,7 @@ function ToolPageContent() {
       if (data.user) {
         setUserId(data.user.id)
         setFormat('CSV')
+        restoreDraft()
         fetchQuota()
       }
     }
@@ -215,6 +252,7 @@ function ToolPageContent() {
   const selectFormat = (f: Format) => {
     if (GATED_FORMATS.includes(f) && !isSignedIn) {
       trackEvent('export_format_gated', { format: f })
+      setWantedFormat(f)
       setShowAuthGate(true)
       return
     }
@@ -228,6 +266,7 @@ function ToolPageContent() {
   const downloadComments = (comments: Comment[], fmt: Format) => {
     if (GATED_FORMATS.includes(fmt) && !isSignedIn) {
       trackEvent('download_gated', { format: fmt, comment_count: comments.length })
+      setWantedFormat(fmt)
       setShowAuthGate(true)
       return
     }
@@ -552,6 +591,7 @@ ${commentRows}
   const handleExport = async () => {
     const activeUrls = urls.filter(u => u.trim())
     if (!activeUrls.length) return
+    setRestoredDraft(false)
 
     // Parse all URLs upfront
     const parsedUrls = activeUrls.map(u => ({ url: u, parsed: parseYouTubeUrl(u) }))
@@ -800,6 +840,18 @@ ${commentRows}
           <p className="text-[#888888] text-sm sm:text-base">Paste a public YouTube URL to export available comments within your plan limit.</p>
         </div>
 
+        {restoredDraft && (
+          <div role="status" className="mb-4 sm:mb-6 flex items-start justify-between gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3">
+            <p className="text-sm text-green-100">
+              You&apos;re signed in and your link is ready below. Press <strong>Start Export</strong> to download{' '}
+              {effectiveLimit > 0 ? `up to ${Math.min(effectiveLimit, parseInt(maxComments) || effectiveLimit).toLocaleString()} comments` : 'your comments'} as {format}.
+            </p>
+            <button onClick={() => setRestoredDraft(false)} aria-label="Dismiss" className="shrink-0 text-green-200/70 hover:text-white">
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
         {/* URL inputs */}
         <div className="bg-[#171717] border border-white/[0.07] rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
           <label className="text-sm font-medium text-white mb-3 block">YouTube URL(s)</label>
@@ -888,7 +940,7 @@ ${commentRows}
             </div>
             <p className="mt-1.5 text-xs text-[#666666]">
               {!isSignedIn ? (
-                <><Link href="/auth/login" onClick={() => trackEvent('login_cta_click', { location: 'tool_comment_limit' })} className="text-[#888888] hover:text-white underline">Sign in</Link> to unlock more comments</>
+                <>Signed out · 50 per download · <Link href={SIGNUP_HREF} onClick={() => { saveDraft(); trackEvent('signup_cta_click', { location: 'tool_comment_limit' }) }} className="text-[#888888] hover:text-white underline">Sign up free</Link> for 500</>
               ) : userPlan === 'enterprise' ? (
                 'Enterprise plan'
               ) : userPlan === 'business' ? (
@@ -956,7 +1008,7 @@ ${commentRows}
             {!isSignedIn && (
               <p className="text-xs text-[#888888] mb-3 flex items-center gap-1.5">
                 <Lock className="w-3 h-3 text-[#888888]" />
-                <span>CSV, JSON &amp; Excel require a free account. <Link href="/auth/login" onClick={() => trackEvent('login_cta_click', { location: 'tool_format_gate' })} className="text-red-400 hover:text-red-300 underline">Sign in to unlock</Link></span>
+                <span>CSV, JSON &amp; Excel need a free account. <Link href={SIGNUP_HREF} onClick={() => { saveDraft(); trackEvent('signup_cta_click', { location: 'tool_format_gate' }) }} className="text-red-400 hover:text-red-300 underline">Create one free</Link></span>
               </p>
             )}
             <div className="flex flex-wrap gap-2">
@@ -1037,7 +1089,7 @@ ${commentRows}
         {!loading && cappedDownload && (() => {
           // Point each plan at the next per-download limit up
           const next = !isSignedIn
-            ? { limit: PLAN_LIMIT.free, cta: 'Sign up free', href: '/auth/signup', name: 'A free account' }
+            ? { limit: PLAN_LIMIT.free, cta: 'Sign up free', href: SIGNUP_HREF, name: 'A free account' }
             : userPlan === 'free'
               ? { limit: PLAN_LIMIT.pro, cta: 'Upgrade to Pro', href: '/pricing', name: 'Pro' }
               : userPlan === 'pro'
@@ -1052,7 +1104,10 @@ ${commentRows}
               </p>
               <Link
                 href={next.href}
-                onClick={() => trackEvent(isSignedIn ? 'upgrade_cta_click' : 'signup_cta_click', { location: 'capped_download', plan: isSignedIn ? userPlan : 'anonymous' })}
+                onClick={() => {
+                  if (!isSignedIn) saveDraft()
+                  trackEvent(isSignedIn ? 'upgrade_cta_click' : 'signup_cta_click', { location: 'capped_download', plan: isSignedIn ? userPlan : 'anonymous' })
+                }}
                 className="mt-3 inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-red-500 sm:mt-0"
               >
                 {next.cta} <ArrowRight className="h-3.5 w-3.5" />
@@ -1310,14 +1365,14 @@ ${commentRows}
               Create a free account to download in <strong className="text-white">CSV, JSON, and Excel</strong> formats. Plain text is always free — no sign-in needed.
             </p>
             <div className="flex flex-col gap-3">
-              <Link href="/auth/signup" onClick={() => trackEvent('signup_cta_click', { location: 'auth_gate_modal' })} className="block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-xl text-center transition-colors">
+              <Link href={SIGNUP_HREF} onClick={() => { saveDraft(); trackEvent('signup_cta_click', { location: 'auth_gate_modal' }) }} className="block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-xl text-center transition-colors">
                 Create Free Account
               </Link>
               <Link href="/pricing" onClick={() => trackEvent('upgrade_cta_click', { location: 'auth_gate_modal_pro_offer', plan: userPlan })} className="flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-center text-sm font-bold text-red-100 transition-colors hover:border-red-400/50 hover:bg-red-500/15">
                 <BadgePercent className="h-4 w-4" />
                 Get Pro with SAVE10
               </Link>
-              <Link href="/auth/login" onClick={() => trackEvent('login_cta_click', { location: 'auth_gate_modal' })} className="block border border-white/[0.07] hover:border-white/[0.15] text-white font-medium px-4 py-3 rounded-xl text-center transition-colors text-sm">
+              <Link href={LOGIN_HREF} onClick={() => { saveDraft(); trackEvent('login_cta_click', { location: 'auth_gate_modal' }) }} className="block border border-white/[0.07] hover:border-white/[0.15] text-white font-medium px-4 py-3 rounded-xl text-center transition-colors text-sm">
                 Sign In
               </Link>
               <button onClick={() => setShowAuthGate(false)} className="text-[#888888] hover:text-[#888888] text-sm transition-colors mt-1">

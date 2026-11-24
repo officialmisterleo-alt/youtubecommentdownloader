@@ -164,3 +164,67 @@ export async function sendMemberJoinedEmail({
 
   if (error) throw new Error(`Failed to send member joined email: ${error.message}`)
 }
+
+function escapeHtml(str: string) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+/** Returns false when Resend isn't configured, so the caller can fall back to Supabase's mailer. */
+export async function sendSignupConfirmationEmail({
+  toEmail,
+  confirmUrl,
+}: {
+  toEmail: string
+  confirmUrl: string
+}): Promise<boolean> {
+  const subject = `Confirm your email for ${APP_NAME}`
+  const safeUrl = escapeHtml(confirmUrl)
+
+  const html = baseHtml(`
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;">Confirm your email</h1>
+    <p style="margin:0 0 24px;font-size:14px;color:#888888;line-height:1.6;">
+      Click the button below to finish creating your account for <strong style="color:#ffffff;">${escapeHtml(toEmail)}</strong>.
+      You'll go straight back to the downloader with 500 comments per download and 1,000 a month on the free plan.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td align="center">
+          <a href="${safeUrl}"
+             style="display:inline-block;background:#dc2626;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 36px;border-radius:10px;">
+            Confirm Email
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 8px;font-size:13px;color:#555555;text-align:center;">
+      Or copy this link into your browser:
+    </p>
+    <p style="margin:0 0 24px;font-size:12px;color:#555555;text-align:center;word-break:break-all;">
+      <a href="${safeUrl}" style="color:#888888;">${safeUrl}</a>
+    </p>
+
+    <p style="margin:0;font-size:12px;color:#444444;text-align:center;">
+      The link works once. If it has expired, sign in and we'll send a new one. If you didn't sign up, you can safely ignore this email.
+    </p>
+  `)
+
+  if (!resend) {
+    console.log('[email] RESEND_API_KEY not set — would send signup confirmation email:')
+    console.log(`  To: ${toEmail}`)
+    console.log(`  Confirm URL: ${confirmUrl}`)
+    return false
+  }
+
+  const { error } = await resend.emails.send({
+    from: `${APP_NAME} <${FROM}>`,
+    to: toEmail,
+    subject,
+    html,
+    text: `Confirm your email for ${APP_NAME}:\n\n${confirmUrl}\n\nThe link works once. If it has expired, sign in and we'll send a new one. If you didn't sign up, you can ignore this email.`,
+  })
+
+  if (error) throw new Error(`Failed to send signup confirmation email: ${error.message}`)
+  return true
+}
