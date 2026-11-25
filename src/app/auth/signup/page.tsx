@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -17,6 +17,9 @@ function SignupForm() {
   const [success, setSuccess] = useState(false)
   const [resendIn, setResendIn] = useState(0)
   const [resendNote, setResendNote] = useState('')
+  // Bot checks: people never see or fill the hidden field, and take more than a moment to type
+  const [website, setWebsite] = useState('')
+  const startedAt = useRef(Date.now())
   const searchParams = useSearchParams()
   // New accounts go back to the downloader unless a page asked for somewhere else
   const next = safeNextPath(searchParams.get('next'), '/tool')
@@ -32,7 +35,11 @@ function SignupForm() {
     const res = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(resend ? { email, resend: true, next } : { email, password, name, next }),
+      body: JSON.stringify(
+        resend
+          ? { email, resend: true, next }
+          : { email, password, name, next, website, elapsedMs: Date.now() - startedAt.current }
+      ),
     })
     const data = await res.json().catch(() => ({}))
     return { ok: res.ok, error: (data.error as string) || 'Something went wrong. Please try again.' }
@@ -137,6 +144,11 @@ function SignupForm() {
           </div>
         )}
         <form onSubmit={handleSignup} className="space-y-4">
+          <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', width: 1, height: 1, overflow: 'hidden' }}>
+            <label>Website
+              <input type="text" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={e => setWebsite(e.target.value)} />
+            </label>
+          </div>
           <div>
             <label className="text-sm text-[#888888] mb-1.5 block">Full Name</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}

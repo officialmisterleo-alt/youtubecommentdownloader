@@ -32,6 +32,24 @@ function recordSend(email: string, ip: string) {
   sendsByIp.set(ip, [...(sendsByIp.get(ip) ?? []).filter(t => now - t < IP_WINDOW_MS), now])
 }
 
+// Signup bots fill the name with one random mixed-case word like "xKpQwRtYz".
+// Real names rarely switch case more than three times in one word (McDonald, MacKenzie).
+function looksLikeBotName(name: string) {
+  if (!/^[A-Za-z]{6,}$/.test(name)) return false
+  let flips = 0
+  for (let i = 1; i < name.length; i++) {
+    if ((name[i] === name[i].toLowerCase()) !== (name[i - 1] === name[i - 1].toLowerCase())) flips++
+  }
+  return flips >= 4
+}
+
+function botReason(body: Record<string, unknown>, name: string) {
+  if (typeof body.website === 'string' && body.website.trim()) return 'honeypot'
+  if (typeof body.elapsedMs === 'number' && body.elapsedMs < 1500) return 'too_fast'
+  if (looksLikeBotName(name)) return 'name'
+  return null
+}
+
 type AuthUser = {
   id: string
   email?: string
@@ -77,6 +95,15 @@ export async function POST(req: NextRequest) {
     }
     if (!resendOnly && password.length < 6) {
       return NextResponse.json({ error: 'Password should be at least 6 characters.' }, { status: 400 })
+    }
+
+    if (!resendOnly) {
+      const reason = botReason(body, name)
+      if (reason) {
+        // Look successful so bots don't adapt, but create nothing and email no one
+        console.warn('/api/auth/signup dropped likely bot:', reason)
+        return NextResponse.json({ success: true })
+      }
     }
 
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
